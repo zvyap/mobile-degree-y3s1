@@ -17,11 +17,16 @@ void main() {
 
     expect(find.byTooltip('Switch to light theme'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Start ride'));
+    await tester.tap(find.byKey(const ValueKey<String>('nav-scan')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Renting'), findsOneWidget);
+    expect(find.text('Scan QR Code'), findsOneWidget);
     expect(find.byIcon(Icons.qr_code_scanner_rounded), findsWidgets);
+
+    await tester.tap(find.byKey(const ValueKey<String>('nav-home')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rent a bike in seconds'), findsOneWidget);
   });
 
   testWidgets('home layout supports compact phone viewport', (

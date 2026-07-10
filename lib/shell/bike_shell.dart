@@ -1,5 +1,6 @@
 import 'package:bike_renting_app/features/home/home_page.dart';
 import 'package:bike_renting_app/features/modules/module_page.dart';
+import 'package:bike_renting_app/features/qr/qr_scan_page.dart';
 import 'package:bike_renting_app/navigation/bike_bottom_nav_bar.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:flutter/material.dart';
@@ -167,12 +168,7 @@ class _PageContent extends StatelessWidget {
         icon: Icons.directions_bike_rounded,
         accent: Color(0xFF0E9F6E),
       ),
-      2 => const ModulePage(
-        title: 'Renting',
-        subtitle: 'QR unlock, active ride, payment, and return flow.',
-        icon: Icons.qr_code_scanner_rounded,
-        accent: Color(0xFF0369A1),
-      ),
+      2 => const QrScanPage(),
       3 => const ModulePage(
         title: 'Stations',
         subtitle: 'Dock capacity, nearby stations, and return points.',

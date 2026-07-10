@@ -14,7 +14,7 @@ class BikeBottomNavBar extends StatelessWidget {
   static const _items = [
     _NavItem('Home', Icons.home_rounded),
     _NavItem('Bikes', Icons.directions_bike_rounded),
-    _NavItem('Ride', Icons.qr_code_scanner_rounded),
+    _NavItem('Scan', Icons.qr_code_scanner_rounded),
     _NavItem('Stations', Icons.map_rounded),
     _NavItem('User', Icons.person_rounded),
   ];
@@ -138,6 +138,7 @@ class _NavTab extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
+            key: ValueKey<String>('nav-${item.label.toLowerCase()}'),
             onTap: onTap,
             borderRadius: BorderRadius.circular(8),
             child: AnimatedContainer(
@@ -191,29 +192,27 @@ class _CenterNavButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final duration = motionDuration(context, 200);
 
-    return Tooltip(
-      message: 'Start ride',
-      child: Semantics(
-        selected: selected,
-        button: true,
-        label: 'Start ride',
-        child: AnimatedScale(
-          scale: selected ? 1.05 : 1,
-          duration: duration,
-          curve: Curves.easeOutCubic,
-          child: Material(
-            color: selected ? scheme.secondary : scheme.primary,
-            shape: const CircleBorder(),
-            elevation: selected ? 12 : 8,
-            shadowColor: scheme.primary.withValues(alpha: 0.35),
-            child: InkWell(
-              onTap: onTap,
-              customBorder: const CircleBorder(),
-              child: SizedBox(
-                width: 72,
-                height: 72,
-                child: Icon(item.icon, color: Colors.white, size: 30),
-              ),
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: 'Scan QR code',
+      child: AnimatedScale(
+        scale: selected ? 1.05 : 1,
+        duration: duration,
+        curve: Curves.easeOutCubic,
+        child: Material(
+          color: selected ? scheme.secondary : scheme.primary,
+          shape: const CircleBorder(),
+          elevation: selected ? 12 : 8,
+          shadowColor: scheme.primary.withValues(alpha: 0.35),
+          child: InkWell(
+            key: const ValueKey<String>('nav-scan'),
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: SizedBox(
+              width: 72,
+              height: 72,
+              child: Icon(item.icon, color: Colors.white, size: 30),
             ),
           ),
         ),
