@@ -85,7 +85,7 @@ L-- Global layout: BikeShell
     L-- Settings page
 ```
 
-The bottom navigation opens Home, Stations, Scan, History, and Profile. When `BikeShell._isAdmin` is `true`, the header shows an **Admin management** icon beside Settings. It opens the Admin page, whose actions open station management, bike management, and user management destinations. The header back action returns to Home when no rental-flow step needs to be revisited; the renting flow instead moves back through its previous applicable step.
+The bottom navigation opens Home, Stations, Scan, History, and Profile. `AppPage` defines each typed route and its header/navigation metadata, while the nested `Navigator` owns root replacement and child-page back stacks. When `BikeShell._isAdmin` is `true`, the header shows an **Admin management** icon beside Settings. It opens the Admin page, whose actions open station management, bike management, and user management destinations. The renting flow handles back through its previous applicable step.
 
 ## Run
 
@@ -97,6 +97,8 @@ flutter run
 ## Main Files
 
 - `lib/main.dart` - application entry point.
-- `lib/shell/bike_shell.dart` - global layout, page switching, settings, and navigation coordination.
+- `lib/shell/bike_shell.dart` - global layout and navigation coordination.
+- `lib/navigation/app_page.dart` - typed page enum and route metadata.
+- `lib/navigation/app_navigator.dart` - route factory and navigation observer.
 - `lib/features/renting/` - bike renting flow, models, and controller.
 - `lib/features/home/home_page.dart` - home dashboard.

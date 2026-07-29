@@ -1,23 +1,16 @@
+import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:flutter/material.dart';
 
 class BikeBottomNavBar extends StatelessWidget {
   const BikeBottomNavBar({
     super.key,
-    required this.selectedIndex,
+    required this.selectedPage,
     required this.onSelected,
   });
 
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
-
-  static const _items = [
-    _NavItem('Home', Icons.home_rounded),
-    _NavItem('Stations', Icons.map_rounded),
-    _NavItem('Scan', Icons.qr_code_scanner_rounded),
-    _NavItem('History', Icons.history_rounded),
-    _NavItem('Profile', Icons.person_rounded),
-  ];
+  final AppPage selectedPage;
+  final ValueChanged<AppPage> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -64,31 +57,31 @@ class BikeBottomNavBar extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _NavTab(
-                      item: _items[0],
-                      selected: selectedIndex == 0,
-                      onTap: () => onSelected(0),
+                      page: AppPage.home,
+                      selected: selectedPage == AppPage.home,
+                      onTap: () => onSelected(AppPage.home),
                     ),
                   ),
                   Expanded(
                     child: _NavTab(
-                      item: _items[1],
-                      selected: selectedIndex == 1,
-                      onTap: () => onSelected(1),
+                      page: AppPage.stations,
+                      selected: selectedPage == AppPage.stations,
+                      onTap: () => onSelected(AppPage.stations),
                     ),
                   ),
                   const SizedBox(width: 82),
                   Expanded(
                     child: _NavTab(
-                      item: _items[3],
-                      selected: selectedIndex == 3,
-                      onTap: () => onSelected(3),
+                      page: AppPage.history,
+                      selected: selectedPage == AppPage.history,
+                      onTap: () => onSelected(AppPage.history),
                     ),
                   ),
                   Expanded(
                     child: _NavTab(
-                      item: _items[4],
-                      selected: selectedIndex == 4,
-                      onTap: () => onSelected(4),
+                      page: AppPage.profile,
+                      selected: selectedPage == AppPage.profile,
+                      onTap: () => onSelected(AppPage.profile),
                     ),
                   ),
                 ],
@@ -100,9 +93,9 @@ class BikeBottomNavBar extends StatelessWidget {
             left: 0,
             right: 0,
             child: _CenterNavButton(
-              item: _items[2],
-              selected: selectedIndex == 2,
-              onTap: () => onSelected(2),
+              page: AppPage.scan,
+              selected: selectedPage == AppPage.scan,
+              onTap: () => onSelected(AppPage.scan),
             ),
           ),
         ],
@@ -113,12 +106,12 @@ class BikeBottomNavBar extends StatelessWidget {
 
 class _NavTab extends StatelessWidget {
   const _NavTab({
-    required this.item,
+    required this.page,
     required this.selected,
     required this.onTap,
   });
 
-  final _NavItem item;
+  final AppPage page;
   final bool selected;
   final VoidCallback onTap;
 
@@ -136,13 +129,13 @@ class _NavTab extends StatelessWidget {
     return Semantics(
       selected: selected,
       button: true,
-      label: item.label,
+      label: page.navigationLabel,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            key: ValueKey<String>('nav-${item.label.toLowerCase()}'),
+            key: ValueKey<String>('nav-${page.navigationLabel!.toLowerCase()}'),
             onTap: onTap,
             borderRadius: BorderRadius.circular(8),
             child: AnimatedContainer(
@@ -159,10 +152,10 @@ class _NavTab extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(item.icon, color: foreground, size: 22),
+                  Icon(page.icon, color: foreground, size: 22),
                   const SizedBox(height: 3),
                   Text(
-                    item.label,
+                    page.navigationLabel!,
                     maxLines: 1,
                     softWrap: false,
                     textAlign: TextAlign.center,
@@ -185,12 +178,12 @@ class _NavTab extends StatelessWidget {
 
 class _CenterNavButton extends StatelessWidget {
   const _CenterNavButton({
-    required this.item,
+    required this.page,
     required this.selected,
     required this.onTap,
   });
 
-  final _NavItem item;
+  final AppPage page;
   final bool selected;
   final VoidCallback onTap;
 
@@ -219,18 +212,11 @@ class _CenterNavButton extends StatelessWidget {
             child: SizedBox(
               width: 72,
               height: 72,
-              child: Icon(item.icon, color: Colors.white, size: 30),
+              child: Icon(page.icon, color: Colors.white, size: 30),
             ),
           ),
         ),
       ),
     );
   }
-}
-
-class _NavItem {
-  const _NavItem(this.label, this.icon);
-
-  final String label;
-  final IconData icon;
 }

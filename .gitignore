@@ -40,6 +40,7 @@ CLAUDE.md
 .pub/
 /build/
 /coverage/
+/screenshot/
 
 # Symbolication related
 app.*.symbols

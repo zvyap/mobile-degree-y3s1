@@ -2,13 +2,14 @@ import 'package:bike_renting_app/features/home/widgets/hero_panel.dart';
 import 'package:bike_renting_app/features/home/widgets/home_cards.dart';
 import 'package:bike_renting_app/features/home/widgets/ride_conditions_panel.dart';
 import 'package:bike_renting_app/features/home/widgets/station_preview.dart';
+import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key, required this.onNavigate});
 
-  final ValueChanged<int> onNavigate;
+  final ValueChanged<AppPage> onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +24,8 @@ class HomePage extends StatelessWidget {
           children: [
             Entrance(
               child: HeroPanel(
-                onScan: () => onNavigate(2),
-                onFindStation: () => onNavigate(1),
+                onScan: () => onNavigate(AppPage.scan),
+                onFindStation: () => onNavigate(AppPage.stations),
               ),
             ),
             const SizedBox(height: 18),
@@ -32,7 +33,7 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 18),
             const RideConditionsPanel(),
             const SizedBox(height: 18),
-            StationPreview(onViewAll: () => onNavigate(1)),
+            StationPreview(onViewAll: () => onNavigate(AppPage.stations)),
           ],
         );
       },

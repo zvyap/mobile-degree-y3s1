@@ -1,0 +1,91 @@
+import 'package:bike_renting_app/navigation/app_page.dart';
+import 'package:flutter/material.dart';
+
+class AdminManagementPage extends StatelessWidget {
+  const AdminManagementPage({
+    super.key,
+    required this.onNavigate,
+    required this.onOpenBikeManagement,
+  });
+
+  final ValueChanged<AppPage> onNavigate;
+  final VoidCallback onOpenBikeManagement;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return ListView(
+      key: const ValueKey<String>('admin-page'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        Text(
+          'Admin management',
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Manage stations, bikes, and users.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: scheme.onSurface.withValues(alpha: 0.68),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _AdminDestination(
+          actionKey: 'admin-stations',
+          icon: Icons.map_rounded,
+          title: 'Station management',
+          subtitle: 'Stations, dock capacity, and return points',
+          onTap: () => onNavigate(AppPage.stations),
+        ),
+        _AdminDestination(
+          actionKey: 'admin-bikes',
+          icon: Icons.directions_bike_rounded,
+          title: 'Bike management',
+          subtitle: 'Fleet health, battery status, and maintenance',
+          onTap: onOpenBikeManagement,
+        ),
+        _AdminDestination(
+          actionKey: 'admin-users',
+          icon: Icons.manage_accounts_rounded,
+          title: 'User management',
+          subtitle: 'User profile, wallet, permissions, and ride history',
+          onTap: () => onNavigate(AppPage.profile),
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminDestination extends StatelessWidget {
+  const _AdminDestination({
+    required this.actionKey,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final String actionKey;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      key: ValueKey<String>(actionKey),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      minTileHeight: 64,
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle, softWrap: true),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      onTap: onTap,
+    );
+  }
+}
