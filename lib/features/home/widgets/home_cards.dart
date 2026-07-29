@@ -8,6 +8,7 @@ class NetworkSummary extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
+    // TODO: Load live bike, dock, and station totals from their services.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

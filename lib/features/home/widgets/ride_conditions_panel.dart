@@ -1,26 +1,39 @@
-import 'package:bike_renting_app/features/home/ride_conditions_demo_data.dart';
 import 'package:flutter/material.dart';
 
 class RideConditionsPanel extends StatelessWidget {
-  const RideConditionsPanel({super.key, required this.data});
-
-  final RideConditionsDemoData data;
+  const RideConditionsPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final date = DateTime.now();
+
+    // TODO: Replace these values with cached api.met.gov.my weather data and
+    // resolve the authenticated rider's coordinates into a location label.
+    const location = 'Jalan Sultan Ismail, Bukit Bintang, Kuala Lumpur';
+    const currentCondition = 'Partly cloudy';
+    const currentTemperature = '30°C';
+    const feelsLike = 'Feels like 34°C';
+    const nextHourCondition = 'Scattered thunderstorms';
+    const nextHourTemperature = '29°C';
+    const nextHourRainChance = '65% rain';
+    const humidity = '78%';
+    const airQualityIndex = '42';
+    const airQualityLabel = 'Good';
+    const wind = '9 km/h SW';
+    const updatedTime = '10:30 AM';
 
     return Semantics(
       container: true,
       label:
-          'Ride conditions. Current location, ${data.location}. '
-          'Current weather, ${data.currentCondition}, '
-          '${data.currentTemperature}, ${data.feelsLike}. '
-          'Next hour, ${data.nextHourCondition}, '
-          '${data.nextHourTemperature}, ${data.nextHourRainChance}. '
-          'Humidity ${data.humidity}. Air quality index '
-          '${data.airQualityIndex}, ${data.airQualityLabel}. Wind ${data.wind}.',
+          'Ride conditions. Current location, $location. '
+          'Current weather, $currentCondition, '
+          '$currentTemperature, $feelsLike. '
+          'Next hour, $nextHourCondition, '
+          '$nextHourTemperature, $nextHourRainChance. '
+          'Humidity $humidity. Air quality index '
+          '$airQualityIndex, $airQualityLabel. Wind $wind.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -74,7 +87,7 @@ class RideConditionsPanel extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              data.currentCondition,
+                              currentCondition,
                               softWrap: true,
                               style: theme.textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w800,
@@ -82,7 +95,7 @@ class RideConditionsPanel extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              data.feelsLike,
+                              feelsLike,
                               softWrap: true,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.64),
@@ -93,7 +106,7 @@ class RideConditionsPanel extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        data.currentTemperature,
+                        currentTemperature,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w900,
                         ),
@@ -109,7 +122,7 @@ class RideConditionsPanel extends StatelessWidget {
                           child: _ConditionMetric(
                             icon: Icons.water_drop_outlined,
                             label: 'Humidity',
-                            value: data.humidity,
+                            value: humidity,
                           ),
                         ),
                         VerticalDivider(
@@ -120,9 +133,7 @@ class RideConditionsPanel extends StatelessWidget {
                           child: _ConditionMetric(
                             icon: Icons.air_rounded,
                             label: 'Air quality',
-                            value:
-                                '${data.airQualityIndex} '
-                                '${data.airQualityLabel}',
+                            value: '$airQualityIndex $airQualityLabel',
                           ),
                         ),
                         VerticalDivider(
@@ -133,7 +144,7 @@ class RideConditionsPanel extends StatelessWidget {
                           child: _ConditionMetric(
                             icon: Icons.waves_rounded,
                             label: 'Wind',
-                            value: data.wind,
+                            value: wind,
                           ),
                         ),
                       ],
@@ -157,7 +168,7 @@ class RideConditionsPanel extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Next hour · ${data.nextHourCondition}',
+                              'Next hour · $nextHourCondition',
                               softWrap: true,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontWeight: FontWeight.w700,
@@ -165,8 +176,7 @@ class RideConditionsPanel extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${data.nextHourTemperature} · '
-                              '${data.nextHourRainChance}',
+                              '$nextHourTemperature · $nextHourRainChance',
                               softWrap: true,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.68),
@@ -190,7 +200,7 @@ class RideConditionsPanel extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          data.location,
+                          location,
                           softWrap: true,
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w700,
@@ -201,7 +211,7 @@ class RideConditionsPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Updated ${data.updatedTime} · ${data.dateLabel}',
+                    'Updated $updatedTime · ${_dateLabel(date)}',
                     softWrap: true,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.58),
@@ -216,6 +226,24 @@ class RideConditionsPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+String _dateLabel(DateTime date) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${date.day} ${months[date.month - 1]} ${date.year}';
 }
 
 class _ConditionMetric extends StatelessWidget {

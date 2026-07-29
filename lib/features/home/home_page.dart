@@ -2,7 +2,6 @@ import 'package:bike_renting_app/features/home/widgets/hero_panel.dart';
 import 'package:bike_renting_app/features/home/widgets/home_cards.dart';
 import 'package:bike_renting_app/features/home/widgets/ride_conditions_panel.dart';
 import 'package:bike_renting_app/features/home/widgets/station_preview.dart';
-import 'package:bike_renting_app/features/home/ride_conditions_demo_data.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
 
@@ -31,7 +30,7 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 18),
             const NetworkSummary(),
             const SizedBox(height: 18),
-            RideConditionsPanel(data: RideConditionsDemoData.current()),
+            const RideConditionsPanel(),
             const SizedBox(height: 18),
             StationPreview(onViewAll: () => onNavigate(1)),
           ],

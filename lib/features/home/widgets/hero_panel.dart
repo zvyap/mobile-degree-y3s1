@@ -15,6 +15,7 @@ class HeroPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
+    // TODO: Load bike and station availability from their services.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

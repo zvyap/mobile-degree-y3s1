@@ -4,25 +4,22 @@ import 'dart:math' as math;
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:flutter/foundation.dart';
 
-class RentingDemoController extends ChangeNotifier {
-  RentingDemoController({
-    this.enableClock = true,
-    this.demoDelay = const Duration(milliseconds: 450),
-  });
+class RentingController extends ChangeNotifier {
+  RentingController();
 
   static const unlockFee = 0.50;
   static const perMinuteRate = 0.10;
   static const holdAmount = 20.00;
 
-  final bool enableClock;
-  final Duration demoDelay;
-
+  // TODO: Load bike details from the bike service after QR validation.
   final bike = const RentalBike(
     id: 'BIKE-C042',
     batteryPercent: 86,
     location: 'Central Station',
   );
 
+  // TODO: Load nearby return stations and live dock counts from the station
+  // service using the rider's current location.
   final stations = const [
     ReturnStation(
       id: 'central',
@@ -50,6 +47,7 @@ class RentingDemoController extends ChangeNotifier {
     ),
   ];
 
+  // TODO: Load saved payment methods from the authenticated user's wallet.
   final paymentMethods = const [
     RentalPaymentMethod(
       id: 'visa-4242',
@@ -175,7 +173,7 @@ class RentingDemoController extends ChangeNotifier {
   Future<void> authorizeHold({bool fail = false}) async {
     if (isBusy) return;
     _beginBusy();
-    await _demoDelay();
+    await _operationDelay();
     if (fail) {
       isBusy = false;
       errorMessage =
@@ -197,7 +195,7 @@ class RentingDemoController extends ChangeNotifier {
   Future<void> unlockBike({bool fail = false}) async {
     if (isBusy) return;
     _beginBusy();
-    await _demoDelay();
+    await _operationDelay();
     if (fail) {
       isBusy = false;
       errorMessage =
@@ -261,7 +259,8 @@ class RentingDemoController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void simulateArrival() {
+  void confirmArrival() {
+    // TODO: Replace this manual confirmation with station geofence data.
     if (selectedStation == null) {
       errorMessage = 'Choose a return station first.';
     } else {
@@ -292,7 +291,7 @@ class RentingDemoController extends ChangeNotifier {
   Future<void> confirmDock({bool fail = false}) async {
     if (isBusy) return;
     _beginBusy();
-    await _demoDelay();
+    await _operationDelay();
     if (fail) {
       isBusy = false;
       errorMessage =
@@ -311,9 +310,10 @@ class RentingDemoController extends ChangeNotifier {
   Future<void> capturePayment({bool fail = false}) async {
     if (isBusy || selectedStation == null) return;
     _beginBusy();
-    await _demoDelay();
+    await _operationDelay();
     isBusy = false;
     errorMessage = null;
+    // TODO: Use the ride ID and payment result returned by the renting service.
     receipt = RentalReceipt(
       rideId: 'RIDE-2407-C042',
       finalFare: estimatedFare,
@@ -330,7 +330,7 @@ class RentingDemoController extends ChangeNotifier {
   Future<void> retryPayment() async {
     if (isBusy || receipt?.paymentStatus != PaymentStatus.pending) return;
     _beginBusy();
-    await _demoDelay();
+    await _operationDelay();
     isBusy = false;
     receipt = receipt?.copyWith(paymentStatus: PaymentStatus.paid);
     notifyListeners();
@@ -360,13 +360,12 @@ class RentingDemoController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _demoDelay() {
-    return Future<void>.delayed(demoDelay);
+  Future<void> _operationDelay() {
+    return Future<void>.delayed(const Duration(milliseconds: 450));
   }
 
   void _startClock() {
     _stopClock();
-    if (!enableClock) return;
     _rideTimer = Timer.periodic(const Duration(seconds: 1), (_) => tickRide());
   }
 

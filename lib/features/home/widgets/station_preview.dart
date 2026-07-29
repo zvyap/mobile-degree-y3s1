@@ -10,6 +10,8 @@ class StationPreview extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
+    // TODO: Load nearby stations from the station service using the rider's
+    // current location.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

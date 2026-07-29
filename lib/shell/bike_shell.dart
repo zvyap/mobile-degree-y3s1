@@ -1,7 +1,7 @@
 import 'package:bike_renting_app/features/home/home_page.dart';
 import 'package:bike_renting_app/features/modules/module_page.dart';
 import 'package:bike_renting_app/features/qr/qr_scan_page.dart';
-import 'package:bike_renting_app/features/renting/renting_demo_controller.dart';
+import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/navigation/bike_bottom_nav_bar.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:flutter/material.dart';
@@ -16,19 +16,19 @@ class BikeShell extends StatefulWidget {
 }
 
 class _BikeShellState extends State<BikeShell> {
-  // Replace with the authenticated user's role when authentication is added.
+  // TODO: Read this role from the authenticated user session.
   static const bool _isAdmin = true;
 
   int _selectedIndex = 0;
   bool _adminOpen = false;
   bool _bikeManagementOpen = false;
   bool _settingsOpen = false;
-  late final RentingDemoController _rentingController;
+  late final RentingController _rentingController;
 
   @override
   void initState() {
     super.initState();
-    _rentingController = RentingDemoController();
+    _rentingController = RentingController();
   }
 
   @override
@@ -319,7 +319,7 @@ class _PageContent extends StatelessWidget {
   });
 
   final int selectedIndex;
-  final RentingDemoController rentingController;
+  final RentingController rentingController;
   final ValueChanged<int> onRequestExit;
 
   @override

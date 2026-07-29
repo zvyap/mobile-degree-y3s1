@@ -25,19 +25,19 @@ This app supports **SDG 9** by using a digital shared-mobility service to make t
 
 ## Government Dataset Use
 
-The current app remains a frontend-only prototype. Home uses static prototype weather values for a detailed dummy current location. It shows current weather, temperature, humidity, air quality, and wind before the next-hour forecast and rain chance. No government API request or location lookup is made yet.
+Home currently shows local weather values at the UI integration point. A TODO marks where the cached government API response and location lookup will replace them.
 
 The planned implementation will fetch and cache weather data from `api.met.gov.my`, resolve the user's current coordinates into a detailed location, translate documented Bahasa Melayu forecast values into English, and preserve unknown Bahasa Melayu wording as a fallback.
 
 | Dataset type | Use in the app |
 | --- | --- |
-| MET Malaysia weather forecast (prototype only) | Display current and next-hour weather conditions around the rider. |
+| MET Malaysia weather forecast | Display current and next-hour weather conditions around the rider. |
 | Government open-data portal station, road, and cycling-infrastructure data | Show supported bike locations, cycling routes, and safe access to stations. |
 | Public transport stop and timetable data | Help users plan first-mile and last-mile bike trips to buses, rail stations, or other public transport. |
 | Traffic, road-closure, and weather-alert data | Warn riders about disrupted routes and help operations plan bike redistribution or maintenance. |
 | Local authority geographic boundaries and points of interest | Organize station coverage areas and help users find nearby public destinations. |
 
-Before release, the weather demo must be replaced with the cached API integration. Each dataset must be checked for its licence, update frequency, geographic accuracy, and API terms. Cached government data should keep the app usable when a source is temporarily unavailable.
+Before release, the weather TODO must be completed with the cached API integration. Each dataset must be checked for its licence, update frequency, geographic accuracy, and API terms. Cached government data should keep the app usable when a source is temporarily unavailable.
 
 ## Navigation Relation
 
@@ -94,17 +94,9 @@ flutter pub get
 flutter run
 ```
 
-## Verify
-
-```bash
-flutter analyze
-flutter test
-```
-
 ## Main Files
 
 - `lib/main.dart` - application entry point.
 - `lib/shell/bike_shell.dart` - global layout, page switching, settings, and navigation coordination.
-- `lib/features/renting/` - bike renting flow, models, and demo controller.
+- `lib/features/renting/` - bike renting flow, models, and controller.
 - `lib/features/home/home_page.dart` - home dashboard.
-- `test/widget_test.dart` - navigation and widget smoke coverage.

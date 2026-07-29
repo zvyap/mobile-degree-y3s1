@@ -1,4 +1,4 @@
-import 'package:bike_renting_app/features/renting/renting_demo_controller.dart';
+import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
@@ -12,7 +12,7 @@ class RentingFlowPage extends StatefulWidget {
     this.onRequestExit,
   });
 
-  final RentingDemoController? controller;
+  final RentingController? controller;
   final ValueChanged<bool>? onFlowLockChanged;
   final VoidCallback? onRequestExit;
 
@@ -21,7 +21,7 @@ class RentingFlowPage extends StatefulWidget {
 }
 
 class _RentingFlowPageState extends State<RentingFlowPage> {
-  late RentingDemoController _controller;
+  late RentingController _controller;
   late bool _ownsController;
   bool _lastLockState = false;
 
@@ -41,9 +41,9 @@ class _RentingFlowPageState extends State<RentingFlowPage> {
     }
   }
 
-  void _attachController(RentingDemoController? providedController) {
+  void _attachController(RentingController? providedController) {
     _ownsController = providedController == null;
-    _controller = providedController ?? RentingDemoController();
+    _controller = providedController ?? RentingController();
     _lastLockState = _controller.isFlowLocked;
     _controller.addListener(_handleControllerChange);
   }
@@ -132,7 +132,7 @@ class _RentingFlowPageState extends State<RentingFlowPage> {
 class _JourneyHeader extends StatelessWidget {
   const _JourneyHeader({required this.controller});
 
-  final RentingDemoController controller;
+  final RentingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +247,7 @@ class _RouteNode extends StatelessWidget {
 class _ScanStage extends StatelessWidget {
   const _ScanStage({required this.controller});
 
-  final RentingDemoController controller;
+  final RentingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -375,7 +375,7 @@ class _ScanStage extends StatelessWidget {
 class _BikeCheckStage extends StatelessWidget {
   const _BikeCheckStage({required this.controller});
 
-  final RentingDemoController controller;
+  final RentingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -497,7 +497,7 @@ class _BikeCheckStage extends StatelessWidget {
 class _AuthorizationStage extends StatelessWidget {
   const _AuthorizationStage({required this.controller});
 
-  final RentingDemoController controller;
+  final RentingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -574,7 +574,7 @@ class _AuthorizationStage extends StatelessWidget {
 class _UnlockStage extends StatelessWidget {
   const _UnlockStage({required this.controller});
 
-  final RentingDemoController controller;
+  final RentingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -651,7 +651,7 @@ class _UnlockStage extends StatelessWidget {
 class _RideStage extends StatelessWidget {
   const _RideStage({required this.controller});
 
-  final RentingDemoController controller;
+  final RentingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -872,7 +872,7 @@ class _NearbyStationRow extends StatelessWidget {
 class _StationStage extends StatelessWidget {
   const _StationStage({required this.controller});
 
-  final RentingDemoController controller;
+  final RentingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -923,8 +923,8 @@ class _StationStage extends StatelessWidget {
           if (controller.selectedStation != null) ...[
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              key: const ValueKey('rent-simulate-arrival'),
-              onPressed: controller.simulateArrival,
+              key: const ValueKey('rent-confirm-arrival'),
+              onPressed: controller.confirmArrival,
               icon: Icon(
                 controller.isAtStation
                     ? Icons.check_rounded
@@ -956,7 +956,7 @@ class _StationStage extends StatelessWidget {
 class _ReturnStage extends StatelessWidget {
   const _ReturnStage({required this.controller});
 
-  final RentingDemoController controller;
+  final RentingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -1019,7 +1019,7 @@ class _ReturnStage extends StatelessWidget {
 class _ChargeStage extends StatelessWidget {
   const _ChargeStage({required this.controller});
 
-  final RentingDemoController controller;
+  final RentingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -1036,14 +1036,14 @@ class _ChargeStage extends StatelessWidget {
           const SizedBox(height: 14),
           _PriceRow(
             label: 'Unlock fee',
-            value: _money(RentingDemoController.unlockFee),
+            value: _money(RentingController.unlockFee),
           ),
           const SizedBox(height: 10),
           _PriceRow(
             label:
                 '${controller.chargedMinutes} started minute${controller.chargedMinutes == 1 ? '' : 's'}',
             value: _money(
-              controller.chargedMinutes * RentingDemoController.perMinuteRate,
+              controller.chargedMinutes * RentingController.perMinuteRate,
             ),
           ),
           const Divider(height: 22),
@@ -1076,7 +1076,7 @@ class _ChargeStage extends StatelessWidget {
 class _ReceiptStage extends StatelessWidget {
   const _ReceiptStage({required this.controller});
 
-  final RentingDemoController controller;
+  final RentingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -1518,7 +1518,7 @@ class _PaymentMethodTile extends StatelessWidget {
 
 Future<void> _showPaymentMethods(
   BuildContext context,
-  RentingDemoController controller,
+  RentingController controller,
 ) {
   return showModalBottomSheet<void>(
     context: context,

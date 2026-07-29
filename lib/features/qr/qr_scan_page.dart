@@ -1,4 +1,4 @@
-import 'package:bike_renting_app/features/renting/renting_demo_controller.dart';
+import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_flow_page.dart';
 import 'package:flutter/material.dart';
 
@@ -10,7 +10,7 @@ class QrScanPage extends StatelessWidget {
     this.onRequestExit,
   });
 
-  final RentingDemoController? controller;
+  final RentingController? controller;
   final ValueChanged<bool>? onFlowLockChanged;
   final VoidCallback? onRequestExit;
 
