@@ -13,20 +13,22 @@ class BikeBottomNavBar extends StatelessWidget {
 
   static const _items = [
     _NavItem('Home', Icons.home_rounded),
-    _NavItem('Bikes', Icons.directions_bike_rounded),
-    _NavItem('Scan', Icons.qr_code_scanner_rounded),
     _NavItem('Stations', Icons.map_rounded),
-    _NavItem('User', Icons.person_rounded),
+    _NavItem('Scan', Icons.qr_code_scanner_rounded),
+    _NavItem('History', Icons.history_rounded),
+    _NavItem('Profile', Icons.person_rounded),
   ];
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
+    final textScale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+    final accessibilityExtra = (textScale - 1) * 20;
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SizedBox(
-      height: 96 + bottomInset,
+      height: 96 + accessibilityExtra + bottomInset,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -35,7 +37,7 @@ class BikeBottomNavBar extends StatelessWidget {
             right: 16,
             bottom: 10 + bottomInset,
             child: Container(
-              height: 70,
+              height: 70 + accessibilityExtra,
               decoration: BoxDecoration(
                 color: scheme.surface,
                 borderRadius: BorderRadius.circular(8),
@@ -57,7 +59,7 @@ class BikeBottomNavBar extends StatelessWidget {
             right: 18,
             bottom: 12 + bottomInset,
             child: SizedBox(
-              height: 66,
+              height: 66 + accessibilityExtra,
               child: Row(
                 children: [
                   Expanded(
@@ -125,6 +127,8 @@ class _NavTab extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final duration = motionDuration(context, 180);
+    final textScale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+    final accessibilityExtra = (textScale - 1) * 20;
     final foreground = selected
         ? scheme.primary
         : scheme.onSurface.withValues(alpha: 0.62);
@@ -144,8 +148,8 @@ class _NavTab extends StatelessWidget {
             child: AnimatedContainer(
               duration: duration,
               curve: Curves.easeOutCubic,
-              height: 54,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              height: 54 + accessibilityExtra,
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
               decoration: BoxDecoration(
                 color: selected
                     ? scheme.primary.withValues(alpha: 0.10)
@@ -160,9 +164,12 @@ class _NavTab extends StatelessWidget {
                   Text(
                     item.label,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    textAlign: TextAlign.center,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: foreground,
+                      fontSize: 10.5,
+                      height: 1.05,
                       fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                     ),
                   ),

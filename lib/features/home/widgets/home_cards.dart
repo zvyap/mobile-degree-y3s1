@@ -1,118 +1,105 @@
-import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
 
-class MetricCard extends StatelessWidget {
-  const MetricCard({
-    super.key,
-    required this.title,
-    required this.value,
-    required this.caption,
-    required this.icon,
-  });
-
-  final String title;
-  final String value;
-  final String caption;
-  final IconData icon;
+class NetworkSummary extends StatelessWidget {
+  const NetworkSummary({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return SurfacePanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              IconTile(icon: icon, color: scheme.primary),
-              const Spacer(),
-              Icon(
-                Icons.trending_up_rounded,
-                color: scheme.secondary,
-                size: 20,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Live network',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.symmetric(
+              horizontal: BorderSide(
+                color: scheme.outline.withValues(alpha: 0.76),
               ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text(
-            value,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
+          child: const IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _NetworkMetric(
+                    value: '128',
+                    label: 'Bikes',
+                    icon: Icons.directions_bike_rounded,
+                  ),
+                ),
+                VerticalDivider(width: 1),
+                Expanded(
+                  child: _NetworkMetric(
+                    value: '73',
+                    label: 'Open docks',
+                    icon: Icons.local_parking_rounded,
+                  ),
+                ),
+                VerticalDivider(width: 1),
+                Expanded(
+                  child: _NetworkMetric(
+                    value: '9',
+                    label: 'Stations',
+                    icon: Icons.map_rounded,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            caption,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.64),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class ModuleCard extends StatelessWidget {
-  const ModuleCard({
-    super.key,
-    required this.title,
-    required this.caption,
+class _NetworkMetric extends StatelessWidget {
+  const _NetworkMetric({
+    required this.value,
+    required this.label,
     required this.icon,
-    required this.accent,
   });
 
-  final String title;
-  final String caption;
+  final String value;
+  final String label;
   final IconData icon;
-  final Color accent;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return SurfacePanel(
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          IconTile(icon: icon, color: accent),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  caption,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.64),
-                  ),
-                ),
-              ],
+          Icon(icon, size: 18, color: scheme.primary),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            softWrap: true,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.66),
+              fontWeight: FontWeight.w700,
+              height: 1.15,
             ),
           ),
         ],

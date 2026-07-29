@@ -5,7 +5,7 @@ class SurfacePanel extends StatelessWidget {
   const SurfacePanel({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(14),
+    this.padding = const EdgeInsets.all(12),
   });
 
   final Widget child;
@@ -18,19 +18,18 @@ class SurfacePanel extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 96),
       padding: padding,
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: scheme.outline.withValues(alpha: isDark ? 0.54 : 0.86),
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.06),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -127,10 +126,16 @@ class ResponsiveWrap extends StatelessWidget {
 }
 
 class SectionHeader extends StatelessWidget {
-  const SectionHeader({super.key, required this.title, required this.subtitle});
+  const SectionHeader({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    this.compact = false,
+  });
 
   final String title;
   final String subtitle;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -142,18 +147,21 @@ class SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
+          style:
+              (compact
+                      ? theme.textTheme.titleMedium
+                      : theme.textTheme.titleLarge)
+                  ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: 0),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: scheme.onSurface.withValues(alpha: 0.68),
+        if (!compact) ...[
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.68),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
