@@ -19,6 +19,7 @@ CLAUDE.md
 .codex/
 .cursor/
 .windsurf/
+skills-lock.json
 
 # IntelliJ related
 *.iml
