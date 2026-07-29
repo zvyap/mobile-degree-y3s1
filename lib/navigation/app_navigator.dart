@@ -4,6 +4,7 @@ import 'package:bike_renting_app/features/home/home_page.dart';
 import 'package:bike_renting_app/features/qr/qr_scan_page.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/settings/settings_page.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
@@ -44,7 +45,7 @@ class AppNavigator extends StatelessWidget {
           transitionDuration: duration,
           reverseTransitionDuration: duration,
           pageBuilder: (context, animation, secondaryAnimation) =>
-              _buildPage(page),
+              _buildPage(context, page),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final curved = CurvedAnimation(
               parent: animation,
@@ -68,27 +69,28 @@ class AppNavigator extends StatelessWidget {
     );
   }
 
-  Widget _buildPage(AppPage page) {
+  Widget _buildPage(BuildContext context, AppPage page) {
+    final l10n = context.l10n;
     return switch (page) {
       AppPage.home => HomePage(onNavigate: onSelectRootPage),
-      AppPage.stations => const FeaturePlaceholderPage(
-        title: 'Stations',
-        subtitle: 'Dock capacity, nearby stations, and return points.',
-        accent: Color(0xFFF59E0B),
+      AppPage.stations => FeaturePlaceholderPage(
+        title: l10n.stations,
+        subtitle: l10n.stationsDescription,
+        accent: const Color(0xFFF59E0B),
       ),
       AppPage.scan => QrScanPage(
         controller: rentingController,
         onRequestExit: () => onSelectRootPage(AppPage.home),
       ),
-      AppPage.history => const FeaturePlaceholderPage(
-        title: 'Ride history',
-        subtitle: 'Review past rides, fares, and return stations.',
-        accent: Color(0xFF0369A1),
+      AppPage.history => FeaturePlaceholderPage(
+        title: l10n.rideHistory,
+        subtitle: l10n.rideHistoryDescription,
+        accent: const Color(0xFF0369A1),
       ),
-      AppPage.profile => const FeaturePlaceholderPage(
-        title: 'Profile',
-        subtitle: 'Profile, wallet, permissions, and ride history.',
-        accent: Color(0xFF7C3AED),
+      AppPage.profile => FeaturePlaceholderPage(
+        title: l10n.profile,
+        subtitle: l10n.profileDescription,
+        accent: const Color(0xFF7C3AED),
       ),
       AppPage.admin => AdminManagementPage(
         onNavigate: onSelectRootPage,

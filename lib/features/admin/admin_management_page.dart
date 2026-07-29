@@ -1,3 +1,4 @@
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:flutter/material.dart';
 
@@ -21,14 +22,14 @@ class AdminManagementPage extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         Text(
-          'Admin management',
+          context.l10n.adminManagement,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Manage stations, bikes, and users.',
+          context.l10n.adminDescription,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.68),
           ),
@@ -37,22 +38,22 @@ class AdminManagementPage extends StatelessWidget {
         _AdminDestination(
           actionKey: 'admin-stations',
           icon: Icons.map_rounded,
-          title: 'Station management',
-          subtitle: 'Stations, dock capacity, and return points',
+          title: context.l10n.stationManagement,
+          subtitle: context.l10n.stationManagementDescription,
           onTap: () => onNavigate(AppPage.stations),
         ),
         _AdminDestination(
           actionKey: 'admin-bikes',
           icon: Icons.directions_bike_rounded,
-          title: 'Bike management',
-          subtitle: 'Fleet health, battery status, and maintenance',
+          title: context.l10n.bikeManagement,
+          subtitle: context.l10n.bikeManagementDescription,
           onTap: onOpenBikeManagement,
         ),
         _AdminDestination(
           actionKey: 'admin-users',
           icon: Icons.manage_accounts_rounded,
-          title: 'User management',
-          subtitle: 'User profile, wallet, permissions, and ride history',
+          title: context.l10n.userManagement,
+          subtitle: context.l10n.userManagementDescription,
           onTap: () => onNavigate(AppPage.profile),
         ),
       ],

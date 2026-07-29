@@ -12,54 +12,24 @@ class RentingController extends ChangeNotifier {
   static const holdAmount = 20.00;
 
   // TODO: Load bike details from the bike service after QR validation.
-  final bike = const RentalBike(
-    id: 'BIKE-C042',
-    batteryPercent: 86,
-    location: 'Central Station',
-  );
+  final bike = const RentalBike(id: 'BIKE-C042', batteryPercent: 86);
 
   // TODO: Load nearby return stations and live dock counts from the station
   // service using the rider's current location.
   final stations = const [
-    ReturnStation(
-      id: 'central',
-      name: 'Central Station',
-      distanceMeters: 120,
-      availableDocks: 8,
-    ),
-    ReturnStation(
-      id: 'riverside',
-      name: 'Riverside Park',
-      distanceMeters: 260,
-      availableDocks: 0,
-    ),
-    ReturnStation(
-      id: 'market',
-      name: 'Market Square',
-      distanceMeters: 430,
-      availableDocks: 5,
-    ),
-    ReturnStation(
-      id: 'university',
-      name: 'University Gate',
-      distanceMeters: 610,
-      availableDocks: 3,
-    ),
+    ReturnStation(id: 'central', distanceMeters: 120, availableDocks: 8),
+    ReturnStation(id: 'riverside', distanceMeters: 260, availableDocks: 0),
+    ReturnStation(id: 'market', distanceMeters: 430, availableDocks: 5),
+    ReturnStation(id: 'university', distanceMeters: 610, availableDocks: 3),
   ];
 
   // TODO: Load saved payment methods from the authenticated user's wallet.
   final paymentMethods = const [
-    RentalPaymentMethod(
-      id: 'visa-4242',
-      brand: 'Visa',
-      lastFour: '4242',
-      label: 'Personal card',
-    ),
+    RentalPaymentMethod(id: 'visa-4242', brand: 'Visa', lastFour: '4242'),
     RentalPaymentMethod(
       id: 'mastercard-4444',
       brand: 'Mastercard',
       lastFour: '4444',
-      label: 'Travel card',
     ),
   ];
 
@@ -72,7 +42,8 @@ class RentingController extends ChangeNotifier {
   RentalPaymentMethod? selectedPaymentMethod;
   ReturnStation? selectedStation;
   RentalReceipt? receipt;
-  String? errorMessage;
+  RentalError? error;
+  ReturnStation? errorStation;
   bool isBusy = false;
   bool gpsAvailable = true;
   bool isAtStation = false;
@@ -101,23 +72,15 @@ class RentingController extends ChangeNotifier {
 
   double get releasedHold => math.max(0, holdAmount - estimatedFare);
 
-  String get formattedElapsed {
-    final minutes = metrics.elapsedSeconds ~/ 60;
-    final seconds = metrics.elapsedSeconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
   void scanBike({bool invalid = false, bool unavailable = false}) {
-    errorMessage = null;
+    _clearError();
     if (invalid) {
-      errorMessage =
-          'This QR code is not a BikeRent bike. Scan the code on the bike frame.';
+      error = RentalError.invalidQr;
       notifyListeners();
       return;
     }
     if (unavailable) {
-      errorMessage =
-          'Bike BIKE-C042 is already reserved. Choose another bike and scan again.';
+      error = RentalError.bikeReserved;
       notifyListeners();
       return;
     }
@@ -133,14 +96,14 @@ class RentingController extends ChangeNotifier {
   }
 
   void reviewAuthorization() {
-    errorMessage = null;
+    _clearError();
     stage = RentalStage.authorizing;
     notifyListeners();
   }
 
   void backToBikeCheck() {
     if (isBusy) return;
-    errorMessage = null;
+    _clearError();
     stage = RentalStage.bikeCheck;
     notifyListeners();
   }
@@ -176,8 +139,7 @@ class RentingController extends ChangeNotifier {
     await _operationDelay();
     if (fail) {
       isBusy = false;
-      errorMessage =
-          'The RM20.00 hold was declined. Try another card or retry.';
+      error = RentalError.holdDeclined;
       notifyListeners();
       return;
     }
@@ -187,7 +149,7 @@ class RentingController extends ChangeNotifier {
       status: PaymentStatus.authorized,
     );
     isBusy = false;
-    errorMessage = null;
+    _clearError();
     stage = RentalStage.unlocking;
     notifyListeners();
   }
@@ -198,14 +160,13 @@ class RentingController extends ChangeNotifier {
     await _operationDelay();
     if (fail) {
       isBusy = false;
-      errorMessage =
-          'The lock did not respond. Stand near the bike and try again.';
+      error = RentalError.lockFailed;
       notifyListeners();
       return;
     }
 
     isBusy = false;
-    errorMessage = null;
+    _clearError();
     stage = RentalStage.riding;
     _startClock();
     notifyListeners();
@@ -228,62 +189,63 @@ class RentingController extends ChangeNotifier {
 
   void setGpsAvailable(bool value) {
     gpsAvailable = value;
-    errorMessage = value
-        ? null
-        : 'GPS signal lost. Move to an open area and check location access.';
+    if (value) {
+      _clearError();
+    } else {
+      error = RentalError.gpsLost;
+    }
     notifyListeners();
   }
 
   void findReturnStation() {
-    errorMessage = null;
+    _clearError();
     stage = RentalStage.selectingReturn;
     notifyListeners();
   }
 
   void resumeRide() {
-    errorMessage = null;
+    _clearError();
     stage = RentalStage.riding;
     notifyListeners();
   }
 
   void selectStation(ReturnStation station) {
     if (station.availableDocks == 0) {
-      errorMessage =
-          '${station.name} has no free docks. Choose another station.';
+      error = RentalError.stationFull;
+      errorStation = station;
       notifyListeners();
       return;
     }
     selectedStation = station;
     isAtStation = false;
-    errorMessage = null;
+    _clearError();
     notifyListeners();
   }
 
   void confirmArrival() {
     // TODO: Replace this manual confirmation with station geofence data.
     if (selectedStation == null) {
-      errorMessage = 'Choose a return station first.';
+      error = RentalError.chooseStation;
     } else {
       isAtStation = true;
-      errorMessage = null;
+      _clearError();
     }
     notifyListeners();
   }
 
   void beginReturn() {
     if (selectedStation == null) {
-      errorMessage = 'Choose a return station first.';
+      error = RentalError.chooseStation;
       notifyListeners();
       return;
     }
     if (!isAtStation) {
-      errorMessage =
-          'Move within 50 m of the selected station before returning the bike.';
+      error = RentalError.outsideReturnZone;
       notifyListeners();
       return;
     }
 
-    errorMessage = null;
+    _clearError();
     stage = RentalStage.returning;
     notifyListeners();
   }
@@ -294,15 +256,14 @@ class RentingController extends ChangeNotifier {
     await _operationDelay();
     if (fail) {
       isBusy = false;
-      errorMessage =
-          'Dock not detected. Push the bike firmly into the dock and retry.';
+      error = RentalError.dockNotDetected;
       notifyListeners();
       return;
     }
 
     _stopClock();
     isBusy = false;
-    errorMessage = null;
+    _clearError();
     stage = RentalStage.charging;
     notifyListeners();
   }
@@ -312,7 +273,7 @@ class RentingController extends ChangeNotifier {
     _beginBusy();
     await _operationDelay();
     isBusy = false;
-    errorMessage = null;
+    _clearError();
     // TODO: Use the ride ID and payment result returned by the renting service.
     receipt = RentalReceipt(
       rideId: 'RIDE-2407-C042',
@@ -347,7 +308,7 @@ class RentingController extends ChangeNotifier {
     selectedPaymentMethod = null;
     selectedStation = null;
     receipt = null;
-    errorMessage = null;
+    _clearError();
     isBusy = false;
     gpsAvailable = true;
     isAtStation = false;
@@ -356,8 +317,13 @@ class RentingController extends ChangeNotifier {
 
   void _beginBusy() {
     isBusy = true;
-    errorMessage = null;
+    _clearError();
     notifyListeners();
+  }
+
+  void _clearError() {
+    error = null;
+    errorStation = null;
   }
 
   Future<void> _operationDelay() {

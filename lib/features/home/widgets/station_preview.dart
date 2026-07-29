@@ -1,3 +1,4 @@
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class StationPreview extends StatelessWidget {
@@ -19,7 +20,7 @@ class StationPreview extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'Near you',
+                context.l10n.nearYou,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -28,24 +29,24 @@ class StationPreview extends StatelessWidget {
             TextButton(
               key: const ValueKey<String>('home-view-stations'),
               onPressed: onViewAll,
-              child: const Text('View all'),
+              child: Text(context.l10n.viewAll),
             ),
           ],
         ),
         Divider(height: 1, color: scheme.outline.withValues(alpha: 0.76)),
-        const StationRow(
-          name: 'Library Station',
-          distance: '240 m away',
-          bikes: '18 bikes',
-          docks: '7 docks',
+        StationRow(
+          name: context.l10n.libraryStation,
+          distance: context.l10n.stationDistance(240),
+          bikes: context.l10n.bikeCount(18),
+          docks: context.l10n.dockCount(7),
           availability: 0.72,
         ),
         Divider(height: 1, color: scheme.outline.withValues(alpha: 0.58)),
-        const StationRow(
-          name: 'Main Gate',
-          distance: '410 m away',
-          bikes: '9 bikes',
-          docks: '12 docks',
+        StationRow(
+          name: context.l10n.mainGate,
+          distance: context.l10n.stationDistance(410),
+          bikes: context.l10n.bikeCount(9),
+          docks: context.l10n.dockCount(12),
           availability: 0.45,
         ),
       ],

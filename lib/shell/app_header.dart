@@ -1,3 +1,4 @@
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:flutter/material.dart';
 
@@ -31,7 +32,7 @@ class AppHeader extends StatelessWidget {
           if (showBackButton)
             IconButton(
               key: const ValueKey<String>('top-back'),
-              tooltip: 'Back',
+              tooltip: context.l10n.back,
               onPressed: onBack,
               icon: const Icon(Icons.arrow_back_rounded),
             ),
@@ -51,7 +52,7 @@ class AppHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  page.title,
+                  page.title(context.l10n),
                   key: const ValueKey<String>('top-page-title'),
                   maxLines: 2,
                   softWrap: true,
@@ -62,7 +63,7 @@ class AppHeader extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'BikeRent',
+                  context.l10n.appName,
                   softWrap: true,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.68),
@@ -74,13 +75,13 @@ class AppHeader extends StatelessWidget {
           if (showAdminButton)
             IconButton(
               key: const ValueKey<String>('top-admin'),
-              tooltip: 'Admin management',
+              tooltip: context.l10n.adminManagement,
               onPressed: onOpenAdmin,
               icon: const Icon(Icons.admin_panel_settings_rounded),
             ),
           IconButton(
             key: const ValueKey<String>('top-settings'),
-            tooltip: 'Settings',
+            tooltip: context.l10n.settings,
             onPressed: onOpenSettings,
             icon: const Icon(Icons.settings_rounded),
           ),

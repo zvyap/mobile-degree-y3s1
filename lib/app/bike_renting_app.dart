@@ -1,3 +1,5 @@
+import 'package:bike_renting_app/l10n/app_localizations.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/shell/bike_shell.dart';
 import 'package:bike_renting_app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +26,9 @@ class _BikeRentingAppState extends State<BikeRentingApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'BikeRent',
+      onGenerateTitle: (context) => context.l10n.appName,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       themeMode: _themeMode,
       theme: AppTheme.build(Brightness.light),
       darkTheme: AppTheme.build(Brightness.dark),

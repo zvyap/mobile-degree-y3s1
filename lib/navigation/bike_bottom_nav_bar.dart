@@ -1,3 +1,4 @@
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:flutter/material.dart';
@@ -125,17 +126,18 @@ class _NavTab extends StatelessWidget {
     final foreground = selected
         ? scheme.primary
         : scheme.onSurface.withValues(alpha: 0.62);
+    final label = page.navigationLabel(context.l10n);
 
     return Semantics(
       selected: selected,
       button: true,
-      label: page.navigationLabel,
+      label: label,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            key: ValueKey<String>('nav-${page.navigationLabel!.toLowerCase()}'),
+            key: ValueKey<String>('nav-${page.name}'),
             onTap: onTap,
             borderRadius: BorderRadius.circular(8),
             child: AnimatedContainer(
@@ -155,7 +157,7 @@ class _NavTab extends StatelessWidget {
                   Icon(page.icon, color: foreground, size: 22),
                   const SizedBox(height: 3),
                   Text(
-                    page.navigationLabel!,
+                    label,
                     maxLines: 1,
                     softWrap: false,
                     textAlign: TextAlign.center,
@@ -195,7 +197,7 @@ class _CenterNavButton extends StatelessWidget {
     return Semantics(
       selected: selected,
       button: true,
-      label: 'Scan QR code',
+      label: context.l10n.scanQrCode,
       child: AnimatedScale(
         scale: selected ? 1.05 : 1,
         duration: duration,

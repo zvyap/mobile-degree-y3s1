@@ -1,5 +1,8 @@
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
+import 'package:bike_renting_app/l10n/app_formats.dart';
+import 'package:bike_renting_app/l10n/app_localizations.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
@@ -138,6 +141,12 @@ class _JourneyHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final step = _journeyStep(controller.stage);
+    final labels = [
+      context.l10n.scanStep,
+      context.l10n.rideStep,
+      context.l10n.returnStep,
+      context.l10n.payStep,
+    ];
 
     return Padding(
       key: const ValueKey<String>('rent-journey'),
@@ -147,7 +156,7 @@ class _JourneyHeader extends StatelessWidget {
           for (var index = 0; index < 4; index++) ...[
             Expanded(
               child: _RouteNode(
-                label: const ['Scan', 'Ride', 'Return', 'Pay'][index],
+                label: labels[index],
                 icon: const [
                   Icons.qr_code_scanner_rounded,
                   Icons.directions_bike_rounded,
@@ -207,7 +216,7 @@ class _RouteNode extends StatelessWidget {
         : scheme.onSurface.withValues(alpha: 0.45);
 
     return Semantics(
-      label: '$label step',
+      label: context.l10n.stepSemantics(label),
       selected: active,
       child: Column(
         children: [
@@ -260,7 +269,7 @@ class _ScanStage extends StatelessWidget {
           aspectRatio: 0.82,
           child: Semantics(
             button: true,
-            label: 'Camera preview. Tap to scan the bike QR code.',
+            label: context.l10n.cameraPreviewSemantics,
             child: GestureDetector(
               key: const ValueKey<String>('rent-camera-preview'),
               behavior: HitTestBehavior.opaque,
@@ -292,18 +301,18 @@ class _ScanStage extends StatelessWidget {
                           color: Colors.black.withValues(alpha: 0.46),
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.camera_alt_rounded,
                               color: Colors.white,
                               size: 17,
                             ),
-                            SizedBox(width: 6),
+                            const SizedBox(width: 6),
                             Text(
-                              'Camera ready',
-                              style: TextStyle(
+                              context.l10n.cameraReady,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -340,7 +349,7 @@ class _ScanStage extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(20),
                         child: Text(
-                          'Point the camera at the QR code on the bike frame',
+                          context.l10n.pointCamera,
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: Colors.white,
@@ -355,13 +364,13 @@ class _ScanStage extends StatelessWidget {
             ),
           ),
         ),
-        if (controller.errorMessage != null) ...[
+        if (controller.error != null) ...[
           const SizedBox(height: 10),
-          _ErrorPanel(message: controller.errorMessage!),
+          _ErrorPanel(message: _rentalError(context, controller)),
         ],
         const SizedBox(height: 8),
         Text(
-          'Scan the QR code on the bike frame to start your session',
+          context.l10n.scanInstructions,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall?.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.64),
@@ -390,11 +399,10 @@ class _BikeCheckStage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _StageTitle(
+              _StageTitle(
                 icon: Icons.verified_rounded,
-                title: 'Bike ready',
-                subtitle:
-                    'Check the bike and fare before placing the card hold.',
+                title: context.l10n.bikeReady,
+                subtitle: context.l10n.bikeReadyDescription,
               ),
               const SizedBox(height: 12),
               Container(
@@ -423,7 +431,13 @@ class _BikeCheckStage extends StatelessWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            '${controller.bike.batteryPercent}% battery · ${controller.bike.location}',
+                            context.l10n.bikeBatteryLocation(
+                              controller.bike.batteryPercent,
+                              _stationName(
+                                context.l10n,
+                                controller.stations[0],
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -432,15 +446,15 @@ class _BikeCheckStage extends StatelessWidget {
                       key: const ValueKey<String>('rent-bike-view'),
                       style: _secondaryTextButtonStyle(context),
                       onPressed: () {},
-                      child: const Text('View'),
+                      child: Text(context.l10n.view),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
-              const _CheckRow(label: 'Brakes and tyres look safe'),
-              const _CheckRow(label: 'Seat and frame have no visible damage'),
-              const _CheckRow(label: 'Front and rear lights are working'),
+              _CheckRow(label: context.l10n.brakesSafe),
+              _CheckRow(label: context.l10n.frameSafe),
+              _CheckRow(label: context.l10n.lightsSafe),
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.center,
@@ -449,7 +463,7 @@ class _BikeCheckStage extends StatelessWidget {
                   style: _dangerTextButtonStyle(context),
                   onPressed: () {},
                   icon: const Icon(Icons.report_problem_outlined),
-                  label: const Text('Report bike issue'),
+                  label: Text(context.l10n.reportBikeIssue),
                 ),
               ),
               const SizedBox(height: 12),
@@ -460,13 +474,15 @@ class _BikeCheckStage extends StatelessWidget {
                 trailing: TextButton(
                   style: _secondaryTextButtonStyle(context),
                   onPressed: () => _showPaymentMethods(context, controller),
-                  child: const Text('Change'),
+                  child: Text(context.l10n.change),
                 ),
               ),
               const SizedBox(height: 18),
               _ActionButton(
                 key: const ValueKey('rent-review-hold'),
-                label: 'Review RM20.00 hold',
+                label: context.l10n.reviewHold(
+                  context.formats.currency(RentingController.holdAmount),
+                ),
                 icon: Icons.credit_card_rounded,
                 onPressed: controller.reviewAuthorization,
               ),
@@ -477,7 +493,7 @@ class _BikeCheckStage extends StatelessWidget {
                   style: _secondaryTextButtonStyle(context),
                   onPressed: controller.reset,
                   icon: const Icon(Icons.close_rounded),
-                  label: const Text('Cancel rental'),
+                  label: Text(context.l10n.cancelRental),
                 ),
               ),
             ],
@@ -485,7 +501,7 @@ class _BikeCheckStage extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'The hold is not a charge. Unused funds are released after return.',
+          context.l10n.holdExplanation,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
@@ -507,36 +523,38 @@ class _AuthorizationStage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _StageTitle(
+          _StageTitle(
             icon: Icons.lock_clock_rounded,
-            title: 'Authorize card hold',
-            subtitle: 'Reserve funds before the bike unlocks.',
+            title: context.l10n.authorizeCardHold,
+            subtitle: context.l10n.authorizeCardHoldDescription,
           ),
           const SizedBox(height: 14),
           Center(
             child: Column(
               children: [
                 Text(
-                  'RM20.00',
+                  context.formats.currency(RentingController.holdAmount),
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
                     color: scheme.primary,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const Text('Temporary authorization hold'),
+                Text(context.l10n.temporaryAuthorizationHold),
               ],
             ),
           ),
           const SizedBox(height: 14),
           _PaymentMethodTile(method: controller.selectedPaymentMethod!),
-          if (controller.errorMessage != null) ...[
+          if (controller.error != null) ...[
             const SizedBox(height: 16),
-            _ErrorPanel(message: controller.errorMessage!),
+            _ErrorPanel(message: _rentalError(context, controller)),
           ],
           const SizedBox(height: 14),
           _ActionButton(
             key: const ValueKey('rent-authorize'),
-            label: 'Authorize RM20.00 hold',
+            label: context.l10n.authorizeHold(
+              context.formats.currency(RentingController.holdAmount),
+            ),
             icon: Icons.verified_user_rounded,
             busy: controller.isBusy,
             onPressed: () => controller.authorizeHold(),
@@ -553,14 +571,14 @@ class _AuthorizationStage extends StatelessWidget {
                       ? null
                       : controller.backToBikeCheck,
                   icon: const Icon(Icons.arrow_back_rounded),
-                  label: const Text('Back'),
+                  label: Text(context.l10n.back),
                 ),
                 TextButton.icon(
                   key: const ValueKey('rent-cancel'),
                   style: _secondaryTextButtonStyle(context),
                   onPressed: controller.isBusy ? null : controller.reset,
                   icon: const Icon(Icons.close_rounded),
-                  label: const Text('Cancel rental'),
+                  label: Text(context.l10n.cancelRental),
                 ),
               ],
             ),
@@ -584,10 +602,10 @@ class _UnlockStage extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          const _StageTitle(
+          _StageTitle(
             icon: Icons.lock_open_rounded,
-            title: 'Unlock the bike',
-            subtitle: 'Stay beside BIKE-C042 while the rear lock opens.',
+            title: context.l10n.unlockBikeTitle,
+            subtitle: context.l10n.unlockBikeDescription(controller.bike.id),
           ),
           const SizedBox(height: 18),
           AnimatedContainer(
@@ -616,20 +634,20 @@ class _UnlockStage extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             controller.isBusy
-                ? 'Contacting bike lock…'
-                : 'Card hold authorized',
+                ? context.l10n.contactingBikeLock
+                : context.l10n.cardHoldAuthorized,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
-          if (controller.errorMessage != null) ...[
+          if (controller.error != null) ...[
             const SizedBox(height: 18),
-            _ErrorPanel(message: controller.errorMessage!),
+            _ErrorPanel(message: _rentalError(context, controller)),
           ],
           const SizedBox(height: 16),
           _ActionButton(
             key: const ValueKey('rent-unlock'),
-            label: 'Unlock bike',
+            label: context.l10n.unlockBike,
             icon: Icons.play_arrow_rounded,
             busy: controller.isBusy,
             onPressed: () => controller.unlockBike(),
@@ -640,7 +658,7 @@ class _UnlockStage extends StatelessWidget {
             style: _secondaryTextButtonStyle(context),
             onPressed: controller.isBusy ? null : controller.reset,
             icon: const Icon(Icons.close_rounded),
-            label: const Text('Cancel rental'),
+            label: Text(context.l10n.cancelRental),
           ),
         ],
       ),
@@ -676,13 +694,14 @@ class _RideStage extends StatelessWidget {
                   Expanded(
                     child: _StageTitle(
                       icon: Icons.navigation_rounded,
-                      title: 'Ride active',
-                      subtitle:
-                          'GPS tracks your position along the city route.',
+                      title: context.l10n.rideActive,
+                      subtitle: context.l10n.rideActiveDescription,
                     ),
                   ),
                   _StatusPill(
-                    label: controller.gpsAvailable ? 'GPS active' : 'GPS lost',
+                    label: controller.gpsAvailable
+                        ? context.l10n.gpsActive
+                        : context.l10n.gpsLost,
                     icon: controller.gpsAvailable
                         ? Icons.gps_fixed_rounded
                         : Icons.gps_off_rounded,
@@ -701,11 +720,11 @@ class _RideStage extends StatelessWidget {
                 selectedStation: null,
                 atStation: false,
               ),
-              if (controller.errorMessage != null) ...[
+              if (controller.error != null) ...[
                 const SizedBox(height: 10),
                 _ErrorPanel(
-                  message: controller.errorMessage!,
-                  actionLabel: 'Restore GPS',
+                  message: _rentalError(context, controller),
+                  actionLabel: context.l10n.restoreGps,
                   onAction: () => controller.setGpsAvailable(true),
                 ),
               ],
@@ -713,24 +732,27 @@ class _RideStage extends StatelessWidget {
               _MetricGrid(
                 children: [
                   _MetricValue(
-                    label: 'Time',
-                    value: controller.formattedElapsed,
+                    label: context.l10n.time,
+                    value: context.formats.duration(
+                      controller.metrics.elapsedSeconds,
+                    ),
                   ),
                   _MetricValue(
-                    label: 'Distance',
-                    value:
-                        '${controller.metrics.distanceKm.toStringAsFixed(2)} km',
+                    label: context.l10n.distance,
+                    value: context.l10n.distanceKm(
+                      context.formats.decimal(controller.metrics.distanceKm),
+                    ),
                   ),
                   _MetricValue(
-                    label: 'Estimated',
-                    value: _money(controller.estimatedFare),
+                    label: context.l10n.estimated,
+                    value: context.formats.currency(controller.estimatedFare),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
               _ActionButton(
                 key: const ValueKey('rent-find-station'),
-                label: 'Return Bike',
+                label: context.l10n.returnBike,
                 icon: Icons.assignment_return_rounded,
                 onPressed: controller.findReturnStation,
               ),
@@ -742,7 +764,7 @@ class _RideStage extends StatelessWidget {
                   style: _dangerTextButtonStyle(context),
                   onPressed: () {},
                   icon: const Icon(Icons.report_problem_outlined),
-                  label: const Text('Report bike issue'),
+                  label: Text(context.l10n.reportBikeIssue),
                 ),
               ),
             ],
@@ -766,13 +788,13 @@ class _RideStage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Nearest return station',
+                      context.l10n.nearestReturnStation,
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.68),
                       ),
                     ),
                     Text(
-                      nearestStation.name,
+                      _stationName(context.l10n, nearestStation),
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -781,7 +803,7 @@ class _RideStage extends StatelessWidget {
                 ),
               ),
               Text(
-                '${nearestStation.distanceMeters} m away',
+                context.l10n.stationDistance(nearestStation.distanceMeters),
                 style: theme.textTheme.labelLarge?.copyWith(
                   color: scheme.secondary,
                   fontWeight: FontWeight.w800,
@@ -794,7 +816,7 @@ class _RideStage extends StatelessWidget {
         Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            'Other nearby stations',
+            context.l10n.otherNearbyStations,
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w800,
             ),
@@ -806,7 +828,7 @@ class _RideStage extends StatelessWidget {
           const SizedBox(height: 6),
         ],
         Text(
-          'Stop safely before using the phone or choosing a station.',
+          context.l10n.phoneSafety,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
@@ -847,17 +869,19 @@ class _NearbyStationRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  station.name,
+                  _stationName(context.l10n, station),
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                Text('${station.distanceMeters} m away'),
+                Text(context.l10n.stationDistance(station.distanceMeters)),
               ],
             ),
           ),
           Text(
-            available ? '${station.availableDocks} docks' : 'Full',
+            available
+                ? context.l10n.dockCount(station.availableDocks)
+                : context.l10n.full,
             style: theme.textTheme.labelMedium?.copyWith(
               color: statusColor,
               fontWeight: FontWeight.w800,
@@ -885,16 +909,16 @@ class _StationStage extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                tooltip: 'Continue ride',
+                tooltip: context.l10n.continueRide,
                 onPressed: controller.resumeRide,
                 icon: const Icon(Icons.arrow_back_rounded),
               ),
               const SizedBox(width: 4),
-              const Expanded(
+              Expanded(
                 child: _StageTitle(
                   icon: Icons.location_on_rounded,
-                  title: 'Choose return station',
-                  subtitle: 'A free dock is required to finish the ride.',
+                  title: context.l10n.chooseReturnStation,
+                  subtitle: context.l10n.chooseReturnStationDescription,
                 ),
               ),
             ],
@@ -916,9 +940,9 @@ class _StationStage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          if (controller.errorMessage != null) ...[
+          if (controller.error != null) ...[
             const SizedBox(height: 4),
-            _ErrorPanel(message: controller.errorMessage!),
+            _ErrorPanel(message: _rentalError(context, controller)),
           ],
           if (controller.selectedStation != null) ...[
             const SizedBox(height: 12),
@@ -932,8 +956,8 @@ class _StationStage extends StatelessWidget {
               ),
               label: Text(
                 controller.isAtStation
-                    ? 'Within return zone'
-                    : 'Confirm arrival',
+                    ? context.l10n.withinReturnZone
+                    : context.l10n.confirmArrival,
               ),
               style: controller.isAtStation
                   ? OutlinedButton.styleFrom(foregroundColor: scheme.secondary)
@@ -943,7 +967,7 @@ class _StationStage extends StatelessWidget {
           const SizedBox(height: 12),
           _ActionButton(
             key: const ValueKey('rent-begin-return'),
-            label: 'Continue to dock',
+            label: context.l10n.continueToDock,
             icon: Icons.keyboard_double_arrow_down_rounded,
             onPressed: controller.beginReturn,
           ),
@@ -966,10 +990,10 @@ class _ReturnStage extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          const _StageTitle(
+          _StageTitle(
             icon: Icons.keyboard_double_arrow_down_rounded,
-            title: 'Secure the bike',
-            subtitle: 'Push the front wheel into an open dock until it locks.',
+            title: context.l10n.secureBike,
+            subtitle: context.l10n.secureBikeDescription,
           ),
           const SizedBox(height: 18),
           Container(
@@ -992,20 +1016,24 @@ class _ReturnStage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            controller.selectedStation!.name,
+            _stationName(context.l10n, controller.selectedStation!),
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w900,
             ),
           ),
-          Text('${controller.selectedStation!.availableDocks} docks available'),
-          if (controller.errorMessage != null) ...[
+          Text(
+            context.l10n.docksAvailable(
+              controller.selectedStation!.availableDocks,
+            ),
+          ),
+          if (controller.error != null) ...[
             const SizedBox(height: 18),
-            _ErrorPanel(message: controller.errorMessage!),
+            _ErrorPanel(message: _rentalError(context, controller)),
           ],
           const SizedBox(height: 16),
           _ActionButton(
             key: const ValueKey('rent-confirm-dock'),
-            label: 'Confirm bike is docked',
+            label: context.l10n.confirmBikeDocked,
             icon: Icons.lock_rounded,
             busy: controller.isBusy,
             onPressed: () => controller.confirmDock(),
@@ -1028,41 +1056,42 @@ class _ChargeStage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _StageTitle(
+          _StageTitle(
             icon: Icons.receipt_long_rounded,
-            title: 'Ride complete',
-            subtitle: 'The bike is secured. Review the final charge.',
+            title: context.l10n.rideComplete,
+            subtitle: context.l10n.rideCompleteDescription,
           ),
           const SizedBox(height: 14),
           _PriceRow(
-            label: 'Unlock fee',
-            value: _money(RentingController.unlockFee),
+            label: context.l10n.unlockFee,
+            value: context.formats.currency(RentingController.unlockFee),
           ),
           const SizedBox(height: 10),
           _PriceRow(
-            label:
-                '${controller.chargedMinutes} started minute${controller.chargedMinutes == 1 ? '' : 's'}',
-            value: _money(
+            label: context.l10n.startedMinutes(controller.chargedMinutes),
+            value: context.formats.currency(
               controller.chargedMinutes * RentingController.perMinuteRate,
             ),
           ),
           const Divider(height: 22),
           _PriceRow(
-            label: 'Final fare',
-            value: _money(controller.estimatedFare),
+            label: context.l10n.finalFare,
+            value: context.formats.currency(controller.estimatedFare),
             strong: true,
           ),
           const SizedBox(height: 10),
           _PriceRow(
-            label: 'Hold released',
-            value: _money(controller.releasedHold),
+            label: context.l10n.holdReleased,
+            value: context.formats.currency(controller.releasedHold),
           ),
           const SizedBox(height: 14),
           _PaymentMethodTile(method: controller.selectedPaymentMethod!),
           const SizedBox(height: 14),
           _ActionButton(
             key: const ValueKey('rent-charge'),
-            label: 'Charge ${_money(controller.estimatedFare)}',
+            label: context.l10n.chargeAmount(
+              context.formats.currency(controller.estimatedFare),
+            ),
             icon: Icons.credit_score_rounded,
             busy: controller.isBusy,
             onPressed: () => controller.capturePayment(),
@@ -1105,7 +1134,7 @@ class _ReceiptStage extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            paid ? 'Ride paid' : 'Ride ended · Payment pending',
+            paid ? context.l10n.ridePaid : context.l10n.paymentPending,
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w900,
@@ -1114,8 +1143,8 @@ class _ReceiptStage extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             paid
-                ? 'The remaining card hold has been released.'
-                : 'The bike is returned safely. Retry the card charge below.',
+                ? context.l10n.holdReleasedDescription
+                : context.l10n.paymentPendingDescription,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -1127,32 +1156,34 @@ class _ReceiptStage extends StatelessWidget {
             ),
             child: Column(
               children: [
-                _PriceRow(label: 'Ride ID', value: receipt.rideId),
+                _PriceRow(label: context.l10n.rideId, value: receipt.rideId),
                 const SizedBox(height: 10),
                 _PriceRow(
-                  label: 'Duration',
-                  value: _formatSeconds(receipt.elapsedSeconds),
+                  label: context.l10n.duration,
+                  value: context.formats.duration(receipt.elapsedSeconds),
                 ),
                 const SizedBox(height: 10),
                 _PriceRow(
-                  label: 'Distance',
-                  value: '${receipt.distanceKm.toStringAsFixed(2)} km',
+                  label: context.l10n.distance,
+                  value: context.l10n.distanceKm(
+                    context.formats.decimal(receipt.distanceKm),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 _PriceRow(
-                  label: 'Returned at',
-                  value: receipt.returnStation.name,
+                  label: context.l10n.returnedAt,
+                  value: _stationName(context.l10n, receipt.returnStation),
                 ),
                 const Divider(height: 28),
                 _PriceRow(
-                  label: 'Final fare',
-                  value: _money(receipt.finalFare),
+                  label: context.l10n.finalFare,
+                  value: context.formats.currency(receipt.finalFare),
                   strong: true,
                 ),
                 const SizedBox(height: 10),
                 _PriceRow(
-                  label: 'Hold released',
-                  value: _money(receipt.releasedHold),
+                  label: context.l10n.holdReleased,
+                  value: context.formats.currency(receipt.releasedHold),
                 ),
               ],
             ),
@@ -1161,7 +1192,7 @@ class _ReceiptStage extends StatelessWidget {
             const SizedBox(height: 18),
             _ActionButton(
               key: const ValueKey('rent-retry-payment'),
-              label: 'Retry payment',
+              label: context.l10n.retryPayment,
               icon: Icons.refresh_rounded,
               busy: controller.isBusy,
               onPressed: controller.retryPayment,
@@ -1172,7 +1203,7 @@ class _ReceiptStage extends StatelessWidget {
             key: const ValueKey('rent-reset'),
             onPressed: controller.isBusy ? null : controller.reset,
             icon: const Icon(Icons.qr_code_scanner_rounded),
-            label: const Text('Rent another bike'),
+            label: Text(context.l10n.rentAnotherBike),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 50),
             ),
@@ -1294,7 +1325,7 @@ class _ActionButton extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : Icon(icon),
-        label: Text(busy ? 'Please wait…' : label),
+        label: Text(busy ? context.l10n.pleaseWait : label),
       ),
     );
   }
@@ -1412,7 +1443,7 @@ class _FareCalculationPanel extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Time-based pricing',
+                  context.l10n.timeBasedPricing,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w900,
                   ),
@@ -1429,7 +1460,10 @@ class _FareCalculationPanel extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              'RM0.50 + (started minutes × RM0.10)',
+              context.l10n.pricingFormula(
+                context.formats.currency(RentingController.unlockFee),
+                context.formats.currency(RentingController.perMinuteRate),
+              ),
               textAlign: TextAlign.center,
               style: theme.textTheme.titleSmall?.copyWith(
                 color: scheme.onSurface,
@@ -1438,10 +1472,16 @@ class _FareCalculationPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const _PriceRow(label: '10-minute example', value: 'RM1.50'),
+          _PriceRow(
+            label: context.l10n.pricingExample(10),
+            value: context.formats.currency(
+              RentingController.unlockFee +
+                  (10 * RentingController.perMinuteRate),
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
-            'The timer starts after the bike unlocks and stops when the dock confirms the return.',
+            context.l10n.pricingTimerDescription,
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.72),
               height: 1.4,
@@ -1505,7 +1545,8 @@ class _PaymentMethodTile extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              '${method.brand} •••• ${method.lastFour}\n${method.label}',
+              '${method.brand} •••• ${method.lastFour}\n'
+              '${_paymentMethodLabel(context.l10n, method)}',
               style: const TextStyle(height: 1.35),
             ),
           ),
@@ -1532,7 +1573,7 @@ Future<void> _showPaymentMethods(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Choose payment method',
+                context.l10n.choosePaymentMethod,
                 style: Theme.of(
                   context,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
@@ -1554,15 +1595,17 @@ Future<void> _showPaymentMethods(
                       RadioListTile<String>(
                         value: method.id,
                         title: Text('${method.brand} •••• ${method.lastFour}'),
-                        subtitle: Text(method.label),
+                        subtitle: Text(
+                          _paymentMethodLabel(context.l10n, method),
+                        ),
                       ),
                   ],
                 ),
               ),
               const SizedBox(height: 8),
-              const _InfoPanel(
+              _InfoPanel(
                 icon: Icons.info_outline_rounded,
-                text: 'Adding a new card belongs to the future User module.',
+                text: context.l10n.addCardFuture,
               ),
             ],
           ),
@@ -1691,9 +1734,9 @@ class _StationTile extends StatelessWidget {
     final selectable = available && station.id == 'central';
     final highlighted = selected || selectable;
     final selectionLabel = selected
-        ? 'Selected'
+        ? context.l10n.selected
         : selectable
-        ? 'Selectable'
+        ? context.l10n.selectable
         : null;
     final badgeColor = available ? scheme.secondary : scheme.error;
 
@@ -1751,13 +1794,15 @@ class _StationTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        station.name,
+                        _stationName(context.l10n, station),
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 3),
-                      Text('${station.distanceMeters} m away'),
+                      Text(
+                        context.l10n.stationDistance(station.distanceMeters),
+                      ),
                     ],
                   ),
                 ),
@@ -1769,7 +1814,9 @@ class _StationTile extends StatelessWidget {
                       const SizedBox(height: 4),
                     ],
                     buildBadge(
-                      available ? '${station.availableDocks} docks' : 'Full',
+                      available
+                          ? context.l10n.dockCount(station.availableDocks)
+                          : context.l10n.full,
                       badgeColor,
                     ),
                   ],
@@ -1798,7 +1845,7 @@ class _CityMap extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
-      label: 'City map showing current bike position and return stations',
+      label: context.l10n.cityMapSemantics,
       image: true,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -1955,7 +2002,42 @@ class _CityMapPainter extends CustomPainter {
   }
 }
 
-String _money(double amount) => 'RM${amount.toStringAsFixed(2)}';
+String _stationName(AppLocalizations l10n, ReturnStation station) {
+  return switch (station.id) {
+    'central' => l10n.centralStation,
+    'riverside' => l10n.riversidePark,
+    'market' => l10n.marketSquare,
+    'university' => l10n.universityGate,
+    _ => station.id,
+  };
+}
+
+String _paymentMethodLabel(AppLocalizations l10n, RentalPaymentMethod method) {
+  return switch (method.id) {
+    'visa-4242' => l10n.personalCard,
+    'mastercard-4444' => l10n.travelCard,
+    _ => method.brand,
+  };
+}
+
+String _rentalError(BuildContext context, RentingController controller) {
+  final l10n = context.l10n;
+  return switch (controller.error!) {
+    RentalError.invalidQr => l10n.errorInvalidQr,
+    RentalError.bikeReserved => l10n.errorBikeReserved(controller.bike.id),
+    RentalError.holdDeclined => l10n.errorHoldDeclined(
+      context.formats.currency(RentingController.holdAmount),
+    ),
+    RentalError.lockFailed => l10n.errorLockFailed,
+    RentalError.gpsLost => l10n.errorGpsLost,
+    RentalError.stationFull => l10n.errorStationFull(
+      _stationName(l10n, controller.errorStation!),
+    ),
+    RentalError.chooseStation => l10n.errorChooseStation,
+    RentalError.outsideReturnZone => l10n.errorOutsideReturnZone,
+    RentalError.dockNotDetected => l10n.errorDockNotDetected,
+  };
+}
 
 ButtonStyle _secondaryTextButtonStyle(BuildContext context) {
   final scheme = Theme.of(context).colorScheme;
@@ -1967,10 +2049,4 @@ ButtonStyle _secondaryTextButtonStyle(BuildContext context) {
 ButtonStyle _dangerTextButtonStyle(BuildContext context) {
   final scheme = Theme.of(context).colorScheme;
   return TextButton.styleFrom(foregroundColor: scheme.error);
-}
-
-String _formatSeconds(int seconds) {
-  final minutes = seconds ~/ 60;
-  final remaining = seconds % 60;
-  return '${minutes.toString().padLeft(2, '0')}:${remaining.toString().padLeft(2, '0')}';
 }

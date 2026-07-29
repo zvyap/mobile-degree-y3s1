@@ -12,16 +12,23 @@ enum RentalStage {
 
 enum PaymentStatus { ready, authorized, paid, pending }
 
+enum RentalError {
+  invalidQr,
+  bikeReserved,
+  holdDeclined,
+  lockFailed,
+  gpsLost,
+  stationFull,
+  chooseStation,
+  outsideReturnZone,
+  dockNotDetected,
+}
+
 class RentalBike {
-  const RentalBike({
-    required this.id,
-    required this.batteryPercent,
-    required this.location,
-  });
+  const RentalBike({required this.id, required this.batteryPercent});
 
   final String id;
   final int batteryPercent;
-  final String location;
 }
 
 class RideMetrics {
@@ -41,13 +48,11 @@ class RideMetrics {
 class ReturnStation {
   const ReturnStation({
     required this.id,
-    required this.name,
     required this.distanceMeters,
     required this.availableDocks,
   });
 
   final String id;
-  final String name;
   final int distanceMeters;
   final int availableDocks;
 }
@@ -57,13 +62,11 @@ class RentalPaymentMethod {
     required this.id,
     required this.brand,
     required this.lastFour,
-    required this.label,
   });
 
   final String id;
   final String brand;
   final String lastFour;
-  final String label;
 }
 
 class PaymentAuthorization {

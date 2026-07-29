@@ -1,3 +1,4 @@
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class NetworkSummary extends StatelessWidget {
@@ -13,7 +14,7 @@ class NetworkSummary extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Live network',
+          context.l10n.liveNetwork,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w800,
           ),
@@ -27,13 +28,13 @@ class NetworkSummary extends StatelessWidget {
               ),
             ),
           ),
-          child: const IntrinsicHeight(
+          child: IntrinsicHeight(
             child: Row(
               children: [
                 Expanded(
                   child: _NetworkMetric(
                     value: '128',
-                    label: 'Bikes',
+                    label: context.l10n.bikes,
                     icon: Icons.directions_bike_rounded,
                   ),
                 ),
@@ -41,7 +42,7 @@ class NetworkSummary extends StatelessWidget {
                 Expanded(
                   child: _NetworkMetric(
                     value: '73',
-                    label: 'Open docks',
+                    label: context.l10n.openDocks,
                     icon: Icons.local_parking_rounded,
                   ),
                 ),
@@ -49,7 +50,7 @@ class NetworkSummary extends StatelessWidget {
                 Expanded(
                   child: _NetworkMetric(
                     value: '9',
-                    label: 'Stations',
+                    label: context.l10n.stations,
                     icon: Icons.map_rounded,
                   ),
                 ),

@@ -1,3 +1,6 @@
+import 'package:bike_renting_app/features/renting/renting_controller.dart';
+import 'package:bike_renting_app/l10n/app_formats.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class HeroPanel extends StatelessWidget {
@@ -20,7 +23,7 @@ class HeroPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'GOOD AFTERNOON',
+          context.l10n.goodAfternoon,
           style: theme.textTheme.labelSmall?.copyWith(
             color: scheme.primary,
             fontWeight: FontWeight.w800,
@@ -29,7 +32,7 @@ class HeroPanel extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Ready to ride?',
+          context.l10n.readyToRide,
           style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.w900,
             height: 1.05,
@@ -38,7 +41,7 @@ class HeroPanel extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          '128 bikes available across 9 stations.',
+          context.l10n.bikeAvailability(128, 9),
           style: theme.textTheme.bodyMedium?.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.68),
             height: 1.35,
@@ -58,7 +61,10 @@ class HeroPanel extends StatelessWidget {
             const SizedBox(width: 7),
             Expanded(
               child: Text(
-                'RM0.50 unlock fee + RM0.10 per started minute',
+                context.l10n.unlockRate(
+                  context.formats.currency(RentingController.unlockFee),
+                  context.formats.currency(RentingController.perMinuteRate),
+                ),
                 softWrap: true,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.62),
@@ -86,13 +92,13 @@ class _HomeActions extends StatelessWidget {
       key: const ValueKey<String>('home-scan'),
       onPressed: onScan,
       icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
-      label: const Text('Scan bike'),
+      label: Text(context.l10n.scanBike),
     );
     final station = OutlinedButton.icon(
       key: const ValueKey<String>('home-find-station'),
       onPressed: onFindStation,
       icon: const Icon(Icons.near_me_rounded, size: 20),
-      label: const Text('Find station'),
+      label: Text(context.l10n.findStation),
     );
 
     if (usesLargeText) {

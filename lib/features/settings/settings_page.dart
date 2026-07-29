@@ -1,3 +1,4 @@
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -16,14 +17,14 @@ class SettingsPage extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         Text(
-          'App settings',
+          context.l10n.appSettings,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Manage appearance and ride permissions.',
+          context.l10n.appSettingsDescription,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.68),
           ),
@@ -35,25 +36,25 @@ class SettingsPage extends StatelessWidget {
           secondary: Icon(
             isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
           ),
-          title: const Text('Dark theme'),
-          subtitle: Text(isDark ? 'On' : 'Off'),
+          title: Text(context.l10n.darkTheme),
+          subtitle: Text(isDark ? context.l10n.on : context.l10n.off),
           value: isDark,
           onChanged: (_) => onToggleTheme(theme.brightness),
         ),
         const Divider(),
-        const ListTile(
-          contentPadding: EdgeInsets.symmetric(horizontal: 4),
-          leading: Icon(Icons.location_on_outlined),
-          title: Text('Location access'),
-          subtitle: Text('Required while a ride is active'),
-          trailing: Icon(Icons.chevron_right_rounded),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+          leading: const Icon(Icons.location_on_outlined),
+          title: Text(context.l10n.locationAccess),
+          subtitle: Text(context.l10n.locationAccessDescription),
+          trailing: const Icon(Icons.chevron_right_rounded),
         ),
-        const ListTile(
-          contentPadding: EdgeInsets.symmetric(horizontal: 4),
-          leading: Icon(Icons.notifications_outlined),
-          title: Text('Ride notifications'),
-          subtitle: Text('Return reminders and payment updates'),
-          trailing: Icon(Icons.chevron_right_rounded),
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+          leading: const Icon(Icons.notifications_outlined),
+          title: Text(context.l10n.rideNotifications),
+          subtitle: Text(context.l10n.rideNotificationsDescription),
+          trailing: const Icon(Icons.chevron_right_rounded),
         ),
       ],
     );
