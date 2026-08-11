@@ -1,6 +1,9 @@
 import 'package:bike_renting_app/features/admin/admin_management_page.dart';
 import 'package:bike_renting_app/features/bike/bike_management_page.dart';
 import 'package:bike_renting_app/features/home/home_page.dart';
+import 'package:bike_renting_app/features/history/ride_details_page.dart';
+import 'package:bike_renting_app/features/history/ride_history_models.dart';
+import 'package:bike_renting_app/features/history/ride_history_page.dart';
 import 'package:bike_renting_app/features/qr/qr_scan_page.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/settings/settings_page.dart';
@@ -39,13 +42,19 @@ class AppNavigator extends StatelessWidget {
         final duration = reduceMotion(context)
             ? Duration.zero
             : const Duration(milliseconds: 260);
+        final routeArguments = page == AppPage.rideDetails
+            ? settings.arguments
+            : page;
 
         return PageRouteBuilder<void>(
-          settings: RouteSettings(name: page.routeName, arguments: page),
+          settings: RouteSettings(
+            name: page.routeName,
+            arguments: routeArguments,
+          ),
           transitionDuration: duration,
           reverseTransitionDuration: duration,
           pageBuilder: (context, animation, secondaryAnimation) =>
-              _buildPage(context, page),
+              _buildPage(context, page, settings.arguments),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             final curved = CurvedAnimation(
               parent: animation,
@@ -69,7 +78,7 @@ class AppNavigator extends StatelessWidget {
     );
   }
 
-  Widget _buildPage(BuildContext context, AppPage page) {
+  Widget _buildPage(BuildContext context, AppPage page, Object? arguments) {
     final l10n = context.l10n;
     return switch (page) {
       AppPage.home => HomePage(onNavigate: onSelectRootPage),
@@ -82,10 +91,14 @@ class AppNavigator extends StatelessWidget {
         controller: rentingController,
         onRequestExit: () => onSelectRootPage(AppPage.home),
       ),
-      AppPage.history => FeaturePlaceholderPage(
-        title: l10n.rideHistory,
-        subtitle: l10n.rideHistoryDescription,
-        accent: const Color(0xFF0369A1),
+      AppPage.history => RideHistoryPage(
+        onRideSelected: (ride) => Navigator.of(context).pushNamed(
+          AppPage.rideDetails.routeName,
+          arguments: RideDetailsRouteArguments(ride),
+        ),
+      ),
+      AppPage.rideDetails => RideDetailsPage(
+        ride: (arguments as RideDetailsRouteArguments).ride,
       ),
       AppPage.profile => FeaturePlaceholderPage(
         title: l10n.profile,
@@ -102,15 +115,22 @@ class AppNavigator extends StatelessWidget {
   }
 }
 
+class RideDetailsRouteArguments {
+  const RideDetailsRouteArguments(this.ride);
+
+  final RideHistoryEntry ride;
+}
+
 class AppNavigatorObserver extends NavigatorObserver {
   AppNavigatorObserver(this.onPageChanged);
 
   final ValueChanged<AppPage> onPageChanged;
 
   void _notify(Route<dynamic>? route) {
-    final page =
-        route?.settings.arguments as AppPage? ??
-        AppPage.fromRouteName(route?.settings.name);
+    final arguments = route?.settings.arguments;
+    final page = arguments is AppPage
+        ? arguments
+        : AppPage.fromRouteName(route?.settings.name);
     if (page != null) onPageChanged(page);
   }
 

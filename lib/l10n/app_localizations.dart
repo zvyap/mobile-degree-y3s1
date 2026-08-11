@@ -184,6 +184,146 @@ abstract class AppLocalizations {
   /// **'Review past rides, fares, and return stations.'**
   String get rideHistoryDescription;
 
+  /// No description provided for @rideDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride details'**
+  String get rideDetails;
+
+  /// No description provided for @pastRides.
+  ///
+  /// In en, this message translates to:
+  /// **'Past rides'**
+  String get pastRides;
+
+  /// No description provided for @totalRides.
+  ///
+  /// In en, this message translates to:
+  /// **'Total rides'**
+  String get totalRides;
+
+  /// No description provided for @totalDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Total distance'**
+  String get totalDistance;
+
+  /// No description provided for @totalSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'Total spent'**
+  String get totalSpent;
+
+  /// No description provided for @rideHistoryEntrySemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride on {date} at {time}, from {fromStation} to {toStation}, duration {duration}, distance {distance}, fare {fare}. Tap for details.'**
+  String rideHistoryEntrySemantics(
+    String date,
+    String time,
+    String fromStation,
+    String toStation,
+    String duration,
+    String distance,
+    String fare,
+  );
+
+  /// No description provided for @rideCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride completed'**
+  String get rideCompleted;
+
+  /// No description provided for @journeyDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Journey details'**
+  String get journeyDetails;
+
+  /// No description provided for @from.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get from;
+
+  /// No description provided for @to.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get to;
+
+  /// No description provided for @departedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Departed at {time}'**
+  String departedAt(String time);
+
+  /// No description provided for @arrivedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrived at {time}'**
+  String arrivedAt(String time);
+
+  /// No description provided for @rideSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride summary'**
+  String get rideSummary;
+
+  /// No description provided for @bikeId.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike ID'**
+  String get bikeId;
+
+  /// No description provided for @paymentDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment details'**
+  String get paymentDetails;
+
+  /// No description provided for @depositHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit held'**
+  String get depositHeld;
+
+  /// No description provided for @rideFareFromDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride fare paid from deposit'**
+  String get rideFareFromDeposit;
+
+  /// No description provided for @depositRefunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining deposit refunded'**
+  String get depositRefunded;
+
+  /// No description provided for @totalPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Total paid'**
+  String get totalPaid;
+
+  /// No description provided for @depositRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit refund'**
+  String get depositRefund;
+
+  /// No description provided for @paymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment method'**
+  String get paymentMethod;
+
+  /// No description provided for @depositPaymentExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'The ride fare was taken from the deposit. The remaining deposit was refunded to the same payment method.'**
+  String get depositPaymentExplanation;
+
   /// No description provided for @profileDescription.
   ///
   /// In en, this message translates to:

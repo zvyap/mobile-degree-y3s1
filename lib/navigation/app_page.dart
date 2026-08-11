@@ -6,6 +6,7 @@ enum AppPage {
   stations(routeName: '/stations', icon: Icons.map_rounded),
   scan(routeName: '/scan', icon: Icons.qr_code_scanner_rounded),
   history(routeName: '/history', icon: Icons.history_rounded),
+  rideDetails(routeName: '/history/details', icon: Icons.receipt_long_rounded),
   profile(routeName: '/profile', icon: Icons.person_rounded),
   admin(routeName: '/admin', icon: Icons.admin_panel_settings_rounded),
   bikeManagement(
@@ -24,6 +25,7 @@ enum AppPage {
     stations => l10n.stations,
     scan => l10n.bikeSession,
     history => l10n.history,
+    rideDetails => l10n.rideDetails,
     profile => l10n.profile,
     admin => l10n.adminManagement,
     bikeManagement => l10n.bikeManagement,

@@ -56,6 +56,87 @@ class AppLocalizationsEn extends AppLocalizations {
       'Review past rides, fares, and return stations.';
 
   @override
+  String get rideDetails => 'Ride details';
+
+  @override
+  String get pastRides => 'Past rides';
+
+  @override
+  String get totalRides => 'Total rides';
+
+  @override
+  String get totalDistance => 'Total distance';
+
+  @override
+  String get totalSpent => 'Total spent';
+
+  @override
+  String rideHistoryEntrySemantics(
+    String date,
+    String time,
+    String fromStation,
+    String toStation,
+    String duration,
+    String distance,
+    String fare,
+  ) {
+    return 'Ride on $date at $time, from $fromStation to $toStation, duration $duration, distance $distance, fare $fare. Tap for details.';
+  }
+
+  @override
+  String get rideCompleted => 'Ride completed';
+
+  @override
+  String get journeyDetails => 'Journey details';
+
+  @override
+  String get from => 'From';
+
+  @override
+  String get to => 'To';
+
+  @override
+  String departedAt(String time) {
+    return 'Departed at $time';
+  }
+
+  @override
+  String arrivedAt(String time) {
+    return 'Arrived at $time';
+  }
+
+  @override
+  String get rideSummary => 'Ride summary';
+
+  @override
+  String get bikeId => 'Bike ID';
+
+  @override
+  String get paymentDetails => 'Payment details';
+
+  @override
+  String get depositHeld => 'Deposit held';
+
+  @override
+  String get rideFareFromDeposit => 'Ride fare paid from deposit';
+
+  @override
+  String get depositRefunded => 'Remaining deposit refunded';
+
+  @override
+  String get totalPaid => 'Total paid';
+
+  @override
+  String get depositRefund => 'Deposit refund';
+
+  @override
+  String get paymentMethod => 'Payment method';
+
+  @override
+  String get depositPaymentExplanation =>
+      'The ride fare was taken from the deposit. The remaining deposit was refunded to the same payment method.';
+
+  @override
   String get profileDescription =>
       'Profile, wallet, permissions, and ride history.';
 
