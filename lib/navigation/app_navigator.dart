@@ -14,6 +14,7 @@ import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
+import 'package:bike_renting_app/features/bike/add_bike.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppNavigator extends StatelessWidget {
@@ -112,7 +113,10 @@ class AppNavigator extends StatelessWidget {
         onNavigate: onSelectRootPage,
         onOpenBikeManagement: () => onOpenPage(AppPage.bikeManagement),
       ),
-      AppPage.bikeManagement => const BikeManagementPage(),
+      AppPage.addbike => const AddBike(),
+      AppPage.bikeManagement => BikeManagementPage(
+        onAddBike: () => onOpenPage(AppPage.addbike),
+      ),
       AppPage.settings => SettingsPage(onToggleTheme: onToggleTheme),
     };
   }

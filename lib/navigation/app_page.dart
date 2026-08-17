@@ -13,6 +13,7 @@ enum AppPage {
     routeName: '/admin/bikes',
     icon: Icons.directions_bike_rounded,
   ),
+  addbike(routeName: '/admin/bikes/addBike', icon: Icons.add_rounded),
   settings(routeName: '/settings', icon: Icons.settings_rounded);
 
   const AppPage({required this.routeName, required this.icon});
@@ -29,6 +30,7 @@ enum AppPage {
     profile => l10n.profile,
     admin => l10n.adminManagement,
     bikeManagement => l10n.bikeManagement,
+    addbike => 'Add Bike',
     settings => l10n.settings,
   };
 
