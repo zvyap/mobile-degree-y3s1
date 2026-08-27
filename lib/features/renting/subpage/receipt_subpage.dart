@@ -88,6 +88,10 @@ class _ReceiptStage extends StatelessWidget {
           ),
           if (!paid) ...[
             const SizedBox(height: 18),
+            if (controller.error != null) ...[
+              _ErrorPanel(message: _rentalError(context, controller)),
+              const SizedBox(height: 12),
+            ],
             _ActionButton(
               key: const ValueKey('rent-retry-payment'),
               label: context.l10n.retryPayment,

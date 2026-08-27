@@ -47,7 +47,7 @@ class _AuthorizationStage extends StatelessWidget {
             ),
             icon: Icons.verified_user_rounded,
             busy: controller.isBusy,
-            onPressed: () => controller.authorizeHold(),
+            onPressed: () => _openPayPalCheckout(context, controller),
           ),
           const SizedBox(height: 8),
           Center(
@@ -76,5 +76,27 @@ class _AuthorizationStage extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+Future<void> _openPayPalCheckout(
+  BuildContext context,
+  RentingController controller,
+) async {
+  final approvalUrl = await controller.createPayPalOrder();
+  if (!context.mounted || approvalUrl == null) return;
+
+  final result = await Navigator.of(context, rootNavigator: true)
+      .push<PayPalCheckoutResult>(
+        MaterialPageRoute(
+          builder: (context) => PayPalCheckoutPage(approvalUrl: approvalUrl),
+        ),
+      );
+  if (!context.mounted) return;
+
+  if (result == PayPalCheckoutResult.approved) {
+    await controller.authorizePayPalOrder();
+  } else {
+    controller.cancelPayPalCheckout();
   }
 }

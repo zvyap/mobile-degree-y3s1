@@ -717,7 +717,7 @@ abstract class AppLocalizations {
   /// No description provided for @bikeReadyDescription.
   ///
   /// In en, this message translates to:
-  /// **'Check the bike and fare before placing the card hold.'**
+  /// **'Check the bike and fare before placing the PayPal hold.'**
   String get bikeReadyDescription;
 
   /// No description provided for @bikeBatteryLocation.
@@ -783,13 +783,13 @@ abstract class AppLocalizations {
   /// No description provided for @authorizeCardHold.
   ///
   /// In en, this message translates to:
-  /// **'Authorize card hold'**
+  /// **'Authorize PayPal hold'**
   String get authorizeCardHold;
 
   /// No description provided for @authorizeCardHoldDescription.
   ///
   /// In en, this message translates to:
-  /// **'Reserve funds before the bike unlocks.'**
+  /// **'Approve the sandbox payment and reserve funds before the bike unlocks.'**
   String get authorizeCardHoldDescription;
 
   /// No description provided for @temporaryAuthorizationHold.
@@ -825,7 +825,7 @@ abstract class AppLocalizations {
   /// No description provided for @cardHoldAuthorized.
   ///
   /// In en, this message translates to:
-  /// **'Card hold authorized'**
+  /// **'PayPal hold authorized'**
   String get cardHoldAuthorized;
 
   /// No description provided for @unlockBike.
@@ -1023,13 +1023,13 @@ abstract class AppLocalizations {
   /// No description provided for @holdReleasedDescription.
   ///
   /// In en, this message translates to:
-  /// **'The remaining card hold has been released.'**
+  /// **'The remaining PayPal hold has been released.'**
   String get holdReleasedDescription;
 
   /// No description provided for @paymentPendingDescription.
   ///
   /// In en, this message translates to:
-  /// **'The bike is returned safely. Retry the card charge below.'**
+  /// **'The bike is returned safely. Retry the PayPal capture below.'**
   String get paymentPendingDescription;
 
   /// No description provided for @rideId.
@@ -1116,6 +1116,30 @@ abstract class AppLocalizations {
   /// **'Adding a new card belongs to the future User module.'**
   String get addCardFuture;
 
+  /// No description provided for @paypalSandbox.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal Sandbox'**
+  String get paypalSandbox;
+
+  /// No description provided for @paypalSandboxDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Sandbox buyer account · No real money'**
+  String get paypalSandboxDescription;
+
+  /// No description provided for @paypalCheckoutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal Sandbox'**
+  String get paypalCheckoutTitle;
+
+  /// No description provided for @paypalCheckoutSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure PayPal Sandbox approval page'**
+  String get paypalCheckoutSemantics;
+
   /// No description provided for @selected.
   ///
   /// In en, this message translates to:
@@ -1149,8 +1173,38 @@ abstract class AppLocalizations {
   /// No description provided for @errorHoldDeclined.
   ///
   /// In en, this message translates to:
-  /// **'The {amount} hold was declined. Try another card or retry.'**
+  /// **'The {amount} PayPal hold was declined. Check the sandbox buyer account and retry.'**
   String errorHoldDeclined(String amount);
+
+  /// No description provided for @errorPaymentConfiguration.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the PayPal Sandbox client ID and secret in paypal_sandbox_constants.dart.'**
+  String get errorPaymentConfiguration;
+
+  /// No description provided for @errorPaymentNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal Sandbox could not be reached. Check the connection and retry.'**
+  String get errorPaymentNetwork;
+
+  /// No description provided for @errorPaymentCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal approval was cancelled. Retry when ready.'**
+  String get errorPaymentCancelled;
+
+  /// No description provided for @errorPaymentAuthorizationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal could not authorize the hold. Retry with the sandbox buyer account.'**
+  String get errorPaymentAuthorizationFailed;
+
+  /// No description provided for @errorPaymentCaptureFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal could not capture the ride fare. The payment remains pending; retry below.'**
+  String get errorPaymentCaptureFailed;
 
   /// No description provided for @errorLockFailed.
   ///

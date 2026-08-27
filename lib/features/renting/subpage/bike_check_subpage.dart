@@ -88,21 +88,14 @@ class _BikeCheckStage extends StatelessWidget {
               const SizedBox(height: 12),
               const _FareCalculationPanel(),
               const SizedBox(height: 12),
-              _PaymentMethodTile(
-                method: method,
-                trailing: TextButton(
-                  style: _secondaryTextButtonStyle(context),
-                  onPressed: () => _showPaymentMethods(context, controller),
-                  child: Text(context.l10n.change),
-                ),
-              ),
+              _PaymentMethodTile(method: method),
               const SizedBox(height: 18),
               _ActionButton(
                 key: const ValueKey('rent-review-hold'),
                 label: context.l10n.reviewHold(
                   context.formats.currency(RentingController.holdAmount),
                 ),
-                icon: Icons.credit_card_rounded,
+                icon: Icons.account_balance_wallet_rounded,
                 onPressed: controller.reviewAuthorization,
               ),
               const SizedBox(height: 8),

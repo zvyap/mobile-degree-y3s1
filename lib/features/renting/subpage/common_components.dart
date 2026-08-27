@@ -162,27 +162,6 @@ class _ErrorPanel extends StatelessWidget {
   }
 }
 
-class _InfoPanel extends StatelessWidget {
-  const _InfoPanel({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return SurfacePanel(
-      child: Row(
-        children: [
-          IconTile(icon: icon, color: scheme.primary),
-          const SizedBox(width: 12),
-          Expanded(child: Text(text)),
-        ],
-      ),
-    );
-  }
-}
-
 class _CheckRow extends StatelessWidget {
   const _CheckRow({required this.label});
 

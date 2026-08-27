@@ -12,8 +12,7 @@ String _stationName(AppLocalizations l10n, ReturnStation station) {
 
 String _paymentMethodLabel(AppLocalizations l10n, RentalPaymentMethod method) {
   return switch (method.id) {
-    'visa-4242' => l10n.personalCard,
-    'mastercard-4444' => l10n.travelCard,
+    'paypal-sandbox' => l10n.paypalSandboxDescription,
     _ => method.brand,
   };
 }
@@ -26,6 +25,12 @@ String _rentalError(BuildContext context, RentingController controller) {
     RentalError.holdDeclined => l10n.errorHoldDeclined(
       context.formats.currency(RentingController.holdAmount),
     ),
+    RentalError.paymentConfiguration => l10n.errorPaymentConfiguration,
+    RentalError.paymentNetwork => l10n.errorPaymentNetwork,
+    RentalError.paymentCancelled => l10n.errorPaymentCancelled,
+    RentalError.paymentAuthorizationFailed =>
+      l10n.errorPaymentAuthorizationFailed,
+    RentalError.paymentCaptureFailed => l10n.errorPaymentCaptureFailed,
     RentalError.lockFailed => l10n.errorLockFailed,
     RentalError.gpsLost => l10n.errorGpsLost,
     RentalError.stationFull => l10n.errorStationFull(

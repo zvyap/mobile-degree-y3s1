@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:bike_renting_app/data/paypal/paypal_gateway.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:flutter/foundation.dart';
 
 class RentingController extends ChangeNotifier {
-  RentingController();
+  RentingController({PayPalPaymentGateway? paypalGateway})
+    : _paypalGateway = paypalGateway ?? PayPalGateway(),
+      _ownsPayPalGateway = paypalGateway == null;
 
   static const unlockFee = 0.50;
   static const perMinuteRate = 0.10;
@@ -23,15 +26,16 @@ class RentingController extends ChangeNotifier {
     ReturnStation(id: 'university', distanceMeters: 610, availableDocks: 3),
   ];
 
-  // TODO: Load saved payment methods from the authenticated user's wallet.
   final paymentMethods = const [
-    RentalPaymentMethod(id: 'visa-4242', brand: 'Visa', lastFour: '4242'),
     RentalPaymentMethod(
-      id: 'mastercard-4444',
-      brand: 'Mastercard',
-      lastFour: '4444',
+      id: 'paypal-sandbox',
+      brand: 'PayPal Sandbox',
+      lastFour: '',
     ),
   ];
+
+  final PayPalPaymentGateway _paypalGateway;
+  final bool _ownsPayPalGateway;
 
   RentalStage stage = RentalStage.scan;
   RideMetrics metrics = const RideMetrics(elapsedSeconds: 0, distanceKm: 0);
@@ -47,7 +51,16 @@ class RentingController extends ChangeNotifier {
   bool isBusy = false;
   bool gpsAvailable = true;
   bool isAtStation = false;
+  PayPalAuthorizationOrder? _paypalOrder;
+  String? _paypalAuthorizationId;
+  String? _paypalCaptureId;
   Timer? _rideTimer;
+
+  Uri? get paypalApprovalUrl => _paypalOrder?.approvalUrl;
+
+  String? get paypalAuthorizationId => _paypalAuthorizationId;
+
+  String? get paypalCaptureId => _paypalCaptureId;
 
   bool get isFlowLocked => switch (stage) {
     RentalStage.unlocking ||
@@ -133,24 +146,50 @@ class RentingController extends ChangeNotifier {
     }
   }
 
-  Future<void> authorizeHold({bool fail = false}) async {
-    if (isBusy) return;
+  Future<Uri?> createPayPalOrder() async {
+    if (isBusy) return null;
+    if (_paypalOrder != null) return _paypalOrder!.approvalUrl;
     _beginBusy();
-    await _operationDelay();
-    if (fail) {
+    try {
+      _paypalOrder = await _paypalGateway.createAuthorizationOrder(holdAmount);
       isBusy = false;
-      error = RentalError.holdDeclined;
+      _clearError();
       notifyListeners();
-      return;
+      return _paypalOrder!.approvalUrl;
+    } on PayPalException catch (exception) {
+      isBusy = false;
+      error = _mapPayPalError(exception, authorizing: true);
+      notifyListeners();
+      return null;
     }
+  }
 
-    authorization = const PaymentAuthorization(
-      amount: holdAmount,
-      status: PaymentStatus.authorized,
-    );
-    isBusy = false;
-    _clearError();
-    stage = RentalStage.unlocking;
+  Future<void> authorizePayPalOrder() async {
+    final order = _paypalOrder;
+    if (isBusy || order == null) return;
+    _beginBusy();
+    try {
+      final result = await _paypalGateway.authorizeOrder(order.orderId);
+      _paypalAuthorizationId = result.authorizationId;
+      _paypalOrder = null;
+      authorization = const PaymentAuthorization(
+        amount: holdAmount,
+        status: PaymentStatus.authorized,
+      );
+      isBusy = false;
+      _clearError();
+      stage = RentalStage.unlocking;
+    } on PayPalException catch (exception) {
+      isBusy = false;
+      error = _mapPayPalError(exception, authorizing: true);
+    }
+    notifyListeners();
+  }
+
+  void cancelPayPalCheckout() {
+    if (isBusy) return;
+    _paypalOrder = null;
+    error = RentalError.paymentCancelled;
     notifyListeners();
   }
 
@@ -268,13 +307,27 @@ class RentingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> capturePayment({bool fail = false}) async {
+  Future<void> capturePayment() async {
     if (isBusy || selectedStation == null) return;
     _beginBusy();
-    await _operationDelay();
+    var paid = false;
+    final authorizationId = _paypalAuthorizationId;
+    if (authorizationId != null) {
+      try {
+        final result = await _paypalGateway.captureAuthorization(
+          authorizationId,
+          estimatedFare,
+        );
+        _paypalCaptureId = result.captureId;
+        _paypalAuthorizationId = null;
+        paid = true;
+      } on PayPalException catch (exception) {
+        error = _mapPayPalError(exception, authorizing: false);
+      }
+    } else {
+      error = RentalError.paymentAuthorizationFailed;
+    }
     isBusy = false;
-    _clearError();
-    // TODO: Use the ride ID and payment result returned by the renting service.
     receipt = RentalReceipt(
       rideId: 'RIDE-2407-C042',
       finalFare: estimatedFare,
@@ -282,7 +335,7 @@ class RentingController extends ChangeNotifier {
       elapsedSeconds: metrics.elapsedSeconds,
       distanceKm: metrics.distanceKm,
       returnStation: selectedStation!,
-      paymentStatus: fail ? PaymentStatus.pending : PaymentStatus.paid,
+      paymentStatus: paid ? PaymentStatus.paid : PaymentStatus.pending,
     );
     stage = RentalStage.receipt;
     notifyListeners();
@@ -290,14 +343,35 @@ class RentingController extends ChangeNotifier {
 
   Future<void> retryPayment() async {
     if (isBusy || receipt?.paymentStatus != PaymentStatus.pending) return;
+    final authorizationId = _paypalAuthorizationId;
+    if (authorizationId == null) {
+      error = RentalError.paymentAuthorizationFailed;
+      notifyListeners();
+      return;
+    }
     _beginBusy();
-    await _operationDelay();
-    isBusy = false;
-    receipt = receipt?.copyWith(paymentStatus: PaymentStatus.paid);
+    try {
+      final result = await _paypalGateway.captureAuthorization(
+        authorizationId,
+        estimatedFare,
+      );
+      _paypalCaptureId = result.captureId;
+      _paypalAuthorizationId = null;
+      isBusy = false;
+      _clearError();
+      receipt = receipt?.copyWith(paymentStatus: PaymentStatus.paid);
+    } on PayPalException catch (exception) {
+      isBusy = false;
+      error = _mapPayPalError(exception, authorizing: false);
+    }
     notifyListeners();
   }
 
   void reset() {
+    final authorizationId = _paypalAuthorizationId;
+    if (authorizationId != null) {
+      unawaited(_voidAuthorization(authorizationId));
+    }
     _stopClock();
     stage = RentalStage.scan;
     metrics = const RideMetrics(elapsedSeconds: 0, distanceKm: 0);
@@ -312,7 +386,40 @@ class RentingController extends ChangeNotifier {
     isBusy = false;
     gpsAvailable = true;
     isAtStation = false;
+    _paypalOrder = null;
+    _paypalAuthorizationId = null;
+    _paypalCaptureId = null;
     notifyListeners();
+  }
+
+  Future<void> _voidAuthorization(String authorizationId) async {
+    try {
+      await _paypalGateway.voidAuthorization(authorizationId);
+    } on PayPalException {
+      // Reset must remain usable offline. Sandbox authorization expires if the
+      // best-effort void cannot reach PayPal.
+    }
+  }
+
+  RentalError _mapPayPalError(
+    PayPalException exception, {
+    required bool authorizing,
+  }) {
+    return switch (exception.type) {
+      PayPalFailureType.configuration => RentalError.paymentConfiguration,
+      PayPalFailureType.network => RentalError.paymentNetwork,
+      PayPalFailureType.declined =>
+        authorizing
+            ? RentalError.holdDeclined
+            : RentalError.paymentCaptureFailed,
+      PayPalFailureType.captureFailed => RentalError.paymentCaptureFailed,
+      PayPalFailureType.authentication ||
+      PayPalFailureType.invalidResponse ||
+      PayPalFailureType.voidFailed =>
+        authorizing
+            ? RentalError.paymentAuthorizationFailed
+            : RentalError.paymentCaptureFailed,
+    };
   }
 
   void _beginBusy() {
@@ -343,6 +450,7 @@ class RentingController extends ChangeNotifier {
   @override
   void dispose() {
     _stopClock();
+    if (_ownsPayPalGateway) _paypalGateway.close();
     super.dispose();
   }
 }

@@ -107,10 +107,9 @@ class _PriceRow extends StatelessWidget {
 }
 
 class _PaymentMethodTile extends StatelessWidget {
-  const _PaymentMethodTile({required this.method, this.trailing});
+  const _PaymentMethodTile({required this.method});
 
   final RentalPaymentMethod method;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -123,76 +122,16 @@ class _PaymentMethodTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.credit_card_rounded, color: scheme.primary),
+          Icon(Icons.account_balance_wallet_rounded, color: scheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              '${method.brand} •••• ${method.lastFour}\n'
-              '${_paymentMethodLabel(context.l10n, method)}',
+              '${method.brand}\n${_paymentMethodLabel(context.l10n, method)}',
               style: const TextStyle(height: 1.35),
             ),
           ),
-          ?trailing,
         ],
       ),
     );
   }
-}
-
-Future<void> _showPaymentMethods(
-  BuildContext context,
-  RentingController controller,
-) {
-  return showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    builder: (context) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.l10n.choosePaymentMethod,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 14),
-              RadioGroup<String>(
-                groupValue: controller.selectedPaymentMethod?.id,
-                onChanged: (methodId) {
-                  if (methodId == null) return;
-                  final method = controller.paymentMethods.firstWhere(
-                    (candidate) => candidate.id == methodId,
-                  );
-                  controller.selectPaymentMethod(method);
-                  Navigator.pop(context);
-                },
-                child: Column(
-                  children: [
-                    for (final method in controller.paymentMethods)
-                      RadioListTile<String>(
-                        value: method.id,
-                        title: Text('${method.brand} •••• ${method.lastFour}'),
-                        subtitle: Text(
-                          _paymentMethodLabel(context.l10n, method),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              _InfoPanel(
-                icon: Icons.info_outline_rounded,
-                text: context.l10n.addCardFuture,
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
 }

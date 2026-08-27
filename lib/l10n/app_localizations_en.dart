@@ -392,7 +392,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bikeReadyDescription =>
-      'Check the bike and fare before placing the card hold.';
+      'Check the bike and fare before placing the PayPal hold.';
 
   @override
   String bikeBatteryLocation(int battery, String location) {
@@ -430,11 +430,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'The hold is not a charge. Unused funds are released after return.';
 
   @override
-  String get authorizeCardHold => 'Authorize card hold';
+  String get authorizeCardHold => 'Authorize PayPal hold';
 
   @override
   String get authorizeCardHoldDescription =>
-      'Reserve funds before the bike unlocks.';
+      'Approve the sandbox payment and reserve funds before the bike unlocks.';
 
   @override
   String get temporaryAuthorizationHold => 'Temporary authorization hold';
@@ -456,7 +456,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contactingBikeLock => 'Contacting bike lock…';
 
   @override
-  String get cardHoldAuthorized => 'Card hold authorized';
+  String get cardHoldAuthorized => 'PayPal hold authorized';
 
   @override
   String get unlockBike => 'Unlock bike';
@@ -573,11 +573,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get holdReleasedDescription =>
-      'The remaining card hold has been released.';
+      'The remaining PayPal hold has been released.';
 
   @override
   String get paymentPendingDescription =>
-      'The bike is returned safely. Retry the card charge below.';
+      'The bike is returned safely. Retry the PayPal capture below.';
 
   @override
   String get rideId => 'Ride ID';
@@ -628,6 +628,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Adding a new card belongs to the future User module.';
 
   @override
+  String get paypalSandbox => 'PayPal Sandbox';
+
+  @override
+  String get paypalSandboxDescription =>
+      'Sandbox buyer account · No real money';
+
+  @override
+  String get paypalCheckoutTitle => 'PayPal Sandbox';
+
+  @override
+  String get paypalCheckoutSemantics => 'Secure PayPal Sandbox approval page';
+
+  @override
   String get selected => 'Selected';
 
   @override
@@ -648,8 +661,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String errorHoldDeclined(String amount) {
-    return 'The $amount hold was declined. Try another card or retry.';
+    return 'The $amount PayPal hold was declined. Check the sandbox buyer account and retry.';
   }
+
+  @override
+  String get errorPaymentConfiguration =>
+      'Add the PayPal Sandbox client ID and secret in paypal_sandbox_constants.dart.';
+
+  @override
+  String get errorPaymentNetwork =>
+      'PayPal Sandbox could not be reached. Check the connection and retry.';
+
+  @override
+  String get errorPaymentCancelled =>
+      'PayPal approval was cancelled. Retry when ready.';
+
+  @override
+  String get errorPaymentAuthorizationFailed =>
+      'PayPal could not authorize the hold. Retry with the sandbox buyer account.';
+
+  @override
+  String get errorPaymentCaptureFailed =>
+      'PayPal could not capture the ride fare. The payment remains pending; retry below.';
 
   @override
   String get errorLockFailed =>

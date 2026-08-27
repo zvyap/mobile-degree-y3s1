@@ -1,5 +1,6 @@
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
+import 'package:bike_renting_app/features/renting/paypal_checkout_page.dart';
 import 'package:bike_renting_app/l10n/app_formats.dart';
 import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
