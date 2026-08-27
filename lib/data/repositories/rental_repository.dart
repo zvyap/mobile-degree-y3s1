@@ -13,6 +13,14 @@ class RentalRepository {
       'duration_seconds, distance_km, charged_minutes, final_fare, '
       'failure_reason, created_at, updated_at';
 
+  static const _historyColumns =
+      '$_rentalColumns, '
+      'bike:bikes!rentals_bike_id_fkey(code), '
+      'start_station:stations!rentals_start_station_id_fkey(name), '
+      'end_station:stations!rentals_end_station_id_fkey(name), '
+      'payment_method:payment_methods!rentals_payment_method_id_fkey('
+      'brand, last_four)';
+
   static const _blockingStatuses = [
     'pending_authorization',
     'authorized',
@@ -84,7 +92,9 @@ class RentalRepository {
     return rows.isEmpty ? null : RentalDatabaseRecord.fromJson(rows.single);
   }
 
-  Future<List<RentalDatabaseRecord>> listHistory({int limit = 50}) async {
+  Future<List<RentalHistoryDatabaseRecord>> listHistory({
+    int limit = 50,
+  }) async {
     if (limit < 1 || limit > 100) {
       throw const DatabaseException(
         code: DatabaseErrorCode.validation,
@@ -94,13 +104,15 @@ class RentalRepository {
     final userId = _requireUserId();
     final rows = await _dataSource.selectList(
       table: 'rentals',
-      columns: _rentalColumns,
-      equals: {'user_id': userId},
+      columns: _historyColumns,
+      equals: {'user_id': userId, 'status': 'completed'},
       orderBy: 'created_at',
       ascending: false,
       limit: limit,
     );
-    return rows.map(RentalDatabaseRecord.fromJson).toList(growable: false);
+    return rows
+        .map(RentalHistoryDatabaseRecord.fromJson)
+        .toList(growable: false);
   }
 
   Future<RentalDatabaseRecord> _callRentalRpc(

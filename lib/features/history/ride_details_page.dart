@@ -142,7 +142,7 @@ class _JourneyPanel extends StatelessWidget {
             key: const ValueKey<String>('ride-detail-from'),
             icon: Icons.trip_origin_rounded,
             label: context.l10n.from,
-            value: ride.startStation.label(context.l10n),
+            value: ride.startStation,
             supporting: context.l10n.departedAt(
               context.formats.time(ride.startedAt),
             ),
@@ -152,7 +152,7 @@ class _JourneyPanel extends StatelessWidget {
             key: const ValueKey<String>('ride-detail-to'),
             icon: Icons.location_on_rounded,
             label: context.l10n.to,
-            value: ride.endStation.label(context.l10n),
+            value: ride.endStation,
             supporting: context.l10n.arrivedAt(
               context.formats.time(ride.endedAt),
             ),

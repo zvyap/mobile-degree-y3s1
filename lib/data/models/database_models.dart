@@ -284,6 +284,57 @@ class RentalDatabaseRecord {
   final DateTime updatedAt;
 }
 
+class RentalHistoryDatabaseRecord {
+  const RentalHistoryDatabaseRecord({
+    required this.rental,
+    required this.bikeCode,
+    required this.startStationName,
+    required this.endStationName,
+    this.paymentBrand,
+    this.paymentLastFour,
+  });
+
+  factory RentalHistoryDatabaseRecord.fromJson(JsonMap json) {
+    final rental = RentalDatabaseRecord.fromJson(json);
+    final bike = _asJsonMap(json['bike'], relationship: 'bike');
+    final startStation = _asJsonMap(
+      json['start_station'],
+      relationship: 'start_station',
+    );
+    final endStation = _asJsonMap(
+      json['end_station'],
+      relationship: 'end_station',
+    );
+    final paymentMethod = json['payment_method'] == null
+        ? null
+        : _asJsonMap(json['payment_method'], relationship: 'payment_method');
+
+    if (rental.status != RentalDatabaseStatus.completed ||
+        rental.startedAt == null ||
+        rental.endedAt == null ||
+        rental.endStationId == null ||
+        rental.finalFare == null) {
+      throw const FormatException('Incomplete completed-rental history row');
+    }
+
+    return RentalHistoryDatabaseRecord(
+      rental: rental,
+      bikeCode: bike['code'] as String,
+      startStationName: startStation['name'] as String,
+      endStationName: endStation['name'] as String,
+      paymentBrand: paymentMethod?['brand'] as String?,
+      paymentLastFour: paymentMethod?['last_four'] as String?,
+    );
+  }
+
+  final RentalDatabaseRecord rental;
+  final String bikeCode;
+  final String startStationName;
+  final String endStationName;
+  final String? paymentBrand;
+  final String? paymentLastFour;
+}
+
 class RentalPaymentRecord {
   const RentalPaymentRecord({
     required this.id,
@@ -425,4 +476,9 @@ double? _asNullableDouble(Object? value) {
 
 DateTime? _asNullableDateTime(Object? value) {
   return value == null ? null : DateTime.parse(value as String);
+}
+
+JsonMap _asJsonMap(Object? value, {required String relationship}) {
+  if (value is Map) return Map<String, dynamic>.from(value);
+  throw FormatException('Missing $relationship relationship');
 }

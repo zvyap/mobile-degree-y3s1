@@ -1,17 +1,129 @@
+import 'package:bike_renting_app/data/database/database_data_source.dart';
+import 'package:bike_renting_app/data/repositories/rental_repository.dart';
 import 'package:bike_renting_app/features/history/ride_history_models.dart';
 import 'package:bike_renting_app/l10n/app_formats.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class RideHistoryPage extends StatelessWidget {
+class RideHistoryPage extends StatefulWidget {
   const RideHistoryPage({super.key, required this.onRideSelected});
 
   final ValueChanged<RideHistoryEntry> onRideSelected;
 
   @override
+  State<RideHistoryPage> createState() => _RideHistoryPageState();
+}
+
+class _RideHistoryPageState extends State<RideHistoryPage> {
+  static const _demoEmail = 'renting.demo.01@example.com';
+  static const _demoPassword = 'BikeRenting-Demo-01!2026';
+
+  late Future<List<RideHistoryEntry>> _historyFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _historyFuture = _loadHistory();
+  }
+
+  Future<List<RideHistoryEntry>> _loadHistory() async {
+    final client = Supabase.instance.client;
+    final currentEmail = client.auth.currentUser?.email?.toLowerCase();
+
+    if (currentEmail != _demoEmail) {
+      if (client.auth.currentSession != null) await client.auth.signOut();
+      await client.auth.signInWithPassword(
+        email: _demoEmail,
+        password: _demoPassword,
+      );
+    }
+
+    final repository = RentalRepository(SupabaseDatabaseDataSource(client));
+    final records = await repository.listHistory();
+    return records.map(RideHistoryEntry.fromDatabase).toList(growable: false);
+  }
+
+  Future<void> _refresh() async {
+    final nextHistory = _loadHistory();
+    setState(() => _historyFuture = nextHistory);
+    await nextHistory;
+  }
+
+  void _retry() {
+    setState(() => _historyFuture = _loadHistory());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final rides = demoRideHistory;
+    return FutureBuilder<List<RideHistoryEntry>>(
+      future: _historyFuture,
+      builder: (context, snapshot) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final horizontalInset = constraints.maxWidth > 920
+                ? (constraints.maxWidth - 860) / 2
+                : 16.0;
+
+            if (snapshot.connectionState != ConnectionState.done) {
+              return _HistoryStatusView(
+                horizontalInset: horizontalInset,
+                child: const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return _HistoryStatusView(
+                horizontalInset: horizontalInset,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.cloud_off_rounded,
+                        size: 38,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Ride history could not be loaded.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _retry,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                        ),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return _buildHistory(
+              context,
+              horizontalInset,
+              snapshot.data ?? const [],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildHistory(
+    BuildContext context,
+    double horizontalInset,
+    List<RideHistoryEntry> rides,
+  ) {
     final totalDistance = rides.fold<double>(
       0,
       (total, ride) => total + ride.distanceKm,
@@ -21,56 +133,95 @@ class RideHistoryPage extends StatelessWidget {
       (total, ride) => total + ride.payment.finalFare,
     );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontalInset = constraints.maxWidth > 920
-            ? (constraints.maxWidth - 860) / 2
-            : 16.0;
-
-        return ListView(
-          key: const ValueKey<String>('ride-history-page'),
-          padding: EdgeInsets.fromLTRB(horizontalInset, 8, horizontalInset, 24),
-          children: [
-            SectionHeader(
-              title: context.l10n.rideHistory,
-              subtitle: context.l10n.rideHistoryDescription,
-            ),
-            const SizedBox(height: 14),
-            _HistorySummary(
-              rideCount: rides.length,
-              totalDistance: totalDistance,
-              totalSpent: totalSpent,
-            ),
-            const SizedBox(height: 18),
-            Text(
-              context.l10n.pastRides,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            SurfacePanel(
-              padding: EdgeInsets.zero,
-              child: Column(
-                key: const ValueKey<String>('ride-history-list'),
-                children: [
-                  for (var index = 0; index < rides.length; index++) ...[
-                    _RideHistoryRow(
-                      ride: rides[index],
-                      onTap: () => onRideSelected(rides[index]),
-                    ),
-                    if (index < rides.length - 1)
-                      Divider(
-                        height: 1,
-                        color: Theme.of(context).colorScheme.outline,
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: ListView(
+        key: const ValueKey<String>('ride-history-page'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(horizontalInset, 8, horizontalInset, 24),
+        children: [
+          SectionHeader(
+            title: context.l10n.rideHistory,
+            subtitle: context.l10n.rideHistoryDescription,
+          ),
+          const SizedBox(height: 14),
+          _HistorySummary(
+            rideCount: rides.length,
+            totalDistance: totalDistance,
+            totalSpent: totalSpent,
+          ),
+          const SizedBox(height: 18),
+          Text(
+            context.l10n.pastRides,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          SurfacePanel(
+            padding: EdgeInsets.zero,
+            child: rides.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: Text(
+                        'No completed rides yet.',
+                        textAlign: TextAlign.center,
                       ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        );
-      },
+                    ),
+                  )
+                : Column(
+                    key: const ValueKey<String>('ride-history-list'),
+                    children: [
+                      for (var index = 0; index < rides.length; index++) ...[
+                        _RideHistoryRow(
+                          ride: rides[index],
+                          onTap: () => widget.onRideSelected(rides[index]),
+                        ),
+                        if (index < rides.length - 1)
+                          Divider(
+                            height: 1,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                      ],
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryStatusView extends StatelessWidget {
+  const _HistoryStatusView({
+    required this.horizontalInset,
+    required this.child,
+  });
+
+  final double horizontalInset;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      key: const ValueKey<String>('ride-history-page'),
+      padding: EdgeInsets.fromLTRB(horizontalInset, 8, horizontalInset, 24),
+      children: [
+        SectionHeader(
+          title: context.l10n.rideHistory,
+          subtitle: context.l10n.rideHistoryDescription,
+        ),
+        const SizedBox(height: 18),
+        Text(
+          context.l10n.pastRides,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        SurfacePanel(child: child),
+      ],
     );
   }
 }
@@ -202,8 +353,8 @@ class _RideHistoryRow extends StatelessWidget {
       context.formats.decimal(ride.distanceKm, decimalDigits: 1),
     );
     final fare = context.formats.currency(ride.payment.finalFare);
-    final from = ride.startStation.label(context.l10n);
-    final to = ride.endStation.label(context.l10n);
+    final from = ride.startStation;
+    final to = ride.endStation;
 
     return Semantics(
       button: true,
