@@ -1,7 +1,9 @@
 part of '../renting_flow_page.dart';
 
 class _FareCalculationPanel extends StatelessWidget {
-  const _FareCalculationPanel();
+  const _FareCalculationPanel({required this.controller});
+
+  final RentingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -43,8 +45,8 @@ class _FareCalculationPanel extends StatelessWidget {
             ),
             child: Text(
               context.l10n.pricingFormula(
-                context.formats.currency(RentingController.unlockFee),
-                context.formats.currency(RentingController.perMinuteRate),
+                context.formats.currency(controller.unlockFee),
+                context.formats.currency(controller.perMinuteRate),
               ),
               textAlign: TextAlign.center,
               style: theme.textTheme.titleSmall?.copyWith(
@@ -57,8 +59,7 @@ class _FareCalculationPanel extends StatelessWidget {
           _PriceRow(
             label: context.l10n.pricingExample(10),
             value: context.formats.currency(
-              RentingController.unlockFee +
-                  (10 * RentingController.perMinuteRate),
+              controller.unlockFee + (10 * controller.perMinuteRate),
             ),
           ),
           const SizedBox(height: 8),

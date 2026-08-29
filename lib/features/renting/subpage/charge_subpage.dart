@@ -20,13 +20,13 @@ class _ChargeStage extends StatelessWidget {
           const SizedBox(height: 14),
           _PriceRow(
             label: context.l10n.unlockFee,
-            value: context.formats.currency(RentingController.unlockFee),
+            value: context.formats.currency(controller.unlockFee),
           ),
           const SizedBox(height: 10),
           _PriceRow(
             label: context.l10n.startedMinutes(controller.chargedMinutes),
             value: context.formats.currency(
-              controller.chargedMinutes * RentingController.perMinuteRate,
+              controller.chargedMinutes * controller.perMinuteRate,
             ),
           ),
           const Divider(height: 22),

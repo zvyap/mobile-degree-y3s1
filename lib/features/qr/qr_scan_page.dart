@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 class QrScanPage extends StatelessWidget {
   const QrScanPage({
     super.key,
-    this.controller,
+    required this.controller,
     this.onFlowLockChanged,
     this.onRequestExit,
   });
 
-  final RentingController? controller;
+  final RentingController controller;
   final ValueChanged<bool>? onFlowLockChanged;
   final VoidCallback? onRequestExit;
 

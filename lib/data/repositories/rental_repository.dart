@@ -1,12 +1,42 @@
 import 'package:bike_renting_app/data/database/database_data_source.dart';
 import 'package:bike_renting_app/data/database/database_exception.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
+import 'package:bike_renting_app/data/models/rental_session_snapshot.dart';
+import 'package:bike_renting_app/data/repositories/bike_repository.dart';
+import 'package:bike_renting_app/data/repositories/station_repository.dart';
 
-class RentalRepository {
-  RentalRepository(this._dataSource);
+abstract interface class RentalSessionRepository {
+  Future<List<StationAvailabilityRecord>> listReturnStations();
+
+  Future<RentalSessionSnapshot?> restoreActive();
+
+  Future<RentalSessionSnapshot> reserveSession(String qrToken);
+
+  Future<RentalSessionSnapshot> startSession(int rentalId);
+
+  Future<void> cancelSession(int rentalId);
+
+  Future<RentalSessionSnapshot> requestSessionReturn({
+    required int rentalId,
+    required int stationId,
+  });
+
+  Future<RentalSessionSnapshot> resumeSession(int rentalId);
+
+  Future<RentalSessionSnapshot> completeSession({
+    required int rentalId,
+    required double distanceKm,
+  });
+}
+
+class RentalRepository implements RentalSessionRepository {
+  RentalRepository(this._dataSource)
+    : _bikes = BikeRepository(_dataSource),
+      _stations = StationRepository(_dataSource);
 
   static const _rentalColumns =
       'id, public_id, user_id, bike_id, rental_plan_id, payment_method_id, '
+      'payment_required, '
       'start_station_id, end_station_id, status, currency, unlock_fee, '
       'per_minute_rate, hold_amount, reservation_expires_at, authorized_at, '
       'started_at, return_requested_at, ended_at, cancelled_at, '
@@ -22,6 +52,7 @@ class RentalRepository {
       'brand, last_four)';
 
   static const _blockingStatuses = [
+    'reserved',
     'pending_authorization',
     'authorized',
     'active',
@@ -31,6 +62,62 @@ class RentalRepository {
   ];
 
   final DatabaseDataSource _dataSource;
+  final BikeRepository _bikes;
+  final StationRepository _stations;
+
+  @override
+  Future<List<StationAvailabilityRecord>> listReturnStations() {
+    return _stations.listAvailability();
+  }
+
+  @override
+  Future<RentalSessionSnapshot?> restoreActive() async {
+    final rental = await getActive();
+    return rental == null ? null : _hydrate(rental);
+  }
+
+  @override
+  Future<RentalSessionSnapshot> reserveSession(String qrToken) async {
+    final rental = await _callRentalRpc('reserve_rental_session', {
+      'p_qr_token': qrToken,
+    });
+    return _hydrate(rental);
+  }
+
+  @override
+  Future<RentalSessionSnapshot> startSession(int rentalId) async {
+    return _hydrate(await startRental(rentalId));
+  }
+
+  @override
+  Future<void> cancelSession(int rentalId) async {
+    await cancelRental(rentalId);
+  }
+
+  @override
+  Future<RentalSessionSnapshot> requestSessionReturn({
+    required int rentalId,
+    required int stationId,
+  }) async {
+    return _hydrate(
+      await requestReturn(rentalId: rentalId, stationId: stationId),
+    );
+  }
+
+  @override
+  Future<RentalSessionSnapshot> resumeSession(int rentalId) async {
+    return _hydrate(await resumeRental(rentalId));
+  }
+
+  @override
+  Future<RentalSessionSnapshot> completeSession({
+    required int rentalId,
+    required double distanceKm,
+  }) async {
+    return _hydrate(
+      await completeReturn(rentalId: rentalId, distanceKm: distanceKm),
+    );
+  }
 
   Future<RentalDatabaseRecord> reserveBike({
     required String qrToken,
@@ -113,6 +200,33 @@ class RentalRepository {
     return rows
         .map(RentalHistoryDatabaseRecord.fromJson)
         .toList(growable: false);
+  }
+
+  Future<RentalSessionSnapshot> _hydrate(RentalDatabaseRecord rental) async {
+    final results = await Future.wait<Object?>([
+      _bikes.findById(rental.bikeId),
+      _stations.findById(rental.startStationId),
+      if (rental.endStationId == null)
+        Future<StationAvailabilityRecord?>.value()
+      else
+        _stations.findById(rental.endStationId!),
+    ]);
+    final bike = results[0] as BikeDatabaseRecord?;
+    final startStation = results[1] as StationAvailabilityRecord?;
+    final endStation = results[2] as StationAvailabilityRecord?;
+
+    if (bike == null || startStation == null) {
+      throw const DatabaseException(
+        code: DatabaseErrorCode.notFound,
+        message: 'rental_session_details_not_found',
+      );
+    }
+    return RentalSessionSnapshot(
+      rental: rental,
+      bike: bike,
+      startStation: startStation,
+      endStation: endStation,
+    );
   }
 
   Future<RentalDatabaseRecord> _callRentalRpc(

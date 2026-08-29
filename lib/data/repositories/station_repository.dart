@@ -21,4 +21,13 @@ class StationRepository {
     );
     return rows.map(StationAvailabilityRecord.fromJson).toList(growable: false);
   }
+
+  Future<StationAvailabilityRecord?> findById(int id) async {
+    final json = await _dataSource.selectMaybeSingle(
+      table: 'station_availability',
+      columns: _columns,
+      equals: {'id': id},
+    );
+    return json == null ? null : StationAvailabilityRecord.fromJson(json);
+  }
 }

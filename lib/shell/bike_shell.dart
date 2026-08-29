@@ -1,9 +1,12 @@
+import 'package:bike_renting_app/data/app_repositories.dart';
+import 'package:bike_renting_app/features/renting/rent_demo_auth.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/navigation/app_navigator.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/navigation/bike_bottom_nav_bar.dart';
 import 'package:bike_renting_app/shell/app_header.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BikeShell extends StatefulWidget {
   const BikeShell({super.key, required this.onToggleTheme});
@@ -28,7 +31,12 @@ class _BikeShellState extends State<BikeShell> {
   @override
   void initState() {
     super.initState();
-    _rentingController = RentingController();
+    final client = Supabase.instance.client;
+    final repositories = AppRepositories.fromSupabase(client);
+    _rentingController = RentingController(
+      repository: repositories.rentals,
+      authenticator: SupabaseDemoRentAuthenticator(client),
+    );
     _navigatorObserver = AppNavigatorObserver(_handleRouteChanged);
   }
 

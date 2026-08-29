@@ -16,7 +16,7 @@ class _UnlockStage extends StatelessWidget {
           _StageTitle(
             icon: Icons.lock_open_rounded,
             title: context.l10n.unlockBikeTitle,
-            subtitle: context.l10n.unlockBikeDescription(controller.bike.id),
+            subtitle: context.l10n.unlockBikeDescription(controller.bikeCode),
           ),
           const SizedBox(height: 18),
           AnimatedContainer(

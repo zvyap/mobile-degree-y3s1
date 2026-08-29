@@ -1,6 +1,7 @@
+import 'dart:async';
+
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
-import 'package:bike_renting_app/features/renting/paypal_checkout_page.dart';
 import 'package:bike_renting_app/l10n/app_formats.dart';
 import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
@@ -27,12 +28,12 @@ part 'subpage/renting_helpers.dart';
 class RentingFlowPage extends StatefulWidget {
   const RentingFlowPage({
     super.key,
-    this.controller,
+    required this.controller,
     this.onFlowLockChanged,
     this.onRequestExit,
   });
 
-  final RentingController? controller;
+  final RentingController controller;
   final ValueChanged<bool>? onFlowLockChanged;
   final VoidCallback? onRequestExit;
 
@@ -42,13 +43,13 @@ class RentingFlowPage extends StatefulWidget {
 
 class _RentingFlowPageState extends State<RentingFlowPage> {
   late RentingController _controller;
-  late bool _ownsController;
   bool _lastLockState = false;
 
   @override
   void initState() {
     super.initState();
     _attachController(widget.controller);
+    unawaited(_controller.initialize());
   }
 
   @override
@@ -56,14 +57,13 @@ class _RentingFlowPageState extends State<RentingFlowPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       _controller.removeListener(_handleControllerChange);
-      if (_ownsController) _controller.dispose();
       _attachController(widget.controller);
+      unawaited(_controller.initialize());
     }
   }
 
-  void _attachController(RentingController? providedController) {
-    _ownsController = providedController == null;
-    _controller = providedController ?? RentingController();
+  void _attachController(RentingController providedController) {
+    _controller = providedController;
     _lastLockState = _controller.isFlowLocked;
     _controller.addListener(_handleControllerChange);
   }
@@ -81,7 +81,6 @@ class _RentingFlowPageState extends State<RentingFlowPage> {
   @override
   void dispose() {
     _controller.removeListener(_handleControllerChange);
-    if (_ownsController) _controller.dispose();
     super.dispose();
   }
 
@@ -135,6 +134,41 @@ class _RentingFlowPageState extends State<RentingFlowPage> {
   }
 
   Widget _buildStage() {
+    if (!_controller.isInitialized) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(48),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_controller.stage == RentalStage.scan &&
+        (_controller.error == RentalError.authenticationFailed ||
+            _controller.error == RentalError.connectionFailed)) {
+      return SurfacePanel(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 44,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 12),
+            _ErrorPanel(message: _rentalError(context, _controller)),
+            const SizedBox(height: 12),
+            _ActionButton(
+              label: context.l10n.retry,
+              icon: Icons.refresh_rounded,
+              busy: _controller.isBusy,
+              onPressed: _controller.retryInitialization,
+            ),
+          ],
+        ),
+      );
+    }
+
     return switch (_controller.stage) {
       RentalStage.scan => _ScanStage(controller: _controller),
       RentalStage.bikeCheck => _BikeCheckStage(controller: _controller),

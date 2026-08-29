@@ -61,9 +61,13 @@ class HeroPanel extends StatelessWidget {
             const SizedBox(width: 7),
             Expanded(
               child: Text(
+                // TODO(renting): Load this preview from the active rental plan
+                // when the Home module gets repository wiring.
                 context.l10n.unlockRate(
-                  context.formats.currency(RentingController.unlockFee),
-                  context.formats.currency(RentingController.perMinuteRate),
+                  context.formats.currency(RentingController.defaultUnlockFee),
+                  context.formats.currency(
+                    RentingController.defaultPerMinuteRate,
+                  ),
                 ),
                 softWrap: true,
                 style: theme.textTheme.bodySmall?.copyWith(

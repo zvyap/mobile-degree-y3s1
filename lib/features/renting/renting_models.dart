@@ -13,6 +13,10 @@ enum RentalStage {
 enum PaymentStatus { ready, authorized, paid, pending }
 
 enum RentalError {
+  authenticationFailed,
+  connectionFailed,
+  activeRentalExists,
+  invalidTransition,
   invalidQr,
   bikeReserved,
   holdDeclined,
@@ -52,12 +56,16 @@ class RideMetrics {
 
 class ReturnStation {
   const ReturnStation({
+    required this.backendId,
     required this.id,
+    required this.name,
     required this.distanceMeters,
     required this.availableDocks,
   });
 
+  final int backendId;
   final String id;
+  final String name;
   final int distanceMeters;
   final int availableDocks;
 }

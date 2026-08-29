@@ -1,18 +1,12 @@
 part of '../renting_flow_page.dart';
 
 String _stationName(AppLocalizations l10n, ReturnStation station) {
-  return switch (station.id) {
-    'central' => l10n.centralStation,
-    'riverside' => l10n.riversidePark,
-    'market' => l10n.marketSquare,
-    'university' => l10n.universityGate,
-    _ => station.id,
-  };
+  return station.name;
 }
 
 String _paymentMethodLabel(AppLocalizations l10n, RentalPaymentMethod method) {
   return switch (method.id) {
-    'paypal-sandbox' => l10n.paypalSandboxDescription,
+    'test-payment' => l10n.paypalSandboxDescription,
     _ => method.brand,
   };
 }
@@ -21,9 +15,9 @@ String _rentalError(BuildContext context, RentingController controller) {
   final l10n = context.l10n;
   return switch (controller.error!) {
     RentalError.invalidQr => l10n.errorInvalidQr,
-    RentalError.bikeReserved => l10n.errorBikeReserved(controller.bike.id),
+    RentalError.bikeReserved => l10n.errorBikeReserved(controller.bikeCode),
     RentalError.holdDeclined => l10n.errorHoldDeclined(
-      context.formats.currency(RentingController.holdAmount),
+      context.formats.currency(controller.holdAmount),
     ),
     RentalError.paymentConfiguration => l10n.errorPaymentConfiguration,
     RentalError.paymentNetwork => l10n.errorPaymentNetwork,
@@ -39,6 +33,10 @@ String _rentalError(BuildContext context, RentingController controller) {
     RentalError.chooseStation => l10n.errorChooseStation,
     RentalError.outsideReturnZone => l10n.errorOutsideReturnZone,
     RentalError.dockNotDetected => l10n.errorDockNotDetected,
+    RentalError.authenticationFailed => l10n.errorAuthenticationFailed,
+    RentalError.connectionFailed => l10n.errorBackendConnection,
+    RentalError.activeRentalExists => l10n.errorActiveRentalExists,
+    RentalError.invalidTransition => l10n.errorInvalidRentalTransition,
   };
 }
 

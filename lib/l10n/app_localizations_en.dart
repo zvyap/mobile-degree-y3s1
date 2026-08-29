@@ -392,7 +392,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bikeReadyDescription =>
-      'Check the bike and fare before placing the PayPal hold.';
+      'Check the bike and fare before placing the test hold.';
 
   @override
   String bikeBatteryLocation(int battery, String location) {
@@ -430,11 +430,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'The hold is not a charge. Unused funds are released after return.';
 
   @override
-  String get authorizeCardHold => 'Authorize PayPal hold';
+  String get authorizeCardHold => 'Authorize test hold';
 
   @override
   String get authorizeCardHoldDescription =>
-      'Approve the sandbox payment and reserve funds before the bike unlocks.';
+      'Simulate approval of the test payment before the bike unlocks.';
 
   @override
   String get temporaryAuthorizationHold => 'Temporary authorization hold';
@@ -456,7 +456,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contactingBikeLock => 'Contacting bike lock…';
 
   @override
-  String get cardHoldAuthorized => 'PayPal hold authorized';
+  String get cardHoldAuthorized => 'Test hold authorized';
 
   @override
   String get unlockBike => 'Unlock bike';
@@ -573,11 +573,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get holdReleasedDescription =>
-      'The remaining PayPal hold has been released.';
+      'The remaining test hold has been released.';
 
   @override
   String get paymentPendingDescription =>
-      'The bike is returned safely. Retry the PayPal capture below.';
+      'The bike is returned safely. Retry the simulated charge below.';
 
   @override
   String get rideId => 'Ride ID';
@@ -590,6 +590,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retryPayment => 'Retry payment';
+
+  @override
+  String get retry => 'Retry';
 
   @override
   String get rentAnotherBike => 'Rent another bike';
@@ -628,11 +631,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Adding a new card belongs to the future User module.';
 
   @override
-  String get paypalSandbox => 'PayPal Sandbox';
+  String get paypalSandbox => 'Test payment';
 
   @override
-  String get paypalSandboxDescription =>
-      'Sandbox buyer account · No real money';
+  String get paypalSandboxDescription => 'Local simulation · No real money';
 
   @override
   String get paypalCheckoutTitle => 'PayPal Sandbox';
@@ -661,28 +663,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String errorHoldDeclined(String amount) {
-    return 'The $amount PayPal hold was declined. Check the sandbox buyer account and retry.';
+    return 'The $amount test hold was declined. Retry when ready.';
   }
 
   @override
   String get errorPaymentConfiguration =>
-      'Add the PayPal Sandbox client ID and secret in paypal_sandbox_constants.dart.';
+      'The local test payment simulator is unavailable.';
 
   @override
   String get errorPaymentNetwork =>
-      'PayPal Sandbox could not be reached. Check the connection and retry.';
+      'The local test payment failed. Retry when ready.';
 
   @override
   String get errorPaymentCancelled =>
-      'PayPal approval was cancelled. Retry when ready.';
+      'Test payment approval was cancelled. Retry when ready.';
 
   @override
   String get errorPaymentAuthorizationFailed =>
-      'PayPal could not authorize the hold. Retry with the sandbox buyer account.';
+      'The test payment could not authorize the hold. Retry when ready.';
 
   @override
   String get errorPaymentCaptureFailed =>
-      'PayPal could not capture the ride fare. The payment remains pending; retry below.';
+      'The test payment could not capture the ride fare. The payment remains pending; retry below.';
 
   @override
   String get errorLockFailed =>
@@ -707,4 +709,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorDockNotDetected =>
       'Dock not detected. Push the bike firmly into the dock and retry.';
+
+  @override
+  String get errorAuthenticationFailed =>
+      'Demo rider sign-in failed. Check Supabase and retry.';
+
+  @override
+  String get errorBackendConnection =>
+      'The rent service is unavailable. Check the connection and retry.';
+
+  @override
+  String get errorActiveRentalExists =>
+      'This rider already has an unfinished rental. Resume or finish it first.';
+
+  @override
+  String get errorInvalidRentalTransition =>
+      'The rental state changed on the server. Retry to restore it.';
 }

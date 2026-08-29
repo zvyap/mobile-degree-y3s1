@@ -717,7 +717,7 @@ abstract class AppLocalizations {
   /// No description provided for @bikeReadyDescription.
   ///
   /// In en, this message translates to:
-  /// **'Check the bike and fare before placing the PayPal hold.'**
+  /// **'Check the bike and fare before placing the test hold.'**
   String get bikeReadyDescription;
 
   /// No description provided for @bikeBatteryLocation.
@@ -783,13 +783,13 @@ abstract class AppLocalizations {
   /// No description provided for @authorizeCardHold.
   ///
   /// In en, this message translates to:
-  /// **'Authorize PayPal hold'**
+  /// **'Authorize test hold'**
   String get authorizeCardHold;
 
   /// No description provided for @authorizeCardHoldDescription.
   ///
   /// In en, this message translates to:
-  /// **'Approve the sandbox payment and reserve funds before the bike unlocks.'**
+  /// **'Simulate approval of the test payment before the bike unlocks.'**
   String get authorizeCardHoldDescription;
 
   /// No description provided for @temporaryAuthorizationHold.
@@ -825,7 +825,7 @@ abstract class AppLocalizations {
   /// No description provided for @cardHoldAuthorized.
   ///
   /// In en, this message translates to:
-  /// **'PayPal hold authorized'**
+  /// **'Test hold authorized'**
   String get cardHoldAuthorized;
 
   /// No description provided for @unlockBike.
@@ -1023,13 +1023,13 @@ abstract class AppLocalizations {
   /// No description provided for @holdReleasedDescription.
   ///
   /// In en, this message translates to:
-  /// **'The remaining PayPal hold has been released.'**
+  /// **'The remaining test hold has been released.'**
   String get holdReleasedDescription;
 
   /// No description provided for @paymentPendingDescription.
   ///
   /// In en, this message translates to:
-  /// **'The bike is returned safely. Retry the PayPal capture below.'**
+  /// **'The bike is returned safely. Retry the simulated charge below.'**
   String get paymentPendingDescription;
 
   /// No description provided for @rideId.
@@ -1055,6 +1055,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry payment'**
   String get retryPayment;
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
 
   /// No description provided for @rentAnotherBike.
   ///
@@ -1119,13 +1125,13 @@ abstract class AppLocalizations {
   /// No description provided for @paypalSandbox.
   ///
   /// In en, this message translates to:
-  /// **'PayPal Sandbox'**
+  /// **'Test payment'**
   String get paypalSandbox;
 
   /// No description provided for @paypalSandboxDescription.
   ///
   /// In en, this message translates to:
-  /// **'Sandbox buyer account · No real money'**
+  /// **'Local simulation · No real money'**
   String get paypalSandboxDescription;
 
   /// No description provided for @paypalCheckoutTitle.
@@ -1173,37 +1179,37 @@ abstract class AppLocalizations {
   /// No description provided for @errorHoldDeclined.
   ///
   /// In en, this message translates to:
-  /// **'The {amount} PayPal hold was declined. Check the sandbox buyer account and retry.'**
+  /// **'The {amount} test hold was declined. Retry when ready.'**
   String errorHoldDeclined(String amount);
 
   /// No description provided for @errorPaymentConfiguration.
   ///
   /// In en, this message translates to:
-  /// **'Add the PayPal Sandbox client ID and secret in paypal_sandbox_constants.dart.'**
+  /// **'The local test payment simulator is unavailable.'**
   String get errorPaymentConfiguration;
 
   /// No description provided for @errorPaymentNetwork.
   ///
   /// In en, this message translates to:
-  /// **'PayPal Sandbox could not be reached. Check the connection and retry.'**
+  /// **'The local test payment failed. Retry when ready.'**
   String get errorPaymentNetwork;
 
   /// No description provided for @errorPaymentCancelled.
   ///
   /// In en, this message translates to:
-  /// **'PayPal approval was cancelled. Retry when ready.'**
+  /// **'Test payment approval was cancelled. Retry when ready.'**
   String get errorPaymentCancelled;
 
   /// No description provided for @errorPaymentAuthorizationFailed.
   ///
   /// In en, this message translates to:
-  /// **'PayPal could not authorize the hold. Retry with the sandbox buyer account.'**
+  /// **'The test payment could not authorize the hold. Retry when ready.'**
   String get errorPaymentAuthorizationFailed;
 
   /// No description provided for @errorPaymentCaptureFailed.
   ///
   /// In en, this message translates to:
-  /// **'PayPal could not capture the ride fare. The payment remains pending; retry below.'**
+  /// **'The test payment could not capture the ride fare. The payment remains pending; retry below.'**
   String get errorPaymentCaptureFailed;
 
   /// No description provided for @errorLockFailed.
@@ -1241,6 +1247,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dock not detected. Push the bike firmly into the dock and retry.'**
   String get errorDockNotDetected;
+
+  /// No description provided for @errorAuthenticationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo rider sign-in failed. Check Supabase and retry.'**
+  String get errorAuthenticationFailed;
+
+  /// No description provided for @errorBackendConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'The rent service is unavailable. Check the connection and retry.'**
+  String get errorBackendConnection;
+
+  /// No description provided for @errorActiveRentalExists.
+  ///
+  /// In en, this message translates to:
+  /// **'This rider already has an unfinished rental. Resume or finish it first.'**
+  String get errorActiveRentalExists;
+
+  /// No description provided for @errorInvalidRentalTransition.
+  ///
+  /// In en, this message translates to:
+  /// **'The rental state changed on the server. Retry to restore it.'**
+  String get errorInvalidRentalTransition;
 }
 
 class _AppLocalizationsDelegate

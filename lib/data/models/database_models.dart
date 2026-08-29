@@ -7,6 +7,7 @@ enum AccountStatus { active, suspended }
 enum BikeDatabaseStatus { available, reserved, inUse, maintenance, retired }
 
 enum RentalDatabaseStatus {
+  reserved,
   pendingAuthorization,
   authorized,
   active,
@@ -125,7 +126,7 @@ class BikeDatabaseRecord {
     return BikeDatabaseRecord(
       id: _asInt(json['id']),
       code: json['code'] as String,
-      qrToken: json['qr_token'] as String,
+      qrToken: json['qr_token'] as String? ?? '',
       currentStationId: _asNullableInt(json['current_station_id']),
       batteryPercent: _asInt(json['battery_percent']),
       status: _enumFromDatabase(
@@ -197,6 +198,7 @@ class RentalDatabaseRecord {
     required this.publicId,
     required this.bikeId,
     required this.rentalPlanId,
+    required this.paymentRequired,
     required this.startStationId,
     required this.status,
     required this.currency,
@@ -229,6 +231,7 @@ class RentalDatabaseRecord {
       bikeId: _asInt(json['bike_id']),
       rentalPlanId: _asInt(json['rental_plan_id']),
       paymentMethodId: _asNullableInt(json['payment_method_id']),
+      paymentRequired: json['payment_required'] as bool? ?? true,
       startStationId: _asInt(json['start_station_id']),
       endStationId: _asNullableInt(json['end_station_id']),
       status: _enumFromDatabase(
@@ -262,6 +265,7 @@ class RentalDatabaseRecord {
   final int bikeId;
   final int rentalPlanId;
   final int? paymentMethodId;
+  final bool paymentRequired;
   final int startStationId;
   final int? endStationId;
   final RentalDatabaseStatus status;

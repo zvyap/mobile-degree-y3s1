@@ -43,7 +43,7 @@ class _BikeCheckStage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            controller.bike.id,
+                            controller.bike!.id,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w900,
                             ),
@@ -51,11 +51,8 @@ class _BikeCheckStage extends StatelessWidget {
                           const SizedBox(height: 3),
                           Text(
                             context.l10n.bikeBatteryLocation(
-                              controller.bike.batteryPercent,
-                              _stationName(
-                                context.l10n,
-                                controller.stations[0],
-                              ),
+                              controller.bike!.batteryPercent,
+                              controller.startStation!.name,
                             ),
                           ),
                         ],
@@ -86,14 +83,14 @@ class _BikeCheckStage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              const _FareCalculationPanel(),
+              _FareCalculationPanel(controller: controller),
               const SizedBox(height: 12),
               _PaymentMethodTile(method: method),
               const SizedBox(height: 18),
               _ActionButton(
                 key: const ValueKey('rent-review-hold'),
                 label: context.l10n.reviewHold(
-                  context.formats.currency(RentingController.holdAmount),
+                  context.formats.currency(controller.holdAmount),
                 ),
                 icon: Icons.account_balance_wallet_rounded,
                 onPressed: controller.reviewAuthorization,
