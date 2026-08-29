@@ -49,6 +49,9 @@ class _RentingFlowPageState extends State<RentingFlowPage> {
   void initState() {
     super.initState();
     _attachController(widget.controller);
+    if (_controller.stage == RentalStage.receipt) {
+      unawaited(_controller.reset());
+    }
     unawaited(_controller.initialize());
   }
 
@@ -58,6 +61,9 @@ class _RentingFlowPageState extends State<RentingFlowPage> {
     if (oldWidget.controller != widget.controller) {
       _controller.removeListener(_handleControllerChange);
       _attachController(widget.controller);
+      if (_controller.stage == RentalStage.receipt) {
+        unawaited(_controller.reset());
+      }
       unawaited(_controller.initialize());
     }
   }

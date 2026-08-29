@@ -24,6 +24,7 @@ class RentingController extends ChangeNotifier {
   static const demoBikeCode = 'BIKE-C042';
   static const defaultUnlockFee = 0.50;
   static const defaultPerMinuteRate = 0.10;
+  static const _initializationRetryDelay = Duration(milliseconds: 250);
 
   static const paymentMethods = [
     RentalPaymentMethod(
@@ -115,10 +116,7 @@ class RentingController extends ChangeNotifier {
     try {
       _clearError();
       await authenticator.ensureSignedIn();
-      final results = await Future.wait<Object?>([
-        repository.listReturnStations(),
-        repository.restoreActive(),
-      ]);
+      final results = await _loadInitializationData();
       stations = (results[0] as List<StationAvailabilityRecord>)
           .map(_stationFromDatabase)
           .toList(growable: false);
@@ -130,6 +128,23 @@ class RentingController extends ChangeNotifier {
       isInitialized = true;
       notifyListeners();
     }
+  }
+
+  Future<List<Object?>> _loadInitializationData() async {
+    Object? lastError;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await Future.wait<Object?>([
+          repository.listReturnStations(),
+          repository.restoreActive(),
+        ]);
+      } catch (caught) {
+        lastError = caught;
+        if (attempt == 1 || caught is AuthException) rethrow;
+        await Future<void>.delayed(_initializationRetryDelay);
+      }
+    }
+    throw lastError ?? StateError('Rent initialization failed');
   }
 
   Future<void> retryInitialization() async {

@@ -14,10 +14,15 @@ class SupabaseDemoRentAuthenticator implements RentSessionAuthenticator {
 
   @override
   Future<void> ensureSignedIn() async {
+    final currentSession = _client.auth.currentSession;
     final currentEmail = _client.auth.currentUser?.email?.toLowerCase();
-    if (currentEmail == email) return;
+    if (currentEmail == email &&
+        currentSession != null &&
+        !currentSession.isExpired) {
+      return;
+    }
 
-    if (_client.auth.currentSession != null) await _client.auth.signOut();
+    if (currentSession != null) await _client.auth.signOut();
     await _client.auth.signInWithPassword(email: email, password: password);
 
     // TODO(auth): Replace automatic demo login with the future User module's
