@@ -42,7 +42,8 @@ class AuthController extends ChangeNotifier {
         password: password,
       );
     } catch (e) {
-      error = UserError.loginFailed;
+      debugPrint('Login error: $e'); // test debug
+      error = UserError.loginFailed; // issue here?
     } finally {
       isBusy = false;
       notifyListeners();

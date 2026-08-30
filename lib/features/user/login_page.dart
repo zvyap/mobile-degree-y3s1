@@ -74,10 +74,9 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.electric_scooter,
-                  size: 90,
-                  color: Colors.white,
+                Image.asset(
+                  'assets/icon/app_icon.png',
+                  width: 90, height: 90,
                 ),
 
                 const SizedBox(height: 12),
