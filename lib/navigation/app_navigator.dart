@@ -1,5 +1,5 @@
 import 'package:bike_renting_app/features/admin/admin_management_page.dart';
-import 'package:bike_renting_app/features/bike/bike_detail_page.dart';
+import 'package:bike_renting_app/features/bike/bike_details.dart';
 import 'package:bike_renting_app/features/bike/bike_management_page.dart';
 import 'package:bike_renting_app/features/home/home_page.dart';
 import 'package:bike_renting_app/features/user/profile_controller.dart';
