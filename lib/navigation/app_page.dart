@@ -11,6 +11,7 @@ enum AppPage {
   admin(routeName: '/admin', icon: Icons.admin_panel_settings_rounded),
   bikeManagement(routeName: '/admin/bikes', icon: Icons.directions_bike_rounded,),
   addbike(routeName: '/admin/bike/addBike', icon: Icons.add_rounded),
+  editBike(routeName: '/admin/bike/editBike', icon: Icons.add_rounded),
   bikeDetail(routeName: '/admin/bike/bikeDetail', icon: Icons.receipt_long_rounded ),
   bikeReport(routeName: '/admin/bike/bikeReport', icon: Icons.receipt_long_rounded ),
   settings(routeName: '/settings', icon: Icons.settings_rounded);
@@ -33,6 +34,7 @@ enum AppPage {
     settings => l10n.settings,
     bikeDetail => 'Bike Detail',
     bikeReport => 'Bike Report',
+    editBike => 'Edit Bike',
   };
 
   String navigationLabel(AppLocalizations l10n) => switch (this) {

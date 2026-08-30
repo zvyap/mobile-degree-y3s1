@@ -9,10 +9,11 @@ class BikeDetailsPage extends StatefulWidget {
   const BikeDetailsPage({
     super.key,
     required this.bikeId,
+    required this.onEditBike,
   });
 
   final String bikeId;
-
+  final VoidCallback onEditBike;
   @override
   State<BikeDetailsPage> createState() => _BikeDetailsPageState();
 }
@@ -231,9 +232,7 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
               child: _BikeActionButton(
                 icon: Icons.edit_outlined,
                 label: 'Edit',
-                onPressed: () {
-                  showSnackBar('Open Edit Bike page');
-                },
+                onPressed: widget.onEditBike,
               ),
             ),
 
