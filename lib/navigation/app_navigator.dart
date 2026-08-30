@@ -1,4 +1,5 @@
 import 'package:bike_renting_app/features/admin/admin_management_page.dart';
+import 'package:bike_renting_app/features/bike/bike_detail_page.dart';
 import 'package:bike_renting_app/features/bike/bike_management_page.dart';
 import 'package:bike_renting_app/features/home/home_page.dart';
 import 'package:bike_renting_app/features/user/profile_controller.dart';
@@ -15,6 +16,7 @@ import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
 import 'package:bike_renting_app/features/bike/add_bike.dart';
+import 'package:bike_renting_app/features/bike/bike_report.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppNavigator extends StatelessWidget {
@@ -114,8 +116,29 @@ class AppNavigator extends StatelessWidget {
         onOpenBikeManagement: () => onOpenPage(AppPage.bikeManagement),
       ),
       AppPage.addbike => const AddBike(),
+      AppPage.bikeDetail => BikeDetailsPage(
+        bikeId: arguments as String,
+      ),
+      AppPage.bikeReport => BikeReportPage(
+        bikeId: arguments as String,
+      ),
       AppPage.bikeManagement => BikeManagementPage(
         onAddBike: () => onOpenPage(AppPage.addbike),
+        onOpenBikeDetails: (bikeId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.bikeDetail.routeName,
+            arguments: bikeId,
+          );
+        },
+
+        onOpenBikeReports: (bikeId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.bikeReport.routeName,
+            arguments: bikeId,
+          );
+        },
+
+
       ),
       AppPage.settings => SettingsPage(onToggleTheme: onToggleTheme),
     };

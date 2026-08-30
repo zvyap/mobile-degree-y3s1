@@ -9,11 +9,10 @@ enum AppPage {
   rideDetails(routeName: '/history/details', icon: Icons.receipt_long_rounded),
   profile(routeName: '/profile', icon: Icons.person_rounded),
   admin(routeName: '/admin', icon: Icons.admin_panel_settings_rounded),
-  bikeManagement(
-    routeName: '/admin/bikes',
-    icon: Icons.directions_bike_rounded,
-  ),
-  addbike(routeName: '/admin/bikes/addBike', icon: Icons.add_rounded),
+  bikeManagement(routeName: '/admin/bikes', icon: Icons.directions_bike_rounded,),
+  addbike(routeName: '/admin/bike/addBike', icon: Icons.add_rounded),
+  bikeDetail(routeName: '/admin/bike/bikeDetail', icon: Icons.receipt_long_rounded ),
+  bikeReport(routeName: '/admin/bike/bikeReport', icon: Icons.receipt_long_rounded ),
   settings(routeName: '/settings', icon: Icons.settings_rounded);
 
   const AppPage({required this.routeName, required this.icon});
@@ -32,6 +31,8 @@ enum AppPage {
     bikeManagement => l10n.bikeManagement,
     addbike => 'Add Bike',
     settings => l10n.settings,
+    bikeDetail => 'Bike Detail',
+    bikeReport => 'Bike Report',
   };
 
   String navigationLabel(AppLocalizations l10n) => switch (this) {

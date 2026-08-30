@@ -5,11 +5,17 @@ class BikeManagementPage extends StatelessWidget {
   const BikeManagementPage({
     super.key,
     required this.onAddBike,
+    required this.onOpenBikeDetails,
+    required this.onOpenBikeReports,
   });
 
   static const Color _cardColor = Color(0xFF1D2939);
   static const Color _accentColor = Color(0xFF0E8EA8);
   static const Color _borderColor = Color(0xFFD2DCE6);
+
+  final ValueChanged<String> onOpenBikeDetails;
+  final ValueChanged<String> onOpenBikeReports;
+
   final VoidCallback onAddBike;
   @override
   Widget build(BuildContext context) {
@@ -82,51 +88,115 @@ class BikeManagementPage extends StatelessWidget {
             // -------------------------------------------------------
             // Bikes
             // -------------------------------------------------------
-            const _BikeCard(
+             _BikeCard(
               bikeId: 'BR-1028',
               model: 'Standard Road Bike',
               status: BikeStatus.available,
               location: 'Gurney Paragon',
               description: 'Last service 4 days ago',
+
+               onViewDetails: () {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(
+                     content: Text('Opening details'),
+                   ),
+                 );
+                 onOpenBikeDetails('BR-1028');
+               },
+
+               onViewReports: () {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(
+                     content: Text('Opening reports'),
+                   ),
+                 );
+                 onOpenBikeReports('BR-1028');
+               },
             ),
 
             const SizedBox(height: 16),
 
-            const _BikeCard(
+            _BikeCard(
               bikeId: 'BR-1042',
               model: 'Standard City Bike',
               status: BikeStatus.inService,
               location: 'Folk Valley',
               description: 'Brake issue • Finish by 24/07/2026',
+
+              onViewDetails: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Opening details'),
+                  ),
+                );
+              },
+
+              onViewReports: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Opening reports'),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 16),
 
-            const _BikeCard(
+            _BikeCard(
               bikeId: 'BR-0986',
               model: 'Standard City Bike',
               status: BikeStatus.rented,
               location: 'University TARUMT',
               description: 'Return By 23 July 22:48',
+
+              onViewDetails: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Opening details'),
+                  ),
+                );
+              },
+
+              onViewReports: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Opening reports'),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 16),
 
-            const _BikeCard(
+            _BikeCard(
               bikeId: 'BR-1107',
               model: 'Standard Road Bike',
               status: BikeStatus.unavailable,
               location: 'University TARUMT',
               description: 'Tyre puncture • 1 Open Report',
+
+              onViewDetails: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Opening details'),
+                  ),
+                );
+                onOpenBikeDetails('BR-1107');
+              },
+
+              onViewReports: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Opening reports'),
+                  ),
+                );
+                onOpenBikeReports('BR-1107');
+              },
             ),
           ],
         );
   }
 }
-
-//-------------------------------------------------------
-// Page title
-// -------------------------------------------------------
 
 // ===========================================================================
 // SEARCH
@@ -285,6 +355,8 @@ class _BikeCard extends StatelessWidget {
     required this.status,
     required this.location,
     required this.description,
+    required this.onViewDetails,
+    required this.onViewReports,
   });
 
   final String bikeId;
@@ -292,6 +364,10 @@ class _BikeCard extends StatelessWidget {
   final BikeStatus status;
   final String location;
   final String description;
+
+  //callnack
+  final VoidCallback onViewDetails;
+  final VoidCallback onViewReports;
 
   @override
   Widget build(BuildContext context) {
@@ -385,19 +461,45 @@ class _BikeCard extends StatelessWidget {
                       ),
                     ),
 
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
-                        // Bike menu later
-                      },
-                      icon: const Icon(
-                        Icons.more_horiz_rounded,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
+                   PopupMenuButton<BikeMenuAction>(
+                     icon: const Icon(
+                       Icons.more_horiz_rounded,
+                       color: Colors.white,
+                       size: 28,
+                     ),
+
+                     onSelected: (action) {
+                       if (action == BikeMenuAction.details) {
+                         onViewDetails();
+                       } else if (action == BikeMenuAction.reports) {
+                         onViewReports();
+                       }
+                     },
+
+                     itemBuilder: (context) => const [
+                       PopupMenuItem(
+                         value: BikeMenuAction.details,
+                         child: Row(
+                           children: [
+                             Icon(Icons.info_outline_rounded),
+                             SizedBox(width: 10),
+                             Text('Bike details'),
+                           ],
+                         ),
+                       ),
+
+                       PopupMenuItem(
+                         value: BikeMenuAction.reports,
+                         child: Row(
+                           children: [
+                             Icon(Icons.report_outlined),
+                             SizedBox(width: 10),
+                             Text('Reports'),
+                           ],
+                         ),
+                       ),
+                     ],
+                   )
                   ],
                 ),
 
@@ -516,4 +618,13 @@ enum BikeStatus {
       unavailable => const Color(0xFF424242),
     };
   }
+}
+
+// ===========================================================================
+// BikeCard Action
+// ===========================================================================
+
+enum BikeMenuAction{
+  details,
+  reports,
 }
