@@ -35,13 +35,6 @@ class BikeManagementPage extends StatelessWidget {
 
             const SizedBox(height: 4),
 
-            Text(
-              context.l10n.fleetDescription,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.80),
-                fontSize: 16,
-              ),
-            ),
 
             const SizedBox(height: 24),
 
