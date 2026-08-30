@@ -16,6 +16,7 @@ enum AppPage {
   bikeReport(routeName: '/admin/bike/bikeReport', icon: Icons.receipt_long_rounded ),
   transferBike(routeName: '/admin/bike/transfer', icon: Icons.compare_arrows_rounded,),
   serviceBike(routeName: '/admin/bike/service', icon: Icons.build_rounded,),
+  bikeReportDetail(routeName: '/admin/bikes/reports/detail', icon: Icons.description_outlined,),
   settings(routeName: '/settings', icon: Icons.settings_rounded);
 
   const AppPage({required this.routeName, required this.icon});
@@ -39,6 +40,7 @@ enum AppPage {
     editBike => 'Edit Bike',
     transferBike => 'Transfer Bike',
     serviceBike => 'Service Bike',
+    bikeReportDetail => 'Report Detail',
   };
 
   String navigationLabel(AppLocalizations l10n) => switch (this) {

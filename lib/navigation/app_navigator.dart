@@ -21,7 +21,7 @@ import 'package:bike_renting_app/features/bike/edit_bike.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bike_renting_app/features/bike/transfer_bike.dart';
 import 'package:bike_renting_app/features/bike/bike_service.dart';
-
+import 'package:bike_renting_app/features/bike/bike_report_detail_page.dart';
 
 class AppNavigator extends StatelessWidget {
   const AppNavigator({
@@ -140,6 +140,12 @@ class AppNavigator extends StatelessWidget {
             arguments: arguments,
           );
         },
+        onMakeReport: () {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.bikeReport.routeName,
+            arguments: arguments,
+          );
+        },
       ),
       AppPage.serviceBike => ServiceBikePage(
         bikeId: arguments as String,
@@ -152,6 +158,15 @@ class AppNavigator extends StatelessWidget {
       ),
       AppPage.bikeReport => BikeReportPage(
         bikeId: arguments as String,
+        onOpenReportDetail: (reportId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.bikeReportDetail.routeName,
+            arguments: reportId,
+          );
+        },
+      ),
+      AppPage.bikeReportDetail => BikeReportDetailPage(
+        reportId: arguments as String,
       ),
       AppPage.bikeManagement => BikeManagementPage(
         onAddBike: () => onOpenPage(AppPage.addbike),
@@ -161,7 +176,6 @@ class AppNavigator extends StatelessWidget {
             arguments: bikeId,
           );
         },
-
         onOpenBikeReports: (bikeId) {
           navigatorKey.currentState?.pushNamed(
             AppPage.bikeReport.routeName,

@@ -12,12 +12,14 @@ class BikeDetailsPage extends StatefulWidget {
     required this.onEditBike,
     required this.onTransferBike,
     required this.onServiceBike,
+    required this.onMakeReport,
   });
 
   final String bikeId;
   final VoidCallback onEditBike;
   final VoidCallback onTransferBike;
   final VoidCallback onServiceBike;
+  final VoidCallback onMakeReport;
   @override
   State<BikeDetailsPage> createState() => _BikeDetailsPageState();
 }
@@ -39,7 +41,7 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
 
   void _handleMenuAction(BikeDetailMenuAction action) {
     if (action == BikeDetailMenuAction.makeReport) {
-      showSnackBar('Open Make Report page');
+      widget.onMakeReport();
     } else if (action == BikeDetailMenuAction.deleteBike) {
       showSnackBar('Delete bike');
     }
