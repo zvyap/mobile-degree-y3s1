@@ -37,12 +37,15 @@ class AuthController extends ChangeNotifier {
     _beginBusy();
 
     try {
-      await _authRepository.login(
+      await _authRepository.login( //  debugging var: final response
         email: email.trim(),
         password: password,
       );
+      // debugPrint('LOGIN SUCCESS: ${response.user?.email}');
+      // debugPrint( 'SESSION EXISTS: ${response.session != null}', );
+
     } catch (e) {
-      debugPrint('Login error: $e'); // test debug
+      // debugPrint('Login error: $e');  test debug
       error = UserError.loginFailed; // issue here?
     } finally {
       isBusy = false;

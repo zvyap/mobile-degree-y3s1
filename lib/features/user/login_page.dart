@@ -36,7 +36,6 @@ class _LoginPageState extends State<LoginPage> {
 
   void _onControllerChanged() {
     if (!mounted) return;
-
     setState(() {});
   }
 
@@ -59,168 +58,159 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
     if (_authController.error == null) {
       // Login succeeded.
-      // The AuthGate will eventually handle navigation/session state.
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF020B2D),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Image.asset(
-                  'assets/icon/app_icon.png',
-                  width: 90, height: 90,
-                ),
-
-                const SizedBox(height: 12),
-
-                const Text(
-                  'BikeRent',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                Center(
+                  child: Image.asset(
+                    'assets/icon/app_icon.png',
+                    width: 72,
+                    height: 72,
                   ),
                 ),
+                const SizedBox(height: 16),
+                Text(
+                  'BikeRent',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 32),
 
-                const SizedBox(height: 45),
-
+                // Email Input
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: Colors.black),
+                  style: TextStyle(color: scheme.onSurface),
                   decoration: InputDecoration(
                     hintText: 'Email',
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintStyle: TextStyle(color: scheme.onSurface.withOpacity(0.5)),
                     filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
+                    fillColor: scheme.surfaceContainerHighest,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: scheme.outline),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: scheme.primary, width: 1.5),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
 
+                // Password Input
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
-                  style: const TextStyle(color: Colors.black),
+                  style: TextStyle(color: scheme.onSurface),
                   decoration: InputDecoration(
                     hintText: 'Password',
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintStyle: TextStyle(color: scheme.onSurface.withOpacity(0.5)),
                     filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
+                    fillColor: scheme.surfaceContainerHighest,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: scheme.outline),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: scheme.primary, width: 1.5),
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 12),
-                // remove this before submit
-                TextButton(
-                  onPressed: _authController.isBusy
-                      ? null
-                      : () {
-                    _emailController.text = 'punlyhayday@gmail.com';
-                    _passwordController.text = 'test1234';
-                  },
-                  child: const Text(
-                    'Use Test Account',
-                    style: TextStyle(
-                      color: Colors.white70,
-                    ),
-                  ),
-                ),
-
                 const SizedBox(height: 8),
 
-
-                const SizedBox(height: 24),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _authController.isBusy ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF023E8A),
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFF023E8A),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: _authController.isBusy
-                        ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                        : const Text(
-                      'LOGIN',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
+                // Quick test account quick-fill
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _authController.isBusy
+                        ? null
+                        : () {
+                      _emailController.text = 'punlyhayday@gmail.com';
+                      _passwordController.text = 'test1234';
+                    },
+                    child: Text(
+                      'Use Test Account',
+                      style: TextStyle(color: scheme.onSurface.withOpacity(0.6), fontSize: 12),
                     ),
                   ),
+                ),
+                const SizedBox(height: 16),
+
+                // Primary Action Button
+                FilledButton(
+                  onPressed: _authController.isBusy ? null : _login,
+                  child: _authController.isBusy
+                      ? SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: scheme.onPrimary,
+                    ),
+                  )
+                      : const Text('Login'),
                 ),
 
                 if (_authController.error != null) ...[
                   const SizedBox(height: 12),
                   Text(
                     _authController.error.toString(),
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                    ),
+                    style: TextStyle(color: theme.colorScheme.error),
                     textAlign: TextAlign.center,
                   ),
                 ],
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
 
-                TextButton(
-                  onPressed: () {
-                    // TODO: Navigate to forgot password page.
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ForgotPasswordPage(
-                          onBack: () => Navigator.of(context).pop(), authController: _authController,
+                // Forgot Password
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ForgotPasswordPage(
+                            onBack: () => Navigator.of(context).pop(),
+                            authController: _authController,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'Forgot Password?',
-                    style: TextStyle(
-                      color: Colors.white,
+                      );
+                    },
+                    child: Text(
+                      'Forgot Password?',
+                      style: TextStyle(color: scheme.primary),
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
 
-                const SizedBox(height: 22),
-
+                // Sign Up Section
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       "Don't have an account? ",
-                      style: TextStyle(
-                        color: Colors.white70,
-                      ),
+                      style: TextStyle(color: scheme.onSurface.withOpacity(0.7)),
                     ),
                     TextButton(
                       onPressed: () {
@@ -233,10 +223,11 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         );
                       },
-                      child: const Text(
+                      child: Text(
                         'Sign Up',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: scheme.primary,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),

@@ -25,7 +25,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _registered = false;
 
   @override
   void dispose() {
@@ -38,10 +37,6 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _register() async {
-    setState(() {
-      _registered = false;
-    });
-
     await widget.authController.register(
       firstName: _firstNameController.text,
       lastName: _lastNameController.text,
@@ -65,31 +60,35 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  InputDecoration _inputDecoration(String hint) {
+  InputDecoration _inputDecoration(BuildContext context, String hint) {
+    final scheme = Theme.of(context).colorScheme;
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: Colors.grey),
+      hintStyle: TextStyle(color: scheme.onSurface.withOpacity(0.5)),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: scheme.surfaceContainerHighest,
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 20,
+        horizontal: 16,
         vertical: 16,
       ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: scheme.outline),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: scheme.primary, width: 1.5),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF020B2D),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: widget.onBackToLogin,
@@ -103,58 +102,59 @@ class _RegisterPageState extends State<RegisterPage> {
 
             return Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
+                    Text(
                       'Create Account',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
+                      style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: scheme.onSurface,
                       ),
                     ),
+                    const SizedBox(height: 32),
 
-                    const SizedBox(height: 30),
-
+                    // First Name Input
                     TextField(
                       controller: _firstNameController,
                       textCapitalization: TextCapitalization.words,
-                      style: const TextStyle(color: Colors.black),
-                      decoration: _inputDecoration('First Name'),
+                      style: TextStyle(color: scheme.onSurface),
+                      decoration: _inputDecoration(context, 'First Name'),
                     ),
-
                     const SizedBox(height: 14),
 
+                    // Last Name Input
                     TextField(
                       controller: _lastNameController,
                       textCapitalization: TextCapitalization.words,
-                      style: const TextStyle(color: Colors.black),
-                      decoration: _inputDecoration('Last Name'),
+                      style: TextStyle(color: scheme.onSurface),
+                      decoration: _inputDecoration(context, 'Last Name'),
                     ),
-
                     const SizedBox(height: 14),
 
+                    // Email Input
                     TextField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      style: const TextStyle(color: Colors.black),
-                      decoration: _inputDecoration('Email'),
+                      style: TextStyle(color: scheme.onSurface),
+                      decoration: _inputDecoration(context, 'Email'),
                     ),
-
                     const SizedBox(height: 14),
 
+                    // Password Input
                     TextField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
-                      style: const TextStyle(color: Colors.black),
-                      decoration: _inputDecoration('Password').copyWith(
+                      style: TextStyle(color: scheme.onSurface),
+                      decoration: _inputDecoration(context, 'Password').copyWith(
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
+                            color: scheme.onSurface.withOpacity(0.6),
                           ),
                           onPressed: () {
                             setState(() {
@@ -164,20 +164,20 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 14),
 
+                    // Confirm Password Input
                     TextField(
                       controller: _confirmPasswordController,
                       obscureText: _obscureConfirmPassword,
-                      style: const TextStyle(color: Colors.black),
-                      decoration:
-                      _inputDecoration('Confirm Password').copyWith(
+                      style: TextStyle(color: scheme.onSurface),
+                      decoration: _inputDecoration(context, 'Confirm Password').copyWith(
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscureConfirmPassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
+                            color: scheme.onSurface.withOpacity(0.6),
                           ),
                           onPressed: () {
                             setState(() {
@@ -188,68 +188,49 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 22),
 
                     if (error != null) ...[
                       Text(
                         _errorMessage(error),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.redAccent,
+                        style: TextStyle(
+                          color: scheme.error,
                           fontSize: 14,
                         ),
                       ),
                       const SizedBox(height: 14),
                     ],
 
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: widget.authController.isBusy
-                            ? null
-                            : _register,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF023E8A),
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor:
-                          const Color(0xFF023E8A),
-                          disabledForegroundColor: Colors.white70,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: widget.authController.isBusy
-                            ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                            : const Text(
-                          'Register',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 18),
-
-                    TextButton(
+                    // Primary Submit Button
+                    FilledButton(
                       onPressed: widget.authController.isBusy
                           ? null
-                          : widget.onBackToLogin,
-                      child: const Text(
-                        'Already have an account? Log In',
-                        style: TextStyle(
-                          color: Colors.white,
+                          : _register,
+                      child: widget.authController.isBusy
+                          ? SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: scheme.onPrimary,
+                        ),
+                      )
+                          : const Text('Register'),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Back to Login Link
+                    Center(
+                      child: TextButton(
+                        onPressed: widget.authController.isBusy
+                            ? null
+                            : widget.onBackToLogin,
+                        child: Text(
+                          'Already have an account? Log In',
+                          style: TextStyle(
+                            color: scheme.primary,
+                          ),
                         ),
                       ),
                     ),
