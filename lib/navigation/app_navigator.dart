@@ -22,7 +22,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bike_renting_app/features/bike/transfer_bike.dart';
 import 'package:bike_renting_app/features/bike/bike_service.dart';
 import 'package:bike_renting_app/features/bike/bike_report_detail_page.dart';
-
+import 'package:bike_renting_app/features/bike/pending_report_page.dart';
 class AppNavigator extends StatelessWidget {
   const AppNavigator({
     super.key,
@@ -164,6 +164,14 @@ class AppNavigator extends StatelessWidget {
             arguments: reportId,
           );
         },
+        onOpenPendingReports: (){
+          navigatorKey.currentState?.pushNamed(
+            AppPage.pendingBikeReports.routeName,
+          );
+        },
+      ),
+      AppPage.pendingBikeReports => const PendingBikeReportsPage(
+
       ),
       AppPage.bikeReportDetail => BikeReportDetailPage(
         reportId: arguments as String,

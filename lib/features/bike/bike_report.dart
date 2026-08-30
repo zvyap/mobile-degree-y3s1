@@ -5,11 +5,12 @@ class BikeReportPage extends StatelessWidget {
     super.key,
     required this.bikeId,
     required this.onOpenReportDetail,
+    required this.onOpenPendingReports,
   });
 
   final String bikeId;
   final ValueChanged<String> onOpenReportDetail;
-
+  final VoidCallback onOpenPendingReports;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -53,9 +54,7 @@ class BikeReportPage extends StatelessWidget {
                   clipBehavior: Clip.none,
                   children: [
                     FilledButton(
-                      onPressed: () {
-                        // Pending reports page later
-                      },
+                      onPressed: onOpenPendingReports,
                       child: const Text('Pending Report'),
                     ),
 
