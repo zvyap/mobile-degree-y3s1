@@ -1,6 +1,8 @@
 import 'package:bike_renting_app/features/admin/admin_management_page.dart';
 import 'package:bike_renting_app/features/bike/bike_management_page.dart';
 import 'package:bike_renting_app/features/home/home_page.dart';
+import 'package:bike_renting_app/features/user/profile_controller.dart';
+import 'package:bike_renting_app/features/user/profile_page.dart';
 import 'package:bike_renting_app/features/history/ride_details_page.dart';
 import 'package:bike_renting_app/features/history/ride_history_models.dart';
 import 'package:bike_renting_app/features/history/ride_history_page.dart';
@@ -12,6 +14,7 @@ import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppNavigator extends StatelessWidget {
   const AppNavigator({
@@ -19,6 +22,7 @@ class AppNavigator extends StatelessWidget {
     required this.navigatorKey,
     required this.observer,
     required this.rentingController,
+    required this.userController,
     required this.onSelectRootPage,
     required this.onOpenPage,
     required this.onToggleTheme,
@@ -27,6 +31,7 @@ class AppNavigator extends StatelessWidget {
   final GlobalKey<NavigatorState> navigatorKey;
   final NavigatorObserver observer;
   final RentingController rentingController;
+  final ProfileController userController;
   final ValueChanged<AppPage> onSelectRootPage;
   final ValueChanged<AppPage> onOpenPage;
   final ValueChanged<Brightness> onToggleTheme;
@@ -100,10 +105,8 @@ class AppNavigator extends StatelessWidget {
       AppPage.rideDetails => RideDetailsPage(
         ride: (arguments as RideDetailsRouteArguments).ride,
       ),
-      AppPage.profile => FeaturePlaceholderPage(
-        title: l10n.profile,
-        subtitle: l10n.profileDescription,
-        accent: const Color(0xFF7C3AED),
+      AppPage.profile => ProfilePage(
+        userCTRL: userController,
       ),
       AppPage.admin => AdminManagementPage(
         onNavigate: onSelectRootPage,

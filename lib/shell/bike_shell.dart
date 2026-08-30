@@ -1,6 +1,8 @@
 import 'package:bike_renting_app/data/app_repositories.dart';
 import 'package:bike_renting_app/features/renting/rent_demo_auth.dart';
+// import 'package:bike_renting_app/features/user/auth_controller.dart'; need this here or not?
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
+import 'package:bike_renting_app/features/user/profile_controller.dart';
 import 'package:bike_renting_app/navigation/app_navigator.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/navigation/bike_bottom_nav_bar.dart';
@@ -19,11 +21,13 @@ class BikeShell extends StatefulWidget {
 
 class _BikeShellState extends State<BikeShell> {
   // TODO: Read this role from the authenticated user session.
+  // (client.auth.currentUser.role)
   static const bool _isAdmin = true;
 
   final _navigatorKey = GlobalKey<NavigatorState>();
   late final AppNavigatorObserver _navigatorObserver;
   late final RentingController _rentingController;
+  late final ProfileController _profileController;
 
   AppPage _currentPage = AppPage.home;
   AppPage _selectedRootPage = AppPage.home;
@@ -37,6 +41,7 @@ class _BikeShellState extends State<BikeShell> {
       repository: repositories.rentals,
       authenticator: SupabaseDemoRentAuthenticator(client),
     );
+    _profileController = ProfileController(repositories.profiles);
     _navigatorObserver = AppNavigatorObserver(_handleRouteChanged);
   }
 
@@ -115,6 +120,7 @@ class _BikeShellState extends State<BikeShell> {
                     navigatorKey: _navigatorKey,
                     observer: _navigatorObserver,
                     rentingController: _rentingController,
+                    userController: _profileController,
                     onSelectRootPage: _selectRootPage,
                     onOpenPage: _openPage,
                     onToggleTheme: widget.onToggleTheme,

@@ -1,10 +1,12 @@
 import 'package:bike_renting_app/l10n/l10n.dart';
+import 'package:bike_renting_app/data/repositories/auth_repository.dart';
 import 'package:flutter/material.dart';
 
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key, required this.onToggleTheme});
+  SettingsPage({super.key, required this.onToggleTheme});
 
   final ValueChanged<Brightness> onToggleTheme;
+  final AuthRepository auth = AuthRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +58,32 @@ class SettingsPage extends StatelessWidget {
           subtitle: Text(context.l10n.rideNotificationsDescription),
           trailing: const Icon(Icons.chevron_right_rounded),
         ),
+
+        const SizedBox(height: 32),
+
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton.icon(
+            onPressed: () async {await auth.logout();},
+            icon: const Icon(Icons.logout_rounded),
+            label: const Text(
+              'Log Out',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+        ),
+
       ],
     );
   }
