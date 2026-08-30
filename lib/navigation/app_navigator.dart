@@ -19,6 +19,9 @@ import 'package:bike_renting_app/features/bike/add_bike.dart';
 import 'package:bike_renting_app/features/bike/bike_report.dart';
 import 'package:bike_renting_app/features/bike/edit_bike.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:bike_renting_app/features/bike/transfer_bike.dart';
+import 'package:bike_renting_app/features/bike/bike_service.dart';
+
 
 class AppNavigator extends StatelessWidget {
   const AppNavigator({
@@ -125,6 +128,24 @@ class AppNavigator extends StatelessWidget {
             arguments: arguments,
           );
         },
+        onTransferBike: () {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.transferBike.routeName,
+            arguments: arguments,
+          );
+        },
+        onServiceBike: () {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.serviceBike.routeName,
+            arguments: arguments,
+          );
+        },
+      ),
+      AppPage.serviceBike => ServiceBikePage(
+        bikeId: arguments as String,
+      ),
+      AppPage.transferBike => TransferBikePage(
+        bikeId: arguments as String,
       ),
       AppPage.editBike => EditBikePage(
         bikeId: arguments as String,

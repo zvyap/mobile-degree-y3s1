@@ -10,10 +10,14 @@ class BikeDetailsPage extends StatefulWidget {
     super.key,
     required this.bikeId,
     required this.onEditBike,
+    required this.onTransferBike,
+    required this.onServiceBike,
   });
 
   final String bikeId;
   final VoidCallback onEditBike;
+  final VoidCallback onTransferBike;
+  final VoidCallback onServiceBike;
   @override
   State<BikeDetailsPage> createState() => _BikeDetailsPageState();
 }
@@ -242,9 +246,7 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
               child: _BikeActionButton(
                 icon: Icons.compare_arrows_rounded,
                 label: 'Transfer',
-                onPressed: () {
-                  showSnackBar('Open Transfer Bike page');
-                },
+                onPressed: widget.onTransferBike,
               ),
             ),
 
@@ -254,9 +256,7 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
               child: _BikeActionButton(
                 icon: Icons.build_rounded,
                 label: 'Service',
-                onPressed: () {
-                  showSnackBar('Open Service page');
-                },
+                onPressed: widget.onServiceBike,
               ),
             ),
           ],
