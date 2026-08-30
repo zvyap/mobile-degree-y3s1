@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+// supabase auth stuff happen here
 class AuthRepository {
   SupabaseClient get _client => Supabase.instance.client;
 

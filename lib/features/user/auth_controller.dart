@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/user/user_models.dart';
 import 'package:bike_renting_app/data/repositories/auth_repository.dart';
+//                                  supabase auth stuff in here ^^^
 
 
 class AuthController extends ChangeNotifier {
