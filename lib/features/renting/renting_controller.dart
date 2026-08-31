@@ -6,7 +6,7 @@ import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/data/models/rental_session_snapshot.dart';
 import 'package:bike_renting_app/data/repositories/payment_method_repository.dart';
 import 'package:bike_renting_app/data/repositories/rental_repository.dart';
-import 'package:bike_renting_app/features/renting/rent_demo_auth.dart';
+import 'package:bike_renting_app/features/renting/rent_auth.dart';
 import 'package:bike_renting_app/features/renting/rental_payment_simulator.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:flutter/foundation.dart';

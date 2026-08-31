@@ -1,6 +1,6 @@
 import 'package:bike_renting_app/data/app_repositories.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
-import 'package:bike_renting_app/features/renting/rent_demo_auth.dart';
+import 'package:bike_renting_app/features/renting/rent_auth.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/user/profile_controller.dart';
 import 'package:bike_renting_app/navigation/app_navigator.dart';
@@ -39,7 +39,7 @@ class _BikeShellState extends State<BikeShell> {
     final repositories = AppRepositories.fromSupabase(client);
     _rentingController = RentingController(
       repository: repositories.rentals,
-      authenticator: SupabaseDemoRentAuthenticator(client),
+      authenticator: SupabaseRentAuthenticator(client),
       paymentMethodRepository: repositories.paymentMethods,
     );
     _profileController = ProfileController(repositories.profiles)
