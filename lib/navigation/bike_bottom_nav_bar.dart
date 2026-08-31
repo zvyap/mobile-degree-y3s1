@@ -1,32 +1,28 @@
+import 'package:bike_renting_app/l10n/l10n.dart';
+import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:flutter/material.dart';
 
 class BikeBottomNavBar extends StatelessWidget {
   const BikeBottomNavBar({
     super.key,
-    required this.selectedIndex,
+    required this.selectedPage,
     required this.onSelected,
   });
 
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
-
-  static const _items = [
-    _NavItem('Home', Icons.home_rounded),
-    _NavItem('Bikes', Icons.directions_bike_rounded),
-    _NavItem('Scan', Icons.qr_code_scanner_rounded),
-    _NavItem('Stations', Icons.map_rounded),
-    _NavItem('User', Icons.person_rounded),
-  ];
+  final AppPage selectedPage;
+  final ValueChanged<AppPage> onSelected;
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
+    final textScale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+    final accessibilityExtra = (textScale - 1) * 20;
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SizedBox(
-      height: 96 + bottomInset,
+      height: 96 + accessibilityExtra + bottomInset,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -35,7 +31,7 @@ class BikeBottomNavBar extends StatelessWidget {
             right: 16,
             bottom: 10 + bottomInset,
             child: Container(
-              height: 70,
+              height: 70 + accessibilityExtra,
               decoration: BoxDecoration(
                 color: scheme.surface,
                 borderRadius: BorderRadius.circular(8),
@@ -57,36 +53,36 @@ class BikeBottomNavBar extends StatelessWidget {
             right: 18,
             bottom: 12 + bottomInset,
             child: SizedBox(
-              height: 66,
+              height: 66 + accessibilityExtra,
               child: Row(
                 children: [
                   Expanded(
                     child: _NavTab(
-                      item: _items[0],
-                      selected: selectedIndex == 0,
-                      onTap: () => onSelected(0),
+                      page: AppPage.home,
+                      selected: selectedPage == AppPage.home,
+                      onTap: () => onSelected(AppPage.home),
                     ),
                   ),
                   Expanded(
                     child: _NavTab(
-                      item: _items[1],
-                      selected: selectedIndex == 1,
-                      onTap: () => onSelected(1),
+                      page: AppPage.stations,
+                      selected: selectedPage == AppPage.stations,
+                      onTap: () => onSelected(AppPage.stations),
                     ),
                   ),
                   const SizedBox(width: 82),
                   Expanded(
                     child: _NavTab(
-                      item: _items[3],
-                      selected: selectedIndex == 3,
-                      onTap: () => onSelected(3),
+                      page: AppPage.history,
+                      selected: selectedPage == AppPage.history,
+                      onTap: () => onSelected(AppPage.history),
                     ),
                   ),
                   Expanded(
                     child: _NavTab(
-                      item: _items[4],
-                      selected: selectedIndex == 4,
-                      onTap: () => onSelected(4),
+                      page: AppPage.profile,
+                      selected: selectedPage == AppPage.profile,
+                      onTap: () => onSelected(AppPage.profile),
                     ),
                   ),
                 ],
@@ -98,9 +94,9 @@ class BikeBottomNavBar extends StatelessWidget {
             left: 0,
             right: 0,
             child: _CenterNavButton(
-              item: _items[2],
-              selected: selectedIndex == 2,
-              onTap: () => onSelected(2),
+              page: AppPage.scan,
+              selected: selectedPage == AppPage.scan,
+              onTap: () => onSelected(AppPage.scan),
             ),
           ),
         ],
@@ -111,12 +107,12 @@ class BikeBottomNavBar extends StatelessWidget {
 
 class _NavTab extends StatelessWidget {
   const _NavTab({
-    required this.item,
+    required this.page,
     required this.selected,
     required this.onTap,
   });
 
-  final _NavItem item;
+  final AppPage page;
   final bool selected;
   final VoidCallback onTap;
 
@@ -125,27 +121,30 @@ class _NavTab extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final duration = motionDuration(context, 180);
+    final textScale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+    final accessibilityExtra = (textScale - 1) * 20;
     final foreground = selected
         ? scheme.primary
         : scheme.onSurface.withValues(alpha: 0.62);
+    final label = page.navigationLabel(context.l10n);
 
     return Semantics(
       selected: selected,
       button: true,
-      label: item.label,
+      label: label,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            key: ValueKey<String>('nav-${item.label.toLowerCase()}'),
+            key: ValueKey<String>('nav-${page.name}'),
             onTap: onTap,
             borderRadius: BorderRadius.circular(8),
             child: AnimatedContainer(
               duration: duration,
               curve: Curves.easeOutCubic,
-              height: 54,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              height: 54 + accessibilityExtra,
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
               decoration: BoxDecoration(
                 color: selected
                     ? scheme.primary.withValues(alpha: 0.10)
@@ -155,14 +154,17 @@ class _NavTab extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(item.icon, color: foreground, size: 22),
+                  Icon(page.icon, color: foreground, size: 22),
                   const SizedBox(height: 3),
                   Text(
-                    item.label,
+                    label,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    textAlign: TextAlign.center,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: foreground,
+                      fontSize: 10.5,
+                      height: 1.05,
                       fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                     ),
                   ),
@@ -178,12 +180,12 @@ class _NavTab extends StatelessWidget {
 
 class _CenterNavButton extends StatelessWidget {
   const _CenterNavButton({
-    required this.item,
+    required this.page,
     required this.selected,
     required this.onTap,
   });
 
-  final _NavItem item;
+  final AppPage page;
   final bool selected;
   final VoidCallback onTap;
 
@@ -195,7 +197,7 @@ class _CenterNavButton extends StatelessWidget {
     return Semantics(
       selected: selected,
       button: true,
-      label: 'Scan QR code',
+      label: context.l10n.scanQrCode,
       child: AnimatedScale(
         scale: selected ? 1.05 : 1,
         duration: duration,
@@ -212,18 +214,11 @@ class _CenterNavButton extends StatelessWidget {
             child: SizedBox(
               width: 72,
               height: 72,
-              child: Icon(item.icon, color: Colors.white, size: 30),
+              child: Icon(page.icon, color: Colors.white, size: 30),
             ),
           ),
         ),
       ),
     );
   }
-}
-
-class _NavItem {
-  const _NavItem(this.label, this.icon);
-
-  final String label;
-  final IconData icon;
 }

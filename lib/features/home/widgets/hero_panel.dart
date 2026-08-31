@@ -1,206 +1,120 @@
+import 'package:bike_renting_app/features/renting/renting_controller.dart';
+import 'package:bike_renting_app/l10n/app_formats.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class HeroPanel extends StatelessWidget {
-  const HeroPanel({super.key});
+  const HeroPanel({
+    super.key,
+    required this.onScan,
+    required this.onFindStation,
+  });
+
+  final VoidCallback onScan;
+  final VoidCallback onFindStation;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 680;
-        final content = [
-          Expanded(
-            flex: isWide ? 6 : 0,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: isDark ? 0.10 : 0.72),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.white.withValues(
-                        alpha: isDark ? 0.12 : 0.8,
-                      ),
-                    ),
-                  ),
-                  child: Text(
-                    'Nearest station: 240m',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Rent a bike in seconds',
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    height: 1.05,
-                    letterSpacing: 0,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Find nearby bikes, unlock with QR, and return at any open station.',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: (isDark ? Colors.white : const Color(0xFF0F172A))
-                        .withValues(alpha: 0.72),
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.qr_code_scanner_rounded),
-                      label: const Text('Scan and rent'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.near_me_rounded),
-                      label: const Text('Find station'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+    // TODO: Load bike and station availability from their services.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          context.l10n.goodAfternoon,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: scheme.primary,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
           ),
-          if (isWide) const SizedBox(width: 28) else const SizedBox(height: 24),
-          Expanded(flex: isWide ? 4 : 0, child: const HeroBikeVisual()),
-        ];
-
-        return Container(
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            color: scheme.primary.withValues(alpha: isDark ? 0.30 : 0.10),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: scheme.primary.withValues(alpha: isDark ? 0.22 : 0.16),
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                scheme.primary.withValues(alpha: isDark ? 0.44 : 0.16),
-                scheme.secondary.withValues(alpha: isDark ? 0.26 : 0.12),
-                scheme.tertiary.withValues(alpha: isDark ? 0.16 : 0.10),
-              ],
-            ),
-          ),
-          child: isWide
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: content,
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: content,
-                ),
-        );
-      },
-    );
-  }
-}
-
-class HeroBikeVisual extends StatelessWidget {
-  const HeroBikeVisual({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      height: 168,
-      decoration: BoxDecoration(
-        color: (isDark ? Colors.white : scheme.surface).withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: isDark ? 0.16 : 0.64),
         ),
-      ),
-      child: Stack(
-        children: [
-          Center(
-            child: Icon(
-              Icons.directions_bike_rounded,
-              size: 88,
-              color: scheme.primary,
-            ),
+        const SizedBox(height: 4),
+        Text(
+          context.l10n.readyToRide,
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w900,
+            height: 1.05,
+            letterSpacing: -0.6,
           ),
-          Positioned(
-            top: 16,
-            right: 16,
-            child: _MiniBadge(
-              icon: Icons.bolt_rounded,
-              label: 'Fast',
-              color: scheme.tertiary,
-            ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          context.l10n.bikeAvailability(128, 9),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: scheme.onSurface.withValues(alpha: 0.68),
+            height: 1.35,
           ),
-          Positioned(
-            left: 16,
-            bottom: 16,
-            child: _MiniBadge(
-              icon: Icons.lock_open_rounded,
-              label: 'QR unlock',
-              color: scheme.secondary,
+        ),
+        const SizedBox(height: 14),
+        _HomeActions(onScan: onScan, onFindStation: onFindStation),
+        const SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.payments_outlined,
+              size: 17,
+              color: scheme.onSurface.withValues(alpha: 0.62),
             ),
-          ),
-        ],
-      ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                // TODO(renting): Load this preview from the active rental plan
+                // when the Home module gets repository wiring.
+                context.l10n.unlockRate(
+                  context.formats.currency(RentingController.defaultUnlockFee),
+                  context.formats.currency(
+                    RentingController.defaultPerMinuteRate,
+                  ),
+                ),
+                softWrap: true,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.62),
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
 
-class _MiniBadge extends StatelessWidget {
-  const _MiniBadge({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
+class _HomeActions extends StatelessWidget {
+  const _HomeActions({required this.onScan, required this.onFindStation});
 
-  final IconData icon;
-  final String label;
-  final Color color;
+  final VoidCallback onScan;
+  final VoidCallback onFindStation;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final usesLargeText = MediaQuery.textScalerOf(context).scale(14) > 18;
+    final scan = FilledButton.icon(
+      key: const ValueKey<String>('home-scan'),
+      onPressed: onScan,
+      icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+      label: Text(context.l10n.scanBike),
+    );
+    final station = OutlinedButton.icon(
+      key: const ValueKey<String>('home-find-station'),
+      onPressed: onFindStation,
+      icon: const Icon(Icons.near_me_rounded, size: 20),
+      label: Text(context.l10n.findStation),
+    );
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
+    if (usesLargeText) {
+      return Wrap(spacing: 8, runSpacing: 8, children: [scan, station]);
+    }
+
+    return Row(
+      children: [
+        Expanded(child: scan),
+        const SizedBox(width: 8),
+        Expanded(child: station),
+      ],
     );
   }
 }

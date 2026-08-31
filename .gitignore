@@ -19,6 +19,7 @@ CLAUDE.md
 .codex/
 .cursor/
 .windsurf/
+skills-lock.json
 
 # IntelliJ related
 *.iml
@@ -40,6 +41,7 @@ CLAUDE.md
 .pub/
 /build/
 /coverage/
+/screenshot/
 
 # Symbolication related
 app.*.symbols

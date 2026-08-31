@@ -1,0 +1,237 @@
+import 'package:bike_renting_app/features/admin/admin_management_page.dart';
+import 'package:bike_renting_app/features/bike/bike_details.dart';
+import 'package:bike_renting_app/features/bike/bike_management_page.dart';
+import 'package:bike_renting_app/features/home/home_page.dart';
+import 'package:bike_renting_app/features/user/profile_controller.dart';
+import 'package:bike_renting_app/features/user/profile_page.dart';
+import 'package:bike_renting_app/features/history/ride_details_page.dart';
+import 'package:bike_renting_app/features/history/ride_history_models.dart';
+import 'package:bike_renting_app/features/history/ride_history_page.dart';
+import 'package:bike_renting_app/features/qr/qr_scan_page.dart';
+import 'package:bike_renting_app/features/renting/renting_controller.dart';
+import 'package:bike_renting_app/features/settings/settings_page.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
+import 'package:bike_renting_app/navigation/app_page.dart';
+import 'package:bike_renting_app/shared/motion.dart';
+import 'package:bike_renting_app/shared/ui_components.dart';
+import 'package:flutter/material.dart';
+import 'package:bike_renting_app/features/bike/add_bike.dart';
+import 'package:bike_renting_app/features/bike/bike_report.dart';
+import 'package:bike_renting_app/features/bike/edit_bike.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:bike_renting_app/features/bike/transfer_bike.dart';
+import 'package:bike_renting_app/features/bike/bike_service.dart';
+import 'package:bike_renting_app/features/bike/bike_report_detail_page.dart';
+import 'package:bike_renting_app/features/bike/pending_report_page.dart';
+class AppNavigator extends StatelessWidget {
+  const AppNavigator({
+    super.key,
+    required this.navigatorKey,
+    required this.observer,
+    required this.rentingController,
+    required this.userController,
+    required this.onSelectRootPage,
+    required this.onOpenPage,
+    required this.onToggleTheme,
+  });
+
+  final GlobalKey<NavigatorState> navigatorKey;
+  final NavigatorObserver observer;
+  final RentingController rentingController;
+  final ProfileController userController;
+  final ValueChanged<AppPage> onSelectRootPage;
+  final ValueChanged<AppPage> onOpenPage;
+  final ValueChanged<Brightness> onToggleTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      key: navigatorKey,
+      initialRoute: AppPage.home.routeName,
+      observers: [observer],
+      onGenerateRoute: (settings) {
+        final page = AppPage.fromRouteName(settings.name) ?? AppPage.home;
+        final duration = reduceMotion(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 260);
+        final routeArguments = page == AppPage.rideDetails
+            ? settings.arguments
+            : page;
+
+        return PageRouteBuilder<void>(
+          settings: RouteSettings(
+            name: page.routeName,
+            arguments: routeArguments,
+          ),
+          transitionDuration: duration,
+          reverseTransitionDuration: duration,
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              _buildPage(context, page, settings.arguments),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+              reverseCurve: Curves.easeInCubic,
+            );
+
+            return FadeTransition(
+              opacity: curved,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.04, 0),
+                  end: Offset.zero,
+                ).animate(curved),
+                child: child,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPage(BuildContext context, AppPage page, Object? arguments) {
+    final l10n = context.l10n;
+    return switch (page) {
+      AppPage.home => HomePage(onNavigate: onSelectRootPage),
+      AppPage.stations => FeaturePlaceholderPage(
+        title: l10n.stations,
+        subtitle: l10n.stationsDescription,
+        accent: const Color(0xFFF59E0B),
+      ),
+      AppPage.scan => QrScanPage(
+        controller: rentingController,
+        onRequestExit: () => onSelectRootPage(AppPage.home),
+      ),
+      AppPage.history => RideHistoryPage(
+        onRideSelected: (ride) => Navigator.of(context).pushNamed(
+          AppPage.rideDetails.routeName,
+          arguments: RideDetailsRouteArguments(ride),
+        ),
+      ),
+      AppPage.rideDetails => RideDetailsPage(
+        ride: (arguments as RideDetailsRouteArguments).ride,
+      ),
+      AppPage.profile => ProfilePage(
+        userCTRL: userController,
+      ),
+      AppPage.admin => AdminManagementPage(
+        onNavigate: onSelectRootPage,
+        onOpenBikeManagement: () => onOpenPage(AppPage.bikeManagement),
+      ),
+      AppPage.addbike => const AddBike(),
+      AppPage.bikeDetail => BikeDetailsPage(
+        bikeId: arguments as String,
+        onEditBike: (){
+          navigatorKey.currentState?.pushNamed(
+            AppPage.editBike.routeName,
+            arguments: arguments,
+          );
+        },
+        onTransferBike: () {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.transferBike.routeName,
+            arguments: arguments,
+          );
+        },
+        onServiceBike: () {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.serviceBike.routeName,
+            arguments: arguments,
+          );
+        },
+        onMakeReport: () {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.bikeReport.routeName,
+            arguments: arguments,
+          );
+        },
+      ),
+      AppPage.serviceBike => ServiceBikePage(
+        bikeId: arguments as String,
+      ),
+      AppPage.transferBike => TransferBikePage(
+        bikeId: arguments as String,
+      ),
+      AppPage.editBike => EditBikePage(
+        bikeId: arguments as String,
+      ),
+      AppPage.bikeReport => BikeReportPage(
+        bikeId: arguments as String,
+        onOpenReportDetail: (reportId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.bikeReportDetail.routeName,
+            arguments: reportId,
+          );
+        },
+        onOpenPendingReports: (){
+          navigatorKey.currentState?.pushNamed(
+            AppPage.pendingBikeReports.routeName,
+          );
+        },
+      ),
+      AppPage.pendingBikeReports => const PendingBikeReportsPage(
+
+      ),
+      AppPage.bikeReportDetail => BikeReportDetailPage(
+        reportId: arguments as String,
+      ),
+      AppPage.bikeManagement => BikeManagementPage(
+        onAddBike: () => onOpenPage(AppPage.addbike),
+        onOpenBikeDetails: (bikeId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.bikeDetail.routeName,
+            arguments: bikeId,
+          );
+        },
+        onOpenBikeReports: (bikeId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.bikeReport.routeName,
+            arguments: bikeId,
+          );
+        },
+
+
+      ),
+      AppPage.settings => SettingsPage(onToggleTheme: onToggleTheme),
+    };
+  }
+}
+
+class RideDetailsRouteArguments {
+  const RideDetailsRouteArguments(this.ride);
+
+  final RideHistoryEntry ride;
+}
+
+class AppNavigatorObserver extends NavigatorObserver {
+  AppNavigatorObserver(this.onPageChanged);
+
+  final ValueChanged<AppPage> onPageChanged;
+
+  void _notify(Route<dynamic>? route) {
+    final arguments = route?.settings.arguments;
+    final page = arguments is AppPage
+        ? arguments
+        : AppPage.fromRouteName(route?.settings.name);
+    if (page != null) onPageChanged(page);
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    _notify(route);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    _notify(previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    _notify(newRoute);
+  }
+}

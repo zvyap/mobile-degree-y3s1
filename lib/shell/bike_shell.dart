@@ -1,9 +1,14 @@
-import 'package:bike_renting_app/features/home/home_page.dart';
-import 'package:bike_renting_app/features/modules/module_page.dart';
-import 'package:bike_renting_app/features/qr/qr_scan_page.dart';
+import 'package:bike_renting_app/data/app_repositories.dart';
+import 'package:bike_renting_app/features/renting/rent_demo_auth.dart';
+// import 'package:bike_renting_app/features/user/auth_controller.dart'; need this here or not?
+import 'package:bike_renting_app/features/renting/renting_controller.dart';
+import 'package:bike_renting_app/features/user/profile_controller.dart';
+import 'package:bike_renting_app/navigation/app_navigator.dart';
+import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/navigation/bike_bottom_nav_bar.dart';
-import 'package:bike_renting_app/shared/motion.dart';
+import 'package:bike_renting_app/shell/app_header.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BikeShell extends StatefulWidget {
   const BikeShell({super.key, required this.onToggleTheme});
@@ -15,172 +20,123 @@ class BikeShell extends StatefulWidget {
 }
 
 class _BikeShellState extends State<BikeShell> {
-  int _selectedIndex = 0;
+  // TODO: Read this role from the authenticated user session.
+  // (client.auth.currentUser.role)
+  static const bool _isAdmin = true;
 
-  void _selectPage(int index) {
-    if (_selectedIndex == index) {
-      return;
-    }
+  final _navigatorKey = GlobalKey<NavigatorState>();
+  late final AppNavigatorObserver _navigatorObserver;
+  late final RentingController _rentingController;
+  late final ProfileController _profileController;
 
-    setState(() {
-      _selectedIndex = index;
-    });
+  AppPage _currentPage = AppPage.home;
+  AppPage _selectedRootPage = AppPage.home;
+
+  @override
+  void initState() {
+    super.initState();
+    final client = Supabase.instance.client;
+    final repositories = AppRepositories.fromSupabase(client);
+    _rentingController = RentingController(
+      repository: repositories.rentals,
+      authenticator: SupabaseDemoRentAuthenticator(client),
+    );
+    _profileController = ProfileController(repositories.profiles);
+    _navigatorObserver = AppNavigatorObserver(_handleRouteChanged);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final shouldReduceMotion = reduceMotion(context);
+  void dispose() {
+    _rentingController.dispose();
+    super.dispose();
+  }
 
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _AppHeader(onToggleTheme: widget.onToggleTheme),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: shouldReduceMotion
-                    ? Duration.zero
-                    : const Duration(milliseconds: 260),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  if (shouldReduceMotion) {
-                    return child;
-                  }
+  void _handleRouteChanged(AppPage page) {
+    if (!mounted || page == _currentPage) return;
+    setState(() => _currentPage = page);
+  }
 
-                  final curved = CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  );
+  void _selectRootPage(AppPage page) {
+    assert(page.isNavigationRoot);
+    if (!page.isNavigationRoot) return;
 
-                  return FadeTransition(
-                    opacity: curved,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0.04, 0),
-                        end: Offset.zero,
-                      ).animate(curved),
-                      child: child,
-                    ),
-                  );
-                },
-                child: _PageContent(
-                  key: ValueKey<int>(_selectedIndex),
-                  selectedIndex: _selectedIndex,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BikeBottomNavBar(
-        selectedIndex: _selectedIndex,
-        onSelected: _selectPage,
-      ),
+    if (_selectedRootPage == page && _currentPage == page) return;
+
+    setState(() => _selectedRootPage = page);
+    _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+      page.routeName,
+      (route) => false,
     );
   }
-}
 
-class _AppHeader extends StatelessWidget {
-  const _AppHeader({required this.onToggleTheme});
+  void _openPage(AppPage page) {
+    if (_currentPage == page) return;
+    _navigatorKey.currentState?.pushNamed(page.routeName);
+  }
 
-  final ValueChanged<Brightness> onToggleTheme;
+  void _openUtilityPage(AppPage page) {
+    if (_currentPage == page) return;
+
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null) return;
+
+    navigator.popUntil((route) => route.isFirst);
+    navigator.pushNamed(page.routeName);
+  }
+
+  void _handleBack() {
+    if (_currentPage == AppPage.scan && _rentingController.goBack()) return;
+
+    final navigator = _navigatorKey.currentState;
+    if (navigator?.canPop() ?? false) {
+      navigator!.pop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    return AnimatedBuilder(
+      animation: _rentingController,
+      builder: (context, child) {
+        final showRentalBack =
+            _currentPage == AppPage.scan && _rentingController.canGoBack;
+        final showBackButton = !_currentPage.isNavigationRoot || showRentalBack;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: scheme.primary,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.directions_bike_rounded,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
+        return Scaffold(
+          body: SafeArea(
+            bottom: false,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'BikeRent',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
+                AppHeader(
+                  page: _currentPage,
+                  showBackButton: showBackButton,
+                  onBack: _handleBack,
+                  showAdminButton: _isAdmin,
+                  onOpenAdmin: () => _openUtilityPage(AppPage.admin),
+                  onOpenSettings: () => _openUtilityPage(AppPage.settings),
                 ),
-                Text(
-                  'Campus bike renting',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.68),
+                Expanded(
+                  child: AppNavigator(
+                    navigatorKey: _navigatorKey,
+                    observer: _navigatorObserver,
+                    rentingController: _rentingController,
+                    userController: _profileController,
+                    onSelectRootPage: _selectRootPage,
+                    onOpenPage: _openPage,
+                    onToggleTheme: widget.onToggleTheme,
                   ),
                 ),
               ],
             ),
           ),
-          Tooltip(
-            message: isDark ? 'Switch to light theme' : 'Switch to dark theme',
-            child: IconButton(
-              onPressed: () => onToggleTheme(theme.brightness),
-              icon: AnimatedSwitcher(
-                duration: motionDuration(context, 180),
-                child: Icon(
-                  isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                  key: ValueKey<bool>(isDark),
+          bottomNavigationBar: _rentingController.isFlowLocked
+              ? null
+              : BikeBottomNavBar(
+                  selectedPage: _selectedRootPage,
+                  onSelected: _selectRootPage,
                 ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
-  }
-}
-
-class _PageContent extends StatelessWidget {
-  const _PageContent({super.key, required this.selectedIndex});
-
-  final int selectedIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    return switch (selectedIndex) {
-      0 => const HomePage(),
-      1 => const ModulePage(
-        title: 'Bike Management',
-        subtitle: 'Fleet health, battery status, and maintenance queue.',
-        icon: Icons.directions_bike_rounded,
-        accent: Color(0xFF0E9F6E),
-      ),
-      2 => const QrScanPage(),
-      3 => const ModulePage(
-        title: 'Stations',
-        subtitle: 'Dock capacity, nearby stations, and return points.',
-        icon: Icons.map_rounded,
-        accent: Color(0xFFF59E0B),
-      ),
-      _ => const ModulePage(
-        title: 'User',
-        subtitle: 'Profile, wallet, permissions, and ride history.',
-        icon: Icons.person_rounded,
-        accent: Color(0xFF7C3AED),
-      ),
-    };
   }
 }
