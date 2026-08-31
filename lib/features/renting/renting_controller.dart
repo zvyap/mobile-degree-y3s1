@@ -6,7 +6,6 @@ import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/data/models/rental_session_snapshot.dart';
 import 'package:bike_renting_app/data/repositories/payment_method_repository.dart';
 import 'package:bike_renting_app/data/repositories/rental_repository.dart';
-import 'package:bike_renting_app/features/renting/rent_auth.dart';
 import 'package:bike_renting_app/features/renting/rental_payment_simulator.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:flutter/foundation.dart';
@@ -15,7 +14,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class RentingController extends ChangeNotifier {
   RentingController({
     required this.repository,
-    required this.authenticator,
     this.paymentMethodRepository,
     this.paymentSimulator = const LocalRentalPaymentSimulator(),
     DateTime Function()? now,
@@ -37,7 +35,6 @@ class RentingController extends ChangeNotifier {
   ];
 
   final RentalSessionRepository repository;
-  final RentSessionAuthenticator authenticator;
   final PaymentMethodRepository? paymentMethodRepository;
   final RentalPaymentSimulator paymentSimulator;
   final DateTime Function() _now;
@@ -120,7 +117,6 @@ class RentingController extends ChangeNotifier {
   Future<void> _initialize() async {
     try {
       _clearError();
-      await authenticator.ensureSignedIn();
       final results = await _loadInitializationData();
       stations = (results[0] as List<StationAvailabilityRecord>)
           .map(_stationFromDatabase)
