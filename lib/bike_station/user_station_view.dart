@@ -1,71 +1,96 @@
 import 'package:flutter/material.dart';
 
-class UserBikeStationView extends StatelessWidget {
-  const UserBikeStationView({super.key});
+class RefinedUserBikeView extends StatelessWidget {
+  const RefinedUserBikeView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Defines the dark theme color used in the image
-    const Color darkSurfaceColor = Color(0xFF151821);
+    // Theme Colors
+    const Color bgColor = Color(0xFF10141D);
+    const Color cardColor = Color(0xFF19202E);
+    const Color primaryBlue = Color(0xFF4358F5);
 
     return Scaffold(
+      backgroundColor: bgColor,
       body: Stack(
         children: [
-          // 1. BACKGROUND MAP LAYER
-          // Replace this Container with your actual flutter_map or GoogleMap widget
+          // 1. BACKGROUND MAP
           Positioned.fill(
             child: Container(
-              color: const Color(0xFFEAF5EB), // Light map-like background color
+              color: const Color(0xFFEAF5EB),
               child: const Center(
-                child: Text(
-                  'Map Implementation Here\n(e.g., flutter_map with OSRM)',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 200.0),
+                  child: Text(
+                    'Interactive Map Layer Here\n(Pans underneath the center marker)',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ),
               ),
             ),
           ),
 
-          // 2. TOP NAVIGATION ROW (Back Button & Search)
+          // 2. THE MIDDLE MARKER (Changed to a normal map pin)
+          Align(
+            alignment: Alignment.center,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 200.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      "Your Location",
+                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Updated to standard map marker
+                  const Icon(
+                    Icons.location_on,
+                    color: primaryBlue,
+                    size: 42,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 3. TOP SEARCH BAR
           Positioned(
-            top: 50.0, // Safe area padding
+            top: 50.0,
             left: 16.0,
             right: 16.0,
             child: Row(
               children: [
-                // Back Button
                 Container(
-                  decoration: const BoxDecoration(
-                    color: darkSurfaceColor,
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: const BoxDecoration(color: bgColor, shape: BoxShape.circle),
                   child: IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
+                    onPressed: () {},
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // Search Bar
                 Expanded(
                   child: Container(
                     height: 48,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                      color: darkSurfaceColor,
-                      borderRadius: BorderRadius.circular(24),
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))
+                        ]
                     ),
                     child: const Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Search stations',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
-                      ),
+                      child: Text('Search destination...', style: TextStyle(color: Colors.white54, fontSize: 14)),
                     ),
                   ),
                 ),
@@ -73,64 +98,112 @@ class UserBikeStationView extends StatelessWidget {
             ),
           ),
 
-          // 3. RECENTER FLOATING ACTION BUTTON
+          // 4. RECENTER / MY LOCATION BUTTON
+          // Positioned dynamically just above the bottom sheet
           Positioned(
             right: 16.0,
-            bottom: MediaQuery.of(context).size.height * 0.45 + 16.0,
+            bottom: MediaQuery.of(context).size.height * 0.55 + 16.0,
             child: Container(
-              decoration: const BoxDecoration(
-                color: darkSurfaceColor,
-                shape: BoxShape.circle,
+              decoration: BoxDecoration(
+                  color: cardColor,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
               ),
               child: IconButton(
                 icon: const Icon(Icons.my_location, color: Colors.white),
                 onPressed: () {
-                  // TODO: Add map recentering logic here
+                  // TODO: Trigger map controller to jump to GPS coordinates
                 },
               ),
             ),
           ),
 
-          // 4. BOTTOM STATION LIST (Dark Mode Bottom Sheet)
+          // 5. BOTTOM SHEET OVERLAY
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.45,
+              height: MediaQuery.of(context).size.height * 0.55,
               decoration: const BoxDecoration(
-                color: darkSurfaceColor,
+                color: bgColor,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, -4))],
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Drag Handle / Indicator
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 60,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(10),
+                  // Drag Handle
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 20),
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
-                  const SizedBox(height: 20),
 
-                  // Scrollable List of Stations
+                  // === SECTION 1: Absolute Nearest Station ===
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Text("Closest to you", style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: primaryBlue.withOpacity(0.15),
+                        border: Border.all(color: primaryBlue.withOpacity(0.5)),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: const BoxDecoration(color: primaryBlue, shape: BoxShape.circle),
+                            child: const Icon(Icons.directions_bike, color: Colors.white, size: 24),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Jalan Sungai Kelian Station", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                SizedBox(height: 4),
+                                Text("0.2 km away • 12 Bikes available", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                    child: Divider(color: Colors.white12, height: 1),
+                  ),
+
+                  // === SECTION 2: Top 3 Nearest Stations ===
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Text("Top 3 Nearby Stations", style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 8),
+
                   Expanded(
                     child: ListView(
                       padding: EdgeInsets.zero,
                       children: const [
-                        StationListTile(
-                          address: 'Jalan Sungai Kelian, Tanjung Bungah',
-                          distance: '1.2 km',
-                        ),
-                        StationListTile(
-                          address: 'Pearl Hill, Tanjung Bungah',
-                          distance: '2.4 km',
-                        ),
-                        StationListTile(
-                          address: 'Pepper Estate, Penang',
-                          distance: '3.1 km',
-                        ),
+                        _StandardStationTile(name: "Jalan Sungai Kelian Station", distance: "0.2 km", bikes: 12),
+                        _StandardStationTile(name: "Pearl Hill Park", distance: "1.2 km", bikes: 8),
+                        _StandardStationTile(name: "Tanjung Bungah Market", distance: "2.4 km", bikes: 15),
                       ],
                     ),
                   ),
@@ -144,53 +217,47 @@ class UserBikeStationView extends StatelessWidget {
   }
 }
 
-// Custom Widget for the Station Items to match the design
-class StationListTile extends StatelessWidget {
-  final String address;
+class _StandardStationTile extends StatelessWidget {
+  final String name;
   final String distance;
+  final int bikes;
 
-  const StationListTile({
-    super.key,
-    required this.address,
+  const _StandardStationTile({
+    required this.name,
     required this.distance,
+    required this.bikes,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Outline Location Icon
-          const Icon(
-            Icons.location_on_outlined,
-            color: Colors.white,
-            size: 28,
-          ),
+          const Icon(Icons.location_on_outlined, color: Colors.white54, size: 28),
           const SizedBox(width: 16),
-
-          // Text Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  address,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text(name, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
-                Text(
-                  distance,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
-                  ),
-                ),
+                Text(distance, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF19202E),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.directions_bike, color: Colors.green, size: 14),
+                const SizedBox(width: 4),
+                Text("$bikes", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
               ],
             ),
           ),
