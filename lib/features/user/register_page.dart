@@ -64,7 +64,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final scheme = Theme.of(context).colorScheme;
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: scheme.onSurface.withOpacity(0.5)),
+      hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.5)),
       filled: true,
       fillColor: scheme.surfaceContainerHighest,
       contentPadding: const EdgeInsets.symmetric(
@@ -154,7 +154,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             _obscurePassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: scheme.onSurface.withOpacity(0.6),
+                            color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
                           onPressed: () {
                             setState(() {
@@ -177,7 +177,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             _obscureConfirmPassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: scheme.onSurface.withOpacity(0.6),
+                            color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
                           onPressed: () {
                             setState(() {

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:bike_renting_app/data/database/database_exception.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/data/models/rental_session_snapshot.dart';
+import 'package:bike_renting_app/data/repositories/payment_method_repository.dart';
 import 'package:bike_renting_app/data/repositories/rental_repository.dart';
 import 'package:bike_renting_app/features/renting/rent_demo_auth.dart';
 import 'package:bike_renting_app/features/renting/rental_payment_simulator.dart';
@@ -15,6 +16,7 @@ class RentingController extends ChangeNotifier {
   RentingController({
     required this.repository,
     required this.authenticator,
+    this.paymentMethodRepository,
     this.paymentSimulator = const LocalRentalPaymentSimulator(),
     DateTime Function()? now,
     this.enableClock = true,
@@ -36,9 +38,12 @@ class RentingController extends ChangeNotifier {
 
   final RentalSessionRepository repository;
   final RentSessionAuthenticator authenticator;
+  final PaymentMethodRepository? paymentMethodRepository;
   final RentalPaymentSimulator paymentSimulator;
   final DateTime Function() _now;
   final bool enableClock;
+
+  List<RentalPaymentMethod> availablePaymentMethods = paymentMethods;
 
   Future<void>? _initialization;
   RentalSessionSnapshot? _session;
@@ -121,6 +126,20 @@ class RentingController extends ChangeNotifier {
           .map(_stationFromDatabase)
           .toList(growable: false);
       final active = results[1] as RentalSessionSnapshot?;
+      final paymentRecords = results[2] as List<PaymentMethodRecord>;
+      if (paymentRecords.isNotEmpty) {
+        availablePaymentMethods = paymentRecords
+            .map(
+              (p) => RentalPaymentMethod(
+                id: p.id.toString(),
+                brand: p.brand,
+                lastFour: p.lastFour,
+              ),
+            )
+            .toList(growable: false);
+      } else {
+        availablePaymentMethods = paymentMethods;
+      }
       if (active != null) _applySnapshot(active);
     } catch (caught) {
       error = _mapError(caught);
@@ -137,6 +156,12 @@ class RentingController extends ChangeNotifier {
         return await Future.wait<Object?>([
           repository.listReturnStations(),
           repository.restoreActive(),
+          if (paymentMethodRepository != null)
+            paymentMethodRepository!
+                .listOwn()
+                .catchError((_) => const <PaymentMethodRecord>[])
+          else
+            Future<List<PaymentMethodRecord>>.value(const []),
         ]);
       } catch (caught) {
         lastError = caught;
@@ -156,15 +181,19 @@ class RentingController extends ChangeNotifier {
     await initialize();
   }
 
-  Future<void> scanBike() async {
+  Future<void> scanBike([String? qrToken]) async {
     if (isBusy) return;
     await initialize();
     if (error != null && _session == null) return;
 
+    final token = (qrToken != null && qrToken.trim().isNotEmpty)
+        ? qrToken.trim()
+        : demoBikeQrToken;
+
     // TODO(qr): Replace this fixed fixture token with Android camera scanning
     // and validated bikerenting:// deep links.
     await _run(() async {
-      final snapshot = await repository.reserveSession(demoBikeQrToken);
+      final snapshot = await repository.reserveSession(token);
       _applySnapshot(snapshot);
     });
   }
@@ -483,7 +512,8 @@ class RentingController extends ChangeNotifier {
       batteryPercent: snapshot.bike.batteryPercent,
     );
     startStation = _stationFromDatabase(snapshot.startStation);
-    selectedPaymentMethod ??= paymentMethods.first;
+    selectedPaymentMethod ??=
+        availablePaymentMethods.firstOrNull ?? paymentMethods.first;
 
     switch (snapshot.rental.status) {
       case RentalDatabaseStatus.reserved:

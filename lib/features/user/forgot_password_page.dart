@@ -88,7 +88,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       decoration: InputDecoration(
                         hintText: 'Email',
                         hintStyle: TextStyle(
-                          color: scheme.onSurface.withOpacity(0.5),
+                          color: scheme.onSurface.withValues(alpha: 0.5),
                         ),
                         filled: true,
                         fillColor: scheme.surfaceContainerHighest,

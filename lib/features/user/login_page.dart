@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:bike_renting_app/data/repositories/auth_repository.dart';
-import 'package:bike_renting_app/data/repositories/profile_repository.dart';
-import 'package:bike_renting_app/data/database/database_data_source.dart';
 import 'package:bike_renting_app/features/user/auth_controller.dart';
 import 'package:bike_renting_app/features/user/forgot_password_page.dart';
 import 'package:bike_renting_app/features/user/register_page.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -23,9 +20,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-
-    final client = Supabase.instance.client;
-    final dataSource = SupabaseDatabaseDataSource(client);
 
     _authController = AuthController(
       AuthRepository(),
@@ -100,7 +94,7 @@ class _LoginPageState extends State<LoginPage> {
                   style: TextStyle(color: scheme.onSurface),
                   decoration: InputDecoration(
                     hintText: 'Email',
-                    hintStyle: TextStyle(color: scheme.onSurface.withOpacity(0.5)),
+                    hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.5)),
                     filled: true,
                     fillColor: scheme.surfaceContainerHighest,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -123,7 +117,7 @@ class _LoginPageState extends State<LoginPage> {
                   style: TextStyle(color: scheme.onSurface),
                   decoration: InputDecoration(
                     hintText: 'Password',
-                    hintStyle: TextStyle(color: scheme.onSurface.withOpacity(0.5)),
+                    hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.5)),
                     filled: true,
                     fillColor: scheme.surfaceContainerHighest,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -151,7 +145,7 @@ class _LoginPageState extends State<LoginPage> {
                     },
                     child: Text(
                       'Use Test Account',
-                      style: TextStyle(color: scheme.onSurface.withOpacity(0.6), fontSize: 12),
+                      style: TextStyle(color: scheme.onSurface.withValues(alpha: 0.6), fontSize: 12),
                     ),
                   ),
                 ),
@@ -210,7 +204,7 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     Text(
                       "Don't have an account? ",
-                      style: TextStyle(color: scheme.onSurface.withOpacity(0.7)),
+                      style: TextStyle(color: scheme.onSurface.withValues(alpha: 0.7)),
                     ),
                     TextButton(
                       onPressed: () {

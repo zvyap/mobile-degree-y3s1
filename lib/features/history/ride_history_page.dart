@@ -30,10 +30,9 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
 
   Future<List<RideHistoryEntry>> _loadHistory() async {
     final client = Supabase.instance.client;
-    final currentEmail = client.auth.currentUser?.email?.toLowerCase();
+    final currentSession = client.auth.currentSession;
 
-    if (currentEmail != _demoEmail) {
-      if (client.auth.currentSession != null) await client.auth.signOut();
+    if (currentSession == null || currentSession.isExpired) {
       await client.auth.signInWithPassword(
         email: _demoEmail,
         password: _demoPassword,

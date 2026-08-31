@@ -18,7 +18,6 @@ import 'package:flutter/material.dart';
 import 'package:bike_renting_app/features/bike/add_bike.dart';
 import 'package:bike_renting_app/features/bike/bike_report.dart';
 import 'package:bike_renting_app/features/bike/edit_bike.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bike_renting_app/features/bike/transfer_bike.dart';
 import 'package:bike_renting_app/features/bike/bike_service.dart';
 import 'package:bike_renting_app/features/bike/bike_report_detail_page.dart';

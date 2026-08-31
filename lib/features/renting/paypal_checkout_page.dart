@@ -1,5 +1,5 @@
 import 'package:bike_renting_app/l10n/l10n.dart';
-import 'package:bike_renting_app/paypal_sandbox_constants.dart';
+import 'package:bike_renting_app/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 

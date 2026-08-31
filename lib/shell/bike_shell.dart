@@ -1,6 +1,6 @@
 import 'package:bike_renting_app/data/app_repositories.dart';
+import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/renting/rent_demo_auth.dart';
-// import 'package:bike_renting_app/features/user/auth_controller.dart'; need this here or not?
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/user/profile_controller.dart';
 import 'package:bike_renting_app/navigation/app_navigator.dart';
@@ -20,10 +20,6 @@ class BikeShell extends StatefulWidget {
 }
 
 class _BikeShellState extends State<BikeShell> {
-  // TODO: Read this role from the authenticated user session.
-  // (client.auth.currentUser.role)
-  static const bool _isAdmin = true;
-
   final _navigatorKey = GlobalKey<NavigatorState>();
   late final AppNavigatorObserver _navigatorObserver;
   late final RentingController _rentingController;
@@ -31,6 +27,10 @@ class _BikeShellState extends State<BikeShell> {
 
   AppPage _currentPage = AppPage.home;
   AppPage _selectedRootPage = AppPage.home;
+
+  bool get _isAdmin =>
+      _profileController.profile?.role == AppUserRole.admin ||
+      _profileController.profile == null;
 
   @override
   void initState() {
@@ -40,13 +40,23 @@ class _BikeShellState extends State<BikeShell> {
     _rentingController = RentingController(
       repository: repositories.rentals,
       authenticator: SupabaseDemoRentAuthenticator(client),
+      paymentMethodRepository: repositories.paymentMethods,
     );
-    _profileController = ProfileController(repositories.profiles);
+    _profileController = ProfileController(repositories.profiles)
+      ..addListener(_handleProfileChanged)
+      ..loadProfile();
     _navigatorObserver = AppNavigatorObserver(_handleRouteChanged);
+  }
+
+  void _handleProfileChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
   void dispose() {
+    _profileController.removeListener(_handleProfileChanged);
+    _profileController.dispose();
     _rentingController.dispose();
     super.dispose();
   }
