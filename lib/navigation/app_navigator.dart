@@ -72,6 +72,11 @@ class AppNavigator extends StatelessWidget {
               curve: Curves.easeOutCubic,
               reverseCurve: Curves.easeInCubic,
             );
+            final outgoing = CurvedAnimation(
+              parent: secondaryAnimation,
+              curve: Curves.easeInCubic,
+              reverseCurve: Curves.easeOutCubic,
+            );
 
             return FadeTransition(
               opacity: curved,
@@ -80,7 +85,10 @@ class AppNavigator extends StatelessWidget {
                   begin: const Offset(0.04, 0),
                   end: Offset.zero,
                 ).animate(curved),
-                child: child,
+                child: FadeTransition(
+                  opacity: Tween<double>(begin: 1.0, end: 0.0).animate(outgoing),
+                  child: child,
+                ),
               ),
             );
           },
