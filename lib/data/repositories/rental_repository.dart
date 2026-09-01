@@ -29,7 +29,14 @@ abstract interface class RentalSessionRepository {
   });
 }
 
-class RentalRepository implements RentalSessionRepository {
+/// Debug-only escape hatch for the camera-less debug scan stage. Remove
+/// together with the debug bike picker once camera scanning ships.
+abstract interface class DebugRentBikeSource {
+  Future<List<BikeDatabaseRecord>> listAllBikes();
+}
+
+class RentalRepository
+    implements RentalSessionRepository, DebugRentBikeSource {
   RentalRepository(this._dataSource)
     : _bikes = BikeRepository(_dataSource),
       _stations = StationRepository(_dataSource);
@@ -164,6 +171,9 @@ class RentalRepository implements RentalSessionRepository {
   Future<RentalDatabaseRecord> requestPaymentRetry(int rentalId) {
     return _callRentalRpc('request_payment_retry', {'p_rental_id': rentalId});
   }
+
+  @override
+  Future<List<BikeDatabaseRecord>> listAllBikes() => _bikes.listBikes();
 
   Future<RentalDatabaseRecord?> getActive() async {
     final userId = _requireUserId();

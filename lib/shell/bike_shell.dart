@@ -6,6 +6,7 @@ import 'package:bike_renting_app/navigation/app_navigator.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/navigation/bike_bottom_nav_bar.dart';
 import 'package:bike_renting_app/shell/app_header.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -39,6 +40,7 @@ class _BikeShellState extends State<BikeShell> {
     _rentingController = RentingController(
       repository: repositories.rentals,
       paymentMethodRepository: repositories.paymentMethods,
+      debugSource: kDebugMode ? repositories.rentals : null,
     );
     _profileController = ProfileController(repositories.profiles)
       ..addListener(_handleProfileChanged)

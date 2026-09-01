@@ -20,7 +20,7 @@ class _ScanStage extends StatelessWidget {
             child: GestureDetector(
               key: const ValueKey<String>('rent-camera-preview'),
               behavior: HitTestBehavior.opaque,
-              onTap: controller.scanBike,
+              onTap: () => _handleCameraTap(context, controller),
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -127,3 +127,110 @@ class _ScanStage extends StatelessWidget {
     );
   }
 }
+
+/// DEBUG ONLY: camera scanning is not wired up yet, so debug builds pick a
+/// bike from a sheet instead. Release builds keep the placeholder demo scan.
+Future<void> _handleCameraTap(
+  BuildContext context,
+  RentingController controller,
+) async {
+  if (!kDebugMode) {
+    await controller.scanBike();
+    return;
+  }
+  final bike = await showModalBottomSheet<BikeDatabaseRecord>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheetContext) => _DebugBikePickerSheet(controller: controller),
+  );
+  if (bike == null || bike.qrToken.isEmpty) return;
+  await controller.scanBike(bike.qrToken);
+}
+
+class _DebugBikePickerSheet extends StatelessWidget {
+  const _DebugBikePickerSheet({required this.controller});
+
+  final RentingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: FutureBuilder<List<BikeDatabaseRecord>>(
+        future: controller.listDebugBikes(),
+        builder: (context, snapshot) {
+          Widget body;
+          if (snapshot.connectionState != ConnectionState.done) {
+            body = const SizedBox(
+              height: 220,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          } else if (snapshot.hasError || snapshot.data == null) {
+            body = SizedBox(
+              height: 160,
+              child: Center(
+                child: Text(
+                  'Debug: could not load bikes',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
+            );
+          } else if (snapshot.data!.isEmpty) {
+            body = SizedBox(
+              height: 160,
+              child: Center(
+                child: Text(
+                  'Debug: no bikes in system',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            );
+          } else {
+            final bikes = snapshot.data!;
+            body = Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: bikes.length,
+                itemBuilder: (context, index) {
+                  final bike = bikes[index];
+                  return ListTile(
+                    leading: const Icon(Icons.pedal_bike_rounded),
+                    title: Text(bike.code),
+                    subtitle: Text(
+                      '${_debugBikeStatusLabel(bike.status)} · '
+                      'battery ${bike.batteryPercent}%',
+                    ),
+                    onTap: () => Navigator.pop(context, bike),
+                  );
+                },
+              ),
+            );
+          }
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Text(
+                  'Debug: choose a bike',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+              body,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+String _debugBikeStatusLabel(BikeDatabaseStatus status) => switch (status) {
+  BikeDatabaseStatus.available => 'available',
+  BikeDatabaseStatus.reserved => 'reserved',
+  BikeDatabaseStatus.inUse => 'in use',
+  BikeDatabaseStatus.maintenance => 'maintenance',
+  BikeDatabaseStatus.retired => 'retired',
+};

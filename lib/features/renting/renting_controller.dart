@@ -18,6 +18,7 @@ class RentingController extends ChangeNotifier {
     this.paymentSimulator = const LocalRentalPaymentSimulator(),
     DateTime Function()? now,
     this.enableClock = true,
+    this.debugSource,
   }) : _now = now ?? DateTime.now;
 
   static const demoBikeQrToken = '00000000-0000-4000-8000-000000000042';
@@ -37,6 +38,7 @@ class RentingController extends ChangeNotifier {
   final RentalSessionRepository repository;
   final PaymentMethodRepository? paymentMethodRepository;
   final RentalPaymentSimulator paymentSimulator;
+  final DebugRentBikeSource? debugSource;
   final DateTime Function() _now;
   final bool enableClock;
 
@@ -192,6 +194,14 @@ class RentingController extends ChangeNotifier {
       final snapshot = await repository.reserveSession(token);
       _applySnapshot(snapshot);
     });
+  }
+
+  /// DEBUG ONLY: every bike in the system, any status, for the camera-less
+  /// debug bike picker on the scan stage.
+  Future<List<BikeDatabaseRecord>> listDebugBikes() async {
+    final source = debugSource;
+    if (source == null) return const [];
+    return source.listAllBikes();
   }
 
   void selectPaymentMethod(RentalPaymentMethod method) {
