@@ -165,7 +165,8 @@ class RentingController extends ChangeNotifier {
       final results = await _loadInitializationData();
       stations = (results[0] as List<StationAvailabilityRecord>)
           .map(_stationFromDatabase)
-          .toList(growable: false);
+          .toList()
+        ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
       final active = results[1] as RentalSessionSnapshot?;
       final paymentRecords = results[2] as List<PaymentMethodRecord>;
       if (paymentRecords.isNotEmpty) {
@@ -182,7 +183,8 @@ class RentingController extends ChangeNotifier {
         availablePaymentMethods = paymentMethods;
       }
       if (active != null) _applySnapshot(active);
-    } catch (caught) {
+    } catch (caught, stack) {
+      debugPrint('RENTING INITIALIZATION ERROR: $caught\n$stack');
       error = _mapError(caught);
     } finally {
       isInitialized = true;
@@ -530,6 +532,11 @@ class RentingController extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (selectedStation?.id == station.id) {
+      _clearError();
+      notifyListeners();
+      return;
+    }
     selectedStation = station;
     stationQrToken = null;
     isAtStation = false;
@@ -542,7 +549,7 @@ class RentingController extends ChangeNotifier {
   /// Resolves a scanned station QR and makes that station authoritative for
   /// the pending return. Arrival still needs a passing GPS check.
   Future<void> selectStationFromQr(String rawInput) async {
-    if (isBusy) return;
+    isBusy = false;
     final station = await resolveStationQr(rawInput);
     if (station == null) {
       error = RentalError.stationQrMismatch;
@@ -550,7 +557,9 @@ class RentingController extends ChangeNotifier {
       return;
     }
     selectStation(station);
-    stationQrToken = station.qrToken.isEmpty ? null : station.qrToken;
+    stationQrToken =
+        station.qrToken.isEmpty ? rawInput.trim() : station.qrToken;
+    _clearError();
     notifyListeners();
   }
 
@@ -627,7 +636,7 @@ class RentingController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (isBusy || id == null) return;
+    if (id == null) return;
 
     await _run(() async {
       final localDistance = metrics.distanceKm;

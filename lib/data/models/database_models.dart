@@ -329,8 +329,7 @@ class RentalHistoryDatabaseRecord {
     if (rental.status != RentalDatabaseStatus.completed ||
         rental.startedAt == null ||
         rental.endedAt == null ||
-        rental.endStationId == null ||
-        rental.finalFare == null) {
+        rental.endStationId == null) {
       throw const FormatException('Incomplete completed-rental history row');
     }
 

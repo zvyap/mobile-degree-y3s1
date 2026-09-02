@@ -30,11 +30,21 @@ class GeolocatorRiderLocationSource implements RiderLocationSource {
         permission == LocationPermission.deniedForever) {
       throw const LocationPermissionDeniedException();
     }
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.medium,
-      ),
-    );
+    Position? position;
+    try {
+      position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 5),
+        ),
+      );
+    } catch (_) {
+      position = await Geolocator.getLastKnownPosition();
+    }
+    position ??= await Geolocator.getLastKnownPosition();
+    if (position == null) {
+      throw Exception('Location unavailable');
+    }
     return RiderPosition(
       latitude: position.latitude,
       longitude: position.longitude,

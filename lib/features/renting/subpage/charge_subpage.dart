@@ -46,10 +46,7 @@ class _ChargeStage extends StatelessWidget {
             value: context.formats.currency(controller.releasedHold),
           ),
           const SizedBox(height: 14),
-          _PaymentMethodTile(
-            method: controller.selectedPaymentMethod!,
-            onTap: () => _showPaymentMethodPicker(context, controller),
-          ),
+          _PaymentMethodTile(method: controller.selectedPaymentMethod!),
           const SizedBox(height: 14),
           _ActionButton(
             key: const ValueKey('rent-charge'),

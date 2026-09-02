@@ -43,6 +43,7 @@ class _BikeShellState extends State<BikeShell> {
       repository: repositories.rentals,
       paymentMethodRepository: repositories.paymentMethods,
       debugSource: kDebugMode ? repositories.rentals : null,
+      bypassGeofence: kDebugMode,
     );
     unawaited(_rentingController.initialize());
     _profileController = ProfileController(repositories.profiles)

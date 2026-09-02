@@ -116,43 +116,48 @@ class _PaymentMethodTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final choosable = onTap != null;
+    final tile = Ink(
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outline),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 48),
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Icon(Icons.account_balance_wallet_rounded, color: scheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '${method.brand}\n${_paymentMethodLabel(context.l10n, method)}',
+                style: const TextStyle(height: 1.35),
+              ),
+            ),
+            if (choosable) ...[
+              const SizedBox(width: 12),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: scheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
     return Semantics(
-      button: true,
+      button: choosable,
       child: Material(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Ink(
-            decoration: BoxDecoration(
-              border: Border.all(color: scheme.outline),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 48),
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Icon(Icons.account_balance_wallet_rounded,
-                      color: scheme.primary),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      '${method.brand}\n${_paymentMethodLabel(context.l10n, method)}',
-                      style: const TextStyle(height: 1.35),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: scheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+        child: choosable
+            ? InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(8),
+                child: tile,
+              )
+            : tile,
       ),
     );
   }

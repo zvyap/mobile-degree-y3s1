@@ -9,13 +9,16 @@ class _RideStage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final nearestStation = controller.stations.firstWhere(
-      (station) => station.availableDocks > 0,
-    );
-    final otherNearbyStations = controller.stations
-        .where((station) => station.id != nearestStation.id)
-        .take(3)
-        .toList(growable: false);
+    final availableStations =
+        controller.stations.where((station) => station.availableDocks > 0);
+    final nearestStation =
+        availableStations.firstOrNull ?? controller.stations.firstOrNull;
+    final otherNearbyStations = nearestStation == null
+        ? const <ReturnStation>[]
+        : controller.stations
+            .where((station) => station.id != nearestStation.id)
+            .take(3)
+            .toList(growable: false);
     return Column(
       children: [
         SurfacePanel(
@@ -119,47 +122,49 @@ class _RideStage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          key: const ValueKey<String>('rent-nearest-station'),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          decoration: BoxDecoration(
-            color: scheme.secondary.withValues(alpha: 0.08),
-            border: Border.all(color: scheme.secondary.withValues(alpha: 0.72)),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.location_on_rounded, color: scheme.secondary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      context.l10n.nearestReturnStation,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.68),
+        if (nearestStation != null)
+          Container(
+            key: const ValueKey<String>('rent-nearest-station'),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              color: scheme.secondary.withValues(alpha: 0.08),
+              border:
+                  Border.all(color: scheme.secondary.withValues(alpha: 0.72)),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.location_on_rounded, color: scheme.secondary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.l10n.nearestReturnStation,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.68),
+                        ),
                       ),
-                    ),
-                    Text(
-                      _stationName(context.l10n, nearestStation),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+                      Text(
+                        _stationName(context.l10n, nearestStation),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Text(
-                context.l10n.stationDistance(nearestStation.distanceMeters),
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: scheme.secondary,
-                  fontWeight: FontWeight.w800,
+                Text(
+                  context.l10n.stationDistance(nearestStation.distanceMeters),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: scheme.secondary,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerLeft,

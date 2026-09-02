@@ -118,7 +118,7 @@ class _RentingFlowPageState extends State<RentingFlowPage> {
               horizontalInset,
               scanning ? 4 : 6,
               horizontalInset,
-              20,
+              96,
             ),
             children: [
               if (!scanning) ...[

@@ -277,7 +277,7 @@ class _DebugBikePickerSheetState extends State<_DebugBikePickerSheet> {
                       height: 120,
                       child: Center(
                         child: Text(
-                          'Debug: could not load bikes',
+                          'Debug: could not load bikes: ${snapshot.error}',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: scheme.error,
                           ),

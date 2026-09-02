@@ -34,12 +34,17 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
 
   Future<void> _refresh() async {
     final nextHistory = _loadHistory();
-    setState(() => _historyFuture = nextHistory);
+    setState(() {
+      _historyFuture = nextHistory;
+    });
     await nextHistory;
   }
 
   void _retry() {
-    setState(() => _historyFuture = _loadHistory());
+    final next = _loadHistory();
+    setState(() {
+      _historyFuture = next;
+    });
   }
 
   @override

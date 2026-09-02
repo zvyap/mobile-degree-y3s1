@@ -80,15 +80,8 @@ class _StationStage extends StatelessWidget {
                       minimumSize: const Size(double.infinity, 48),
                     ),
             ),
-            if (controller.isAtStation) ...[
-              const SizedBox(height: 8),
-              _ActionButton(
-                key: const ValueKey('rent-scan-station-qr'),
-                label: context.l10n.scanStationQr,
-                icon: Icons.qr_code_scanner_rounded,
-                onPressed: () => _handleStationScan(context, controller),
-              ),
-            ] else if (controller.stationDistanceMeters != null) ...[
+            if (controller.stationDistanceMeters != null &&
+                !controller.isAtStation) ...[
               const SizedBox(height: 6),
               Text(
                 context.l10n.stationDistance(controller.stationDistanceMeters!),
@@ -97,6 +90,13 @@ class _StationStage extends StatelessWidget {
               ),
             ],
           ],
+          const SizedBox(height: 8),
+          _ActionButton(
+            key: const ValueKey('rent-scan-station-qr'),
+            label: context.l10n.scanStationQr,
+            icon: Icons.qr_code_scanner_rounded,
+            onPressed: () => _handleStationScan(context, controller),
+          ),
           if (controller.selectedStation != null &&
               controller.stationQrToken != null) ...[
             const SizedBox(height: 12),

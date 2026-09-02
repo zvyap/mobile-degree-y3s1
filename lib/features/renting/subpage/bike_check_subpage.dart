@@ -101,7 +101,10 @@ class _BikeCheckStage extends StatelessWidget {
               const SizedBox(height: 12),
               _FareCalculationPanel(controller: controller),
               const SizedBox(height: 12),
-              _PaymentMethodTile(method: method),
+              _PaymentMethodTile(
+                method: method,
+                onTap: () => _showPaymentMethodPicker(context, controller),
+              ),
               const SizedBox(height: 18),
               _ActionButton(
                 key: const ValueKey('rent-review-hold'),
