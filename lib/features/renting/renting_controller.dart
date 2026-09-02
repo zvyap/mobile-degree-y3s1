@@ -186,6 +186,13 @@ class RentingController extends ChangeNotifier {
     await initialize();
   }
 
+  Future<void> reinitialize() {
+    _initialization = null;
+    isInitialized = false;
+    _resetLocal();
+    return initialize();
+  }
+
   Future<void> scanBike([String? qrToken]) async {
     if (isBusy) return;
     await initialize();
@@ -495,8 +502,11 @@ class RentingController extends ChangeNotifier {
   Future<void> cancelReservation() async {
     final id = rentalId;
     if (isBusy) return;
+    final status = _session?.rental.status;
     if (id == null ||
-        _session?.rental.status != RentalDatabaseStatus.reserved) {
+        (status != RentalDatabaseStatus.reserved &&
+            status != RentalDatabaseStatus.authorized &&
+            status != RentalDatabaseStatus.pendingAuthorization)) {
       _resetLocal();
       return;
     }
@@ -506,7 +516,10 @@ class RentingController extends ChangeNotifier {
   }
 
   Future<void> reset() async {
-    if (_session?.rental.status == RentalDatabaseStatus.reserved) {
+    final status = _session?.rental.status;
+    if (status == RentalDatabaseStatus.reserved ||
+        status == RentalDatabaseStatus.authorized ||
+        status == RentalDatabaseStatus.pendingAuthorization) {
       await cancelReservation();
       return;
     }
@@ -515,13 +528,25 @@ class RentingController extends ChangeNotifier {
 
   RentalReceipt _buildReceipt(PaymentStatus status) {
     final completed = _completedSession!;
+    final station = selectedStation ??
+        _stationFromSnapshot(completed.endStation) ??
+        startStation ??
+        (stations.isNotEmpty
+            ? stations.first
+            : const ReturnStation(
+                backendId: 0,
+                id: 'unknown',
+                name: 'Return Station',
+                distanceMeters: 0,
+                availableDocks: 0,
+              ));
     return RentalReceipt(
       rideId: completed.rental.publicId,
-      finalFare: completed.rental.finalFare!,
+      finalFare: completed.rental.finalFare ?? estimatedFare,
       releasedHold: releasedHold,
       elapsedSeconds: completed.rental.durationSeconds,
       distanceKm: completed.rental.distanceKm,
-      returnStation: selectedStation!,
+      returnStation: station,
       paymentStatus: status,
     );
   }
@@ -548,6 +573,21 @@ class RentingController extends ChangeNotifier {
         isAtStation = false;
         stage = RentalStage.bikeCheck;
         break;
+      case RentalDatabaseStatus.pendingAuthorization:
+        _stopClock();
+        authorization = PaymentAuthorization(
+          amount: snapshot.rental.holdAmount,
+          status: PaymentStatus.ready,
+        );
+        stage = RentalStage.authorizing;
+        break;
+      case RentalDatabaseStatus.authorized:
+        authorization = PaymentAuthorization(
+          amount: snapshot.rental.holdAmount,
+          status: PaymentStatus.authorized,
+        );
+        stage = RentalStage.unlocking;
+        break;
       case RentalDatabaseStatus.active:
         metrics = RideMetrics(
           elapsedSeconds: _elapsedFromServerStart(),
@@ -568,13 +608,6 @@ class RentingController extends ChangeNotifier {
         stage = RentalStage.returning;
         _startClock();
         break;
-      case RentalDatabaseStatus.authorized:
-        authorization = PaymentAuthorization(
-          amount: snapshot.rental.holdAmount,
-          status: PaymentStatus.authorized,
-        );
-        stage = RentalStage.unlocking;
-        break;
       case RentalDatabaseStatus.completed:
         _completedSession = snapshot;
         _stopClock();
@@ -586,10 +619,28 @@ class RentingController extends ChangeNotifier {
         receipt = _buildReceipt(PaymentStatus.paid);
         stage = RentalStage.receipt;
         break;
-      case RentalDatabaseStatus.pendingAuthorization:
       case RentalDatabaseStatus.paymentPending:
+        _completedSession = snapshot;
+        _stopClock();
+        selectedStation = _stationFromSnapshot(snapshot.endStation);
+        metrics = RideMetrics(
+          elapsedSeconds: snapshot.rental.durationSeconds,
+          distanceKm: snapshot.rental.distanceKm,
+        );
+        receipt = _buildReceipt(PaymentStatus.pending);
+        stage = RentalStage.receipt;
+        break;
       case RentalDatabaseStatus.paymentFailed:
-        error = RentalError.invalidTransition;
+        _completedSession = snapshot;
+        _stopClock();
+        selectedStation = _stationFromSnapshot(snapshot.endStation);
+        metrics = RideMetrics(
+          elapsedSeconds: snapshot.rental.durationSeconds,
+          distanceKm: snapshot.rental.distanceKm,
+        );
+        receipt = _buildReceipt(PaymentStatus.pending);
+        error = RentalError.paymentCaptureFailed;
+        stage = RentalStage.receipt;
         break;
       case RentalDatabaseStatus.cancelled:
         _resetLocal();
