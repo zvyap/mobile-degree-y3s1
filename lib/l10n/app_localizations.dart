@@ -166,6 +166,18 @@ abstract class AppLocalizations {
   /// **'Scan QR code'**
   String get scanQrCode;
 
+  /// No description provided for @currentRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Current ride'**
+  String get currentRide;
+
+  /// No description provided for @rideInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Your ride is in progress.'**
+  String get rideInProgress;
+
   /// No description provided for @stationsDescription.
   ///
   /// In en, this message translates to:
@@ -462,6 +474,12 @@ abstract class AppLocalizations {
   /// **'Find station'**
   String get findStation;
 
+  /// No description provided for @returnStationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No return station is available right now.'**
+  String get returnStationUnavailable;
+
   /// No description provided for @liveNetwork.
   ///
   /// In en, this message translates to:
@@ -755,6 +773,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Report bike issue'**
   String get reportBikeIssue;
+
+  /// No description provided for @reportingBike.
+  ///
+  /// In en, this message translates to:
+  /// **'Reporting an issue for {bikeCode}'**
+  String reportingBike(String bikeCode);
+
+  /// No description provided for @chooseIssueType.
+  ///
+  /// In en, this message translates to:
+  /// **'What is wrong?'**
+  String get chooseIssueType;
+
+  /// No description provided for @chooseIssueTypeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an issue type.'**
+  String get chooseIssueTypeError;
+
+  /// No description provided for @issueBrakes.
+  ///
+  /// In en, this message translates to:
+  /// **'Brakes'**
+  String get issueBrakes;
+
+  /// No description provided for @issueTyres.
+  ///
+  /// In en, this message translates to:
+  /// **'Tyres'**
+  String get issueTyres;
+
+  /// No description provided for @issueLights.
+  ///
+  /// In en, this message translates to:
+  /// **'Lights'**
+  String get issueLights;
+
+  /// No description provided for @issueLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock'**
+  String get issueLock;
+
+  /// No description provided for @issueOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get issueOther;
+
+  /// No description provided for @issueNoteOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (optional)'**
+  String get issueNoteOptional;
+
+  /// No description provided for @issueNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a short detail that may help.'**
+  String get issueNoteHint;
+
+  /// No description provided for @issueSessionOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'This note stays in the current app session and is not sent to support.'**
+  String get issueSessionOnly;
+
+  /// No description provided for @noteIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Note issue'**
+  String get noteIssue;
+
+  /// No description provided for @issueNoted.
+  ///
+  /// In en, this message translates to:
+  /// **'Issue noted'**
+  String get issueNoted;
+
+  /// No description provided for @issueNotSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved for this app session only. It was not sent to support.'**
+  String get issueNotSent;
 
   /// No description provided for @change.
   ///

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bike_renting_app/data/app_repositories.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
@@ -42,6 +44,7 @@ class _BikeShellState extends State<BikeShell> {
       paymentMethodRepository: repositories.paymentMethods,
       debugSource: kDebugMode ? repositories.rentals : null,
     );
+    unawaited(_rentingController.initialize());
     _profileController = ProfileController(repositories.profiles)
       ..addListener(_handleProfileChanged)
       ..loadProfile();
@@ -143,6 +146,7 @@ class _BikeShellState extends State<BikeShell> {
               ? null
               : BikeBottomNavBar(
                   selectedPage: _selectedRootPage,
+                  rideActive: _rentingController.isRideActive,
                   onSelected: _selectRootPage,
                 ),
         );

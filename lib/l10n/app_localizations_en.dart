@@ -45,6 +45,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scanQrCode => 'Scan QR code';
 
   @override
+  String get currentRide => 'Current ride';
+
+  @override
+  String get rideInProgress => 'Your ride is in progress.';
+
+  @override
   String get stationsDescription =>
       'Dock capacity, nearby stations, and return points.';
 
@@ -215,6 +221,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get findStation => 'Find station';
+
+  @override
+  String get returnStationUnavailable =>
+      'No return station is available right now.';
 
   @override
   String get liveNetwork => 'Live network';
@@ -413,6 +423,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportBikeIssue => 'Report bike issue';
+
+  @override
+  String reportingBike(String bikeCode) {
+    return 'Reporting an issue for $bikeCode';
+  }
+
+  @override
+  String get chooseIssueType => 'What is wrong?';
+
+  @override
+  String get chooseIssueTypeError => 'Choose an issue type.';
+
+  @override
+  String get issueBrakes => 'Brakes';
+
+  @override
+  String get issueTyres => 'Tyres';
+
+  @override
+  String get issueLights => 'Lights';
+
+  @override
+  String get issueLock => 'Lock';
+
+  @override
+  String get issueOther => 'Other';
+
+  @override
+  String get issueNoteOptional => 'Note (optional)';
+
+  @override
+  String get issueNoteHint => 'Add a short detail that may help.';
+
+  @override
+  String get issueSessionOnly =>
+      'This note stays in the current app session and is not sent to support.';
+
+  @override
+  String get noteIssue => 'Note issue';
+
+  @override
+  String get issueNoted => 'Issue noted';
+
+  @override
+  String get issueNotSent =>
+      'Saved for this app session only. It was not sent to support.';
 
   @override
   String get change => 'Change';

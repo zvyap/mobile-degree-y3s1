@@ -12,6 +12,8 @@ enum RentalStage {
 
 enum PaymentStatus { ready, authorized, paid, pending }
 
+enum RentalIssueType { brakes, tyres, lights, lock, other }
+
 enum RentalError {
   authenticationFailed,
   connectionFailed,
@@ -31,6 +33,18 @@ enum RentalError {
   chooseStation,
   outsideReturnZone,
   dockNotDetected,
+}
+
+class RentalIssueNote {
+  const RentalIssueNote({
+    required this.type,
+    required this.note,
+    required this.notedAt,
+  });
+
+  final RentalIssueType type;
+  final String note;
+  final DateTime notedAt;
 }
 
 class RentalBike {

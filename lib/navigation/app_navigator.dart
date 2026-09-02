@@ -100,7 +100,10 @@ class AppNavigator extends StatelessWidget {
   Widget _buildPage(BuildContext context, AppPage page, Object? arguments) {
     final l10n = context.l10n;
     return switch (page) {
-      AppPage.home => HomePage(onNavigate: onSelectRootPage),
+      AppPage.home => HomePage(
+        rentingController: rentingController,
+        onNavigate: onSelectRootPage,
+      ),
       AppPage.stations => FeaturePlaceholderPage(
         title: l10n.stations,
         subtitle: l10n.stationsDescription,

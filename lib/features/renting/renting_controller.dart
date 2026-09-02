@@ -48,6 +48,7 @@ class RentingController extends ChangeNotifier {
   RentalSessionSnapshot? _session;
   RentalSessionSnapshot? _completedSession;
   Timer? _rideTimer;
+  final List<RentalIssueNote> _localIssueNotes = [];
 
   RentalStage stage = RentalStage.scan;
   RideMetrics metrics = const RideMetrics(elapsedSeconds: 0, distanceKm: 0);
@@ -70,6 +71,9 @@ class RentingController extends ChangeNotifier {
 
   int? get rentalId => _session?.rental.id;
 
+  List<RentalIssueNote> get localIssueNotes =>
+      List.unmodifiable(_localIssueNotes);
+
   String get bikeCode => bike?.id ?? demoBikeCode;
 
   double get unlockFee =>
@@ -83,12 +87,15 @@ class RentingController extends ChangeNotifier {
   double get holdAmount =>
       _completedSession?.rental.holdAmount ?? _session?.rental.holdAmount ?? 0;
 
-  bool get isFlowLocked => switch (stage) {
-    RentalStage.unlocking ||
+  bool get isRideActive => switch (stage) {
     RentalStage.riding ||
     RentalStage.selectingReturn ||
-    RentalStage.returning ||
-    RentalStage.charging => true,
+    RentalStage.returning => true,
+    _ => false,
+  };
+
+  bool get isFlowLocked => switch (stage) {
+    RentalStage.unlocking || RentalStage.charging => true,
     _ => false,
   };
 
@@ -319,6 +326,14 @@ class RentingController extends ChangeNotifier {
     } else {
       error = RentalError.gpsLost;
     }
+    notifyListeners();
+  }
+
+  void noteRideIssue(RentalIssueType type, String note) {
+    if (!isRideActive) return;
+    _localIssueNotes.add(
+      RentalIssueNote(type: type, note: note.trim(), notedAt: _now()),
+    );
     notifyListeners();
   }
 
