@@ -123,105 +123,243 @@ class _ScanStage extends StatelessWidget {
             color: scheme.onSurface.withValues(alpha: 0.64),
           ),
         ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          key: const ValueKey<String>('rent-choose-bike-button'),
+          onPressed: () => _handleCameraTap(context, controller),
+          icon: const Icon(Icons.touch_app_rounded),
+          label: const Text('Choose Bike or Enter Code'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 48),
+          ),
+        ),
       ],
     );
   }
 }
 
-/// DEBUG ONLY: camera scanning is not wired up yet, so debug builds pick a
-/// bike from a sheet instead. Release builds keep the placeholder demo scan.
 Future<void> _handleCameraTap(
   BuildContext context,
   RentingController controller,
 ) async {
-  if (!kDebugMode) {
-    await controller.scanBike();
-    return;
-  }
-  final bike = await showModalBottomSheet<BikeDatabaseRecord>(
+  final token = await showModalBottomSheet<String>(
     context: context,
+    isScrollControlled: true,
     showDragHandle: true,
     builder: (sheetContext) => _DebugBikePickerSheet(controller: controller),
   );
-  if (bike == null || bike.qrToken.isEmpty) return;
-  await controller.scanBike(bike.qrToken);
+  if (token == null || token.trim().isEmpty) return;
+  await controller.scanBike(token.trim());
 }
 
-class _DebugBikePickerSheet extends StatelessWidget {
+class _DebugBikePickerSheet extends StatefulWidget {
   const _DebugBikePickerSheet({required this.controller});
 
   final RentingController controller;
 
   @override
+  State<_DebugBikePickerSheet> createState() => _DebugBikePickerSheetState();
+}
+
+class _DebugBikePickerSheetState extends State<_DebugBikePickerSheet> {
+  final _inputController = TextEditingController();
+  String _filter = '';
+
+  @override
+  void dispose() {
+    _inputController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
     return SafeArea(
-      child: FutureBuilder<List<BikeDatabaseRecord>>(
-        future: controller.listDebugBikes(),
-        builder: (context, snapshot) {
-          Widget body;
-          if (snapshot.connectionState != ConnectionState.done) {
-            body = const SizedBox(
-              height: 220,
-              child: Center(child: CircularProgressIndicator()),
-            );
-          } else if (snapshot.hasError || snapshot.data == null) {
-            body = SizedBox(
-              height: 160,
-              child: Center(
-                child: Text(
-                  'Debug: could not load bikes',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
-                ),
-              ),
-            );
-          } else if (snapshot.data!.isEmpty) {
-            body = SizedBox(
-              height: 160,
-              child: Center(
-                child: Text(
-                  'Debug: no bikes in system',
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ),
-            );
-          } else {
-            final bikes = snapshot.data!;
-            body = Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: bikes.length,
-                itemBuilder: (context, index) {
-                  final bike = bikes[index];
-                  return ListTile(
-                    leading: const Icon(Icons.pedal_bike_rounded),
-                    title: Text(bike.code),
-                    subtitle: Text(
-                      '${_debugBikeStatusLabel(bike.status)} · '
-                      'battery ${bike.batteryPercent}%',
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: FutureBuilder<List<BikeDatabaseRecord>>(
+          future: widget.controller.listDebugBikes(),
+          builder: (context, snapshot) {
+            final bikes = snapshot.data ?? const [];
+            final filteredBikes = _filter.isEmpty
+                ? bikes
+                : bikes.where((b) {
+                    final query = _filter.toLowerCase();
+                    return b.code.toLowerCase().contains(query) ||
+                        b.status.name.toLowerCase().contains(query);
+                  }).toList(growable: false);
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Debug: choose a bike',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
-                    onTap: () => Navigator.pop(context, bike),
-                  );
-                },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          key: const ValueKey<String>('rent-debug-qr-input'),
+                          controller: _inputController,
+                          decoration: InputDecoration(
+                            labelText: 'QR UUID, URL, or Bike Code',
+                            hintText: 'e.g. BIKE-C042',
+                            prefixIcon: const Icon(Icons.qr_code_2_rounded),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                          ),
+                          onSubmitted: (value) {
+                            if (value.trim().isNotEmpty) {
+                              Navigator.pop(context, value.trim());
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        key: const ValueKey<String>('rent-debug-qr-submit'),
+                        onPressed: () {
+                          final text = _inputController.text.trim();
+                          if (text.isNotEmpty) {
+                            Navigator.pop(context, text);
+                          }
+                        },
+                        child: const Text('Scan'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      ActionChip(
+                        avatar: const Icon(Icons.star_rounded, size: 18),
+                        label: const Text('Default BIKE-C042'),
+                        onPressed: () => Navigator.pop(
+                          context,
+                          RentingController.demoBikeQrToken,
+                        ),
+                      ),
+                      FilterChip(
+                        label: const Text('Available only'),
+                        selected: _filter == 'available',
+                        onSelected: (selected) {
+                          setState(() {
+                            _filter = selected ? 'available' : '';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (snapshot.connectionState != ConnectionState.done)
+                    const SizedBox(
+                      height: 160,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (snapshot.hasError)
+                    SizedBox(
+                      height: 120,
+                      child: Center(
+                        child: Text(
+                          'Debug: could not load bikes',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: scheme.error,
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (filteredBikes.isEmpty)
+                    SizedBox(
+                      height: 120,
+                      child: Center(
+                        child: Text(
+                          bikes.isEmpty
+                              ? 'Debug: no bikes in system'
+                              : 'No matching bikes found',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
+                    )
+                  else
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 280),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: filteredBikes.length,
+                        itemBuilder: (context, index) {
+                          final bike = filteredBikes[index];
+                          final isAvailable =
+                              bike.status == BikeDatabaseStatus.available;
+                          return ListTile(
+                            leading: Icon(
+                              Icons.pedal_bike_rounded,
+                              color: isAvailable
+                                  ? scheme.primary
+                                  : scheme.onSurface.withValues(alpha: 0.45),
+                            ),
+                            title: Text(
+                              bike.code,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${_debugBikeStatusLabel(bike.status)} · '
+                              'battery ${bike.batteryPercent}%',
+                            ),
+                            trailing: isAvailable
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: scheme.secondary.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Available',
+                                      style: TextStyle(
+                                        color: scheme.secondary,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  )
+                                : null,
+                            onTap: () => Navigator.pop(
+                              context,
+                              bike.qrToken.isNotEmpty
+                                  ? bike.qrToken
+                                  : bike.code,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
               ),
             );
-          }
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                child: Text(
-                  'Debug: choose a bike',
-                  style: theme.textTheme.titleMedium,
-                ),
-              ),
-              body,
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }

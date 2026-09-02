@@ -9,7 +9,6 @@ import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 part 'subpage/journey_header.dart';
