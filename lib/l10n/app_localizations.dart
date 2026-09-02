@@ -1092,6 +1092,30 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 started minute} other{{count} started minutes}}'**
   String startedMinutes(int count);
 
+  /// No description provided for @rideDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride duration'**
+  String get rideDuration;
+
+  /// No description provided for @timeFare.
+  ///
+  /// In en, this message translates to:
+  /// **'Time fare'**
+  String get timeFare;
+
+  /// No description provided for @hourCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 hour} other{{count} hours}}'**
+  String hourCount(int count);
+
+  /// No description provided for @minuteCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 minute} other{{count} minutes}}'**
+  String minuteCount(int count);
+
   /// No description provided for @finalFare.
   ///
   /// In en, this message translates to:
@@ -1235,6 +1259,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Local simulation · No real money'**
   String get paypalSandboxDescription;
+
+  /// No description provided for @paypalAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal Sandbox account'**
+  String get paypalAccountSubtitle;
 
   /// No description provided for @paypalCheckoutTitle.
   ///

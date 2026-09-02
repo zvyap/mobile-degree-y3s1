@@ -611,6 +611,34 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get rideDuration => 'Ride duration';
+
+  @override
+  String get timeFare => 'Time fare';
+
+  @override
+  String hourCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hours',
+      one: '1 hour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String minuteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes',
+      one: '1 minute',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get finalFare => 'Final fare';
 
   @override
@@ -691,6 +719,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paypalSandboxDescription => 'Local simulation · No real money';
+
+  @override
+  String get paypalAccountSubtitle => 'PayPal Sandbox account';
 
   @override
   String get paypalCheckoutTitle => 'PayPal Sandbox';

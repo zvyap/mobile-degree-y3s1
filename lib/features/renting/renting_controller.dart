@@ -33,6 +33,7 @@ class RentingController extends ChangeNotifier {
       brand: 'BikeRent Test',
       lastFour: '4242',
     ),
+    RentalPaymentMethod(id: 'paypal', brand: 'PayPal', lastFour: ''),
   ];
 
   final RentalSessionRepository repository;

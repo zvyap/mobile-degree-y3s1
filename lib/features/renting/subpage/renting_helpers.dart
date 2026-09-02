@@ -7,8 +7,17 @@ String _stationName(AppLocalizations l10n, ReturnStation station) {
 String _paymentMethodLabel(AppLocalizations l10n, RentalPaymentMethod method) {
   return switch (method.id) {
     'test-payment' => l10n.paypalSandboxDescription,
+    'paypal' => l10n.paypalAccountSubtitle,
     _ => method.brand,
   };
+}
+
+String _durationWords(AppLocalizations l10n, int minutes) {
+  final hours = minutes ~/ 60;
+  final mins = minutes % 60;
+  if (hours == 0) return l10n.minuteCount(mins);
+  if (mins == 0) return l10n.hourCount(hours);
+  return '${l10n.hourCount(hours)} ${l10n.minuteCount(mins)}';
 }
 
 String _rentalError(BuildContext context, RentingController controller) {
