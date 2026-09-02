@@ -96,7 +96,14 @@ class _RideStage extends StatelessWidget {
                 child: TextButton.icon(
                   key: const ValueKey<String>('rent-report-issue-active'),
                   style: _dangerTextButtonStyle(context),
-                  onPressed: () {},
+                  onPressed: () {
+                    final bikeCode =
+                        controller.bike?.id ?? controller.bikeCode;
+                    Navigator.of(context).pushNamed(
+                      AppPage.bikeReport.routeName,
+                      arguments: bikeCode,
+                    );
+                  },
                   icon: const Icon(Icons.report_problem_outlined),
                   label: Text(context.l10n.reportBikeIssue),
                 ),
