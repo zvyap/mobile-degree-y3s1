@@ -708,16 +708,31 @@ class RentingController extends ChangeNotifier {
       backendId: station.id,
       id: station.code,
       name: station.name,
-      // TODO(gps): Calculate rider-relative distance from Android location.
       distanceMeters: switch (station.code) {
         'central' => 120,
         'riverside' => 260,
         'market' => 430,
         'university' => 610,
-        _ => 0,
+        _ => _calculateDistanceMeters(station.latitude, station.longitude),
       },
       availableDocks: station.availableDocks,
     );
+  }
+
+  int _calculateDistanceMeters(double lat, double lon) {
+    const refLat = 3.1390;
+    const refLon = 101.6869;
+    const earthRadiusMeters = 6371000.0;
+    final dLat = (lat - refLat) * (math.pi / 180.0);
+    final dLon = (lon - refLon) * (math.pi / 180.0);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(refLat * (math.pi / 180.0)) *
+            math.cos(lat * (math.pi / 180.0)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    final distance = (earthRadiusMeters * c).round();
+    return math.max(50, distance);
   }
 
   ReturnStation? _stationFromSnapshot(StationAvailabilityRecord? station) {
