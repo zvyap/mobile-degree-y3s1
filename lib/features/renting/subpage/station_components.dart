@@ -16,7 +16,7 @@ class _StationTile extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final available = station.availableDocks > 0;
-    final selectable = available && station.id == 'central';
+    final selectable = available;
     final highlighted = selected || selectable;
     final selectionLabel = selected
         ? context.l10n.selected
@@ -248,6 +248,7 @@ class _CityMapPainter extends CustomPainter {
       'central': Offset(size.width * 0.92, size.height * 0.18),
       'riverside': Offset(size.width * 0.50, size.height * 0.82),
       'market': Offset(size.width * 0.78, size.height * 0.52),
+      'university': Offset(size.width * 0.20, size.height * 0.36),
     };
     for (final entry in stationPoints.entries) {
       final selected = entry.key == selectedStationId;
