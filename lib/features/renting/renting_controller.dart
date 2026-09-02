@@ -193,17 +193,72 @@ class RentingController extends ChangeNotifier {
     return initialize();
   }
 
+  static final _uuidRegex = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
+  /// Resolves any QR payload: UUID, bikerenting:// deep links, or bike code.
+  Future<String?> resolveQrToken(String rawInput) async {
+    final trimmed = rawInput.trim();
+    if (trimmed.isEmpty) return demoBikeQrToken;
+
+    if (_uuidRegex.hasMatch(trimmed)) {
+      return trimmed.toLowerCase();
+    }
+
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null && uri.hasScheme) {
+      final param = uri.queryParameters['qr'] ??
+          uri.queryParameters['token'] ??
+          uri.queryParameters['qr_token'] ??
+          uri.queryParameters['code'];
+      if (param != null && param.trim().isNotEmpty) {
+        final parsed = await resolveQrToken(param);
+        if (parsed != null) return parsed;
+      }
+      for (final segment in uri.pathSegments) {
+        if (_uuidRegex.hasMatch(segment)) {
+          return segment.toLowerCase();
+        }
+      }
+    }
+
+    if (trimmed.toUpperCase() == demoBikeCode.toUpperCase()) {
+      return demoBikeQrToken;
+    }
+
+    final source = debugSource;
+    if (source != null) {
+      try {
+        final bikes = await source.listAllBikes();
+        final match = bikes.cast<BikeDatabaseRecord?>().firstWhere(
+          (b) =>
+              b != null &&
+              (b.code.toUpperCase() == trimmed.toUpperCase() ||
+                  b.qrToken.toLowerCase() == trimmed.toLowerCase()),
+          orElse: () => null,
+        );
+        if (match != null && match.qrToken.isNotEmpty) {
+          return match.qrToken;
+        }
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
   Future<void> scanBike([String? qrToken]) async {
     if (isBusy) return;
     await initialize();
     if (error != null && _session == null) return;
 
-    final token = (qrToken != null && qrToken.trim().isNotEmpty)
-        ? qrToken.trim()
-        : demoBikeQrToken;
+    final token = await resolveQrToken(qrToken ?? demoBikeQrToken);
+    if (token == null) {
+      error = RentalError.invalidQr;
+      notifyListeners();
+      return;
+    }
 
-    // TODO(qr): Replace this fixed fixture token with Android camera scanning
-    // and validated bikerenting:// deep links.
     await _run(() async {
       final snapshot = await repository.reserveSession(token);
       _applySnapshot(snapshot);
