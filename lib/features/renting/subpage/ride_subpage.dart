@@ -54,6 +54,13 @@ class _RideStage extends StatelessWidget {
                 selectedStation: null,
                 atStation: false,
               ),
+              if (controller.isOverdue ||
+                  (controller.timeUntilDeadline != null &&
+                      controller.timeUntilDeadline! <=
+                          const Duration(minutes: 30))) ...[
+                const SizedBox(height: 10),
+                _RideDeadlineBanner(controller: controller),
+              ],
               if (controller.error != null) ...[
                 const SizedBox(height: 10),
                 _ErrorPanel(
@@ -174,6 +181,89 @@ class _RideStage extends StatelessWidget {
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
+    );
+  }
+}
+
+class _RideDeadlineBanner extends StatelessWidget {
+  const _RideDeadlineBanner({required this.controller});
+
+  final RentingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final overdue = controller.isOverdue;
+    final remaining = controller.timeUntilDeadline;
+    final headline = overdue
+        ? context.l10n.rideOverdueTitle
+        : context.l10n.rideDeadlineCountdown(
+            remaining == null ? 0 : remaining.inMinutes.clamp(0, 1 << 31),
+          );
+    final contentColor = overdue ? scheme.onErrorContainer : scheme.secondary;
+    final canExtend = controller.extensionsRemaining > 0;
+
+    return Container(
+      key: const ValueKey<String>('rent-deadline-banner'),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: overdue ? scheme.errorContainer : scheme.secondary.withValues(alpha: 0.08),
+        border: Border.all(
+          color: overdue ? scheme.error : scheme.secondary.withValues(alpha: 0.72),
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                overdue ? Icons.warning_amber_rounded : Icons.schedule_rounded,
+                color: contentColor,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  headline,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: overdue ? scheme.onErrorContainer : null,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (overdue) ...[
+            const SizedBox(height: 6),
+            Text(
+              context.l10n.rideOverdueBody,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onErrorContainer,
+              ),
+            ),
+            const SizedBox(height: 10),
+            FilledButton.icon(
+              key: const ValueKey<String>('rent-extend-ride'),
+              onPressed: canExtend && !controller.isBusy
+                  ? controller.extendRide
+                  : null,
+              icon: const Icon(Icons.more_time_rounded),
+              label: Text(
+                canExtend
+                    ? context.l10n.extendRide(controller.extensionsRemaining)
+                    : context.l10n.noExtensionsLeft,
+              ),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+                backgroundColor: scheme.error,
+                foregroundColor: scheme.onError,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

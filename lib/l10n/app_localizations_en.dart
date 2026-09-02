@@ -580,6 +580,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueToDock => 'Continue to dock';
 
   @override
+  String get scanStationQr => 'Scan station QR';
+
+  @override
+  String get scanStationQrDescription =>
+      'Scan the QR poster at the station, or enter its code, to verify the return.';
+
+  @override
+  String get cameraUnavailable =>
+      'Camera unavailable. Enter the station code below instead.';
+
+  @override
+  String get stationCodeLabel => 'Station code';
+
+  @override
+  String get stationCodeHint => 'e.g. CENTRAL';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String rideDeadlineCountdown(int minutes) {
+    return '$minutes min left to return the bike';
+  }
+
+  @override
+  String get rideOverdueTitle => 'Ride overdue';
+
+  @override
+  String get rideOverdueBody =>
+      'You passed the maximum ride time. Return the bike now — if it is not returned in time, the rental is closed as lost and the account is suspended.';
+
+  @override
+  String extendRide(int count) {
+    return 'Extend +60 min ($count left)';
+  }
+
+  @override
+  String get noExtensionsLeft => 'No extensions left';
+
+  @override
   String get secureBike => 'Secure the bike';
 
   @override
@@ -791,7 +831,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorOutsideReturnZone =>
-      'Move within 50 m of the selected station before returning the bike.';
+      'Move within 250 m of the selected station before returning the bike.';
+
+  @override
+  String get errorStationQrMismatch =>
+      'That QR does not match the selected station. Scan the QR poster at the station or enter its code.';
+
+  @override
+  String get errorMaxExtensionsReached =>
+      'No ride extensions left. Return the bike to finish the rental.';
+
+  @override
+  String get errorLocationPermissionDenied =>
+      'Location permission is needed to verify the return. Enable it and retry.';
+
+  @override
+  String get errorAccountSuspended =>
+      'Account suspended: a previous bike was not returned. Contact support to restore it.';
 
   @override
   String get errorDockNotDetected =>

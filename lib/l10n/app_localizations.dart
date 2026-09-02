@@ -1050,6 +1050,72 @@ abstract class AppLocalizations {
   /// **'Continue to dock'**
   String get continueToDock;
 
+  /// No description provided for @scanStationQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan station QR'**
+  String get scanStationQr;
+
+  /// No description provided for @scanStationQrDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the QR poster at the station, or enter its code, to verify the return.'**
+  String get scanStationQrDescription;
+
+  /// No description provided for @cameraUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera unavailable. Enter the station code below instead.'**
+  String get cameraUnavailable;
+
+  /// No description provided for @stationCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Station code'**
+  String get stationCodeLabel;
+
+  /// No description provided for @stationCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. CENTRAL'**
+  String get stationCodeHint;
+
+  /// No description provided for @confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirm;
+
+  /// No description provided for @rideDeadlineCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min left to return the bike'**
+  String rideDeadlineCountdown(int minutes);
+
+  /// No description provided for @rideOverdueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride overdue'**
+  String get rideOverdueTitle;
+
+  /// No description provided for @rideOverdueBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You passed the maximum ride time. Return the bike now — if it is not returned in time, the rental is closed as lost and the account is suspended.'**
+  String get rideOverdueBody;
+
+  /// No description provided for @extendRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Extend +60 min ({count} left)'**
+  String extendRide(int count);
+
+  /// No description provided for @noExtensionsLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'No extensions left'**
+  String get noExtensionsLeft;
+
   /// No description provided for @secureBike.
   ///
   /// In en, this message translates to:
@@ -1371,8 +1437,32 @@ abstract class AppLocalizations {
   /// No description provided for @errorOutsideReturnZone.
   ///
   /// In en, this message translates to:
-  /// **'Move within 50 m of the selected station before returning the bike.'**
+  /// **'Move within 250 m of the selected station before returning the bike.'**
   String get errorOutsideReturnZone;
+
+  /// No description provided for @errorStationQrMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'That QR does not match the selected station. Scan the QR poster at the station or enter its code.'**
+  String get errorStationQrMismatch;
+
+  /// No description provided for @errorMaxExtensionsReached.
+  ///
+  /// In en, this message translates to:
+  /// **'No ride extensions left. Return the bike to finish the rental.'**
+  String get errorMaxExtensionsReached;
+
+  /// No description provided for @errorLocationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is needed to verify the return. Enable it and retry.'**
+  String get errorLocationPermissionDenied;
+
+  /// No description provided for @errorAccountSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'Account suspended: a previous bike was not returned. Contact support to restore it.'**
+  String get errorAccountSuspended;
 
   /// No description provided for @errorDockNotDetected.
   ///

@@ -10,6 +10,7 @@ import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 part 'subpage/journey_header.dart';
 part 'subpage/scan_subpage.dart';
@@ -18,6 +19,7 @@ part 'subpage/authorization_subpage.dart';
 part 'subpage/unlock_subpage.dart';
 part 'subpage/ride_subpage.dart';
 part 'subpage/station_subpage.dart';
+part 'subpage/station_qr_sheet.dart';
 part 'subpage/return_subpage.dart';
 part 'subpage/charge_subpage.dart';
 part 'subpage/receipt_subpage.dart';

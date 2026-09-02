@@ -55,29 +55,58 @@ class _StationStage extends StatelessWidget {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               key: const ValueKey('rent-confirm-arrival'),
-              onPressed: controller.confirmArrival,
-              icon: Icon(
-                controller.isAtStation
-                    ? Icons.check_rounded
-                    : Icons.near_me_rounded,
-              ),
+              onPressed: controller.isBusy ? null : controller.checkArrival,
+              icon: controller.isBusy
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      controller.isAtStation
+                          ? Icons.check_rounded
+                          : Icons.near_me_rounded,
+                    ),
               label: Text(
                 controller.isAtStation
                     ? context.l10n.withinReturnZone
                     : context.l10n.confirmArrival,
               ),
               style: controller.isAtStation
-                  ? OutlinedButton.styleFrom(foregroundColor: scheme.secondary)
-                  : null,
+                  ? OutlinedButton.styleFrom(
+                      foregroundColor: scheme.secondary,
+                      minimumSize: const Size(double.infinity, 48),
+                    )
+                  : OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                    ),
+            ),
+            if (controller.isAtStation) ...[
+              const SizedBox(height: 8),
+              _ActionButton(
+                key: const ValueKey('rent-scan-station-qr'),
+                label: context.l10n.scanStationQr,
+                icon: Icons.qr_code_scanner_rounded,
+                onPressed: () => _handleStationScan(context, controller),
+              ),
+            ] else if (controller.stationDistanceMeters != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                context.l10n.stationDistance(controller.stationDistanceMeters!),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ],
+          if (controller.selectedStation != null &&
+              controller.stationQrToken != null) ...[
+            const SizedBox(height: 12),
+            _ActionButton(
+              key: const ValueKey('rent-begin-return'),
+              label: context.l10n.continueToDock,
+              icon: Icons.keyboard_double_arrow_down_rounded,
+              onPressed: controller.beginReturn,
             ),
           ],
-          const SizedBox(height: 12),
-          _ActionButton(
-            key: const ValueKey('rent-begin-return'),
-            label: context.l10n.continueToDock,
-            icon: Icons.keyboard_double_arrow_down_rounded,
-            onPressed: controller.beginReturn,
-          ),
         ],
       ),
     );

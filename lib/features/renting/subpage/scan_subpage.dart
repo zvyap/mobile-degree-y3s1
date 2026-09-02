@@ -371,4 +371,5 @@ String _debugBikeStatusLabel(BikeDatabaseStatus status) => switch (status) {
   BikeDatabaseStatus.inUse => 'in use',
   BikeDatabaseStatus.maintenance => 'maintenance',
   BikeDatabaseStatus.retired => 'retired',
+  BikeDatabaseStatus.lost => 'lost',
 };

@@ -8,6 +8,7 @@ import 'package:bike_renting_app/data/repositories/payment_method_repository.dar
 import 'package:bike_renting_app/data/repositories/rental_repository.dart';
 import 'package:bike_renting_app/features/renting/rental_payment_simulator.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
+import 'package:bike_renting_app/features/renting/rider_location.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -16,8 +17,10 @@ class RentingController extends ChangeNotifier {
     required this.repository,
     this.paymentMethodRepository,
     this.paymentSimulator = const LocalRentalPaymentSimulator(),
+    this.locationSource = const GeolocatorRiderLocationSource(),
     DateTime Function()? now,
     this.enableClock = true,
+    this.bypassGeofence = false,
     this.debugSource,
   }) : _now = now ?? DateTime.now;
 
@@ -26,6 +29,10 @@ class RentingController extends ChangeNotifier {
   static const defaultUnlockFee = 0.50;
   static const defaultPerMinuteRate = 0.10;
   static const _initializationRetryDelay = Duration(milliseconds: 250);
+
+  /// Mirrors `private.return_geofence_radius_m()` in the return RPC.
+  static const returnGeofenceRadiusMeters = 250;
+  static const maxRideExtensions = 2;
 
   static const paymentMethods = [
     RentalPaymentMethod(
@@ -39,9 +46,14 @@ class RentingController extends ChangeNotifier {
   final RentalSessionRepository repository;
   final PaymentMethodRepository? paymentMethodRepository;
   final RentalPaymentSimulator paymentSimulator;
+  final RiderLocationSource locationSource;
   final DebugRentBikeSource? debugSource;
   final DateTime Function() _now;
   final bool enableClock;
+
+  /// Debug/test escape hatch: skips device GPS and reports the rider standing
+  /// on the selected station, which also passes the server-side geofence.
+  final bool bypassGeofence;
 
   List<RentalPaymentMethod> availablePaymentMethods = paymentMethods;
 
@@ -69,6 +81,9 @@ class RentingController extends ChangeNotifier {
   bool isInitialized = false;
   bool gpsAvailable = true;
   bool isAtStation = false;
+  String? stationQrToken;
+  int? stationDistanceMeters;
+  RiderPosition? _arrivalPosition;
 
   int? get rentalId => _session?.rental.id;
 
@@ -120,6 +135,25 @@ class RentingController extends ChangeNotifier {
 
   double get releasedHold => math.max(0, holdAmount - estimatedFare);
 
+  /// Overdue as soon as the server marked it or the local deadline passed;
+  /// the server sweep stays authoritative for enforcement.
+  bool get isOverdue {
+    if (_session?.rental.overdueAt != null) return true;
+    final deadline = _session?.rental.rideDeadlineAt;
+    return deadline != null && !_now().isBefore(deadline);
+  }
+
+  DateTime? get rideDeadlineAt => _session?.rental.rideDeadlineAt;
+
+  Duration? get timeUntilDeadline {
+    final deadline = rideDeadlineAt;
+    if (deadline == null || !isRideActive) return null;
+    return deadline.difference(_now());
+  }
+
+  int get extensionsRemaining =>
+      math.max(0, maxRideExtensions - (_session?.rental.extensionsUsed ?? 0));
+
   Future<void> initialize() {
     return _initialization ??= _initialize();
   }
@@ -127,6 +161,7 @@ class RentingController extends ChangeNotifier {
   Future<void> _initialize() async {
     try {
       _clearError();
+      await _sweepDeadlines();
       final results = await _loadInitializationData();
       stations = (results[0] as List<StationAvailabilityRecord>)
           .map(_stationFromDatabase)
@@ -153,6 +188,14 @@ class RentingController extends ChangeNotifier {
       isInitialized = true;
       notifyListeners();
     }
+  }
+
+  /// Best-effort overdue sweep; the server also sweeps inside the reserve RPC,
+  /// so a failure here only delays the overdue/lost transition.
+  Future<void> _sweepDeadlines() async {
+    try {
+      await repository.sweepDeadlines();
+    } catch (_) {}
   }
 
   Future<List<Object?>> _loadInitializationData() async {
@@ -246,6 +289,49 @@ class RentingController extends ChangeNotifier {
     }
 
     return null;
+  }
+
+  /// Resolves a station QR payload (station qr_token UUID, deep link, or
+  /// station code typed manually) against the loaded station list.
+  Future<ReturnStation?> resolveStationQr(String rawInput) async {
+    final trimmed = rawInput.trim();
+    if (trimmed.isEmpty) return null;
+
+    final candidates = <String>[trimmed];
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null && uri.hasScheme) {
+      final param = uri.queryParameters['qr'] ??
+          uri.queryParameters['token'] ??
+          uri.queryParameters['qr_token'] ??
+          uri.queryParameters['code'];
+      if (param != null && param.trim().isNotEmpty) {
+        candidates.add(param.trim());
+      }
+      candidates.addAll(uri.pathSegments.where((s) => s.isNotEmpty));
+    }
+
+    for (final candidate in candidates) {
+      final token = _uuidOrNull(candidate);
+      if (token != null) {
+        for (final station in stations) {
+          if (station.qrToken.isNotEmpty &&
+              station.qrToken.toLowerCase() == token.toLowerCase()) {
+            return station;
+          }
+        }
+      }
+      for (final station in stations) {
+        if (station.id.toUpperCase() == candidate.toUpperCase()) {
+          return station;
+        }
+      }
+    }
+    return null;
+  }
+
+  String? _uuidOrNull(String rawInput) {
+    final trimmed = rawInput.trim();
+    return _uuidRegex.hasMatch(trimmed) ? trimmed.toLowerCase() : null;
   }
 
   Future<void> scanBike([String? qrToken]) async {
@@ -414,6 +500,9 @@ class RentingController extends ChangeNotifier {
     if (_session?.rental.status != RentalDatabaseStatus.returning) {
       selectedStation = null;
       isAtStation = false;
+      stationQrToken = null;
+      stationDistanceMeters = null;
+      _arrivalPosition = null;
       _clearError();
       stage = RentalStage.riding;
       notifyListeners();
@@ -424,6 +513,9 @@ class RentingController extends ChangeNotifier {
       final localDistance = metrics.distanceKm;
       selectedStation = null;
       isAtStation = false;
+      stationQrToken = null;
+      stationDistanceMeters = null;
+      _arrivalPosition = null;
       _applySnapshot(await repository.resumeSession(id));
       metrics = metrics.copyWith(
         distanceKm: math.max(metrics.distanceKm, localDistance),
@@ -439,33 +531,99 @@ class RentingController extends ChangeNotifier {
       return;
     }
     selectedStation = station;
+    stationQrToken = null;
     isAtStation = false;
+    stationDistanceMeters = null;
+    _arrivalPosition = null;
     _clearError();
     notifyListeners();
   }
 
-  void confirmArrival() {
-    // TODO(geofence): Replace manual arrival with Android location/geofence
-    // validation against the selected station coordinates.
-    if (selectedStation == null) {
-      error = RentalError.chooseStation;
-    } else {
-      isAtStation = true;
-      _clearError();
+  /// Resolves a scanned station QR and makes that station authoritative for
+  /// the pending return. Arrival still needs a passing GPS check.
+  Future<void> selectStationFromQr(String rawInput) async {
+    if (isBusy) return;
+    final station = await resolveStationQr(rawInput);
+    if (station == null) {
+      error = RentalError.stationQrMismatch;
+      notifyListeners();
+      return;
     }
+    selectStation(station);
+    stationQrToken = station.qrToken.isEmpty ? null : station.qrToken;
     notifyListeners();
   }
 
-  Future<void> beginReturn() async {
-    final id = rentalId;
+  Future<void> checkArrival() async {
     final station = selectedStation;
     if (station == null) {
       error = RentalError.chooseStation;
       notifyListeners();
       return;
     }
+
+    if (bypassGeofence) {
+      _arrivalPosition = RiderPosition(
+        latitude: station.latitude,
+        longitude: station.longitude,
+      );
+      stationDistanceMeters = 0;
+      isAtStation = true;
+      _clearError();
+      notifyListeners();
+      return;
+    }
+
+    if (isBusy) return;
+    _beginBusy();
+    try {
+      final position = await locationSource.getCurrentPosition();
+      final meters = _haversineMeters(
+        position.latitude,
+        position.longitude,
+        station.latitude,
+        station.longitude,
+      );
+      _arrivalPosition = position;
+      stationDistanceMeters = meters.round();
+      isAtStation = meters <= returnGeofenceRadiusMeters;
+      if (isAtStation) {
+        _clearError();
+      } else {
+        error = RentalError.outsideReturnZone;
+      }
+    } on LocationPermissionDeniedException {
+      error = RentalError.locationPermissionDenied;
+    } catch (_) {
+      error = RentalError.gpsLost;
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> beginReturn() async {
+    final id = rentalId;
+    final station = selectedStation;
+    final token = stationQrToken;
+    if (station == null) {
+      error = RentalError.chooseStation;
+      notifyListeners();
+      return;
+    }
+    if (token == null) {
+      error = RentalError.stationQrMismatch;
+      notifyListeners();
+      return;
+    }
     if (!isAtStation) {
       error = RentalError.outsideReturnZone;
+      notifyListeners();
+      return;
+    }
+    final position = _arrivalPosition;
+    if (position == null) {
+      error = RentalError.gpsLost;
       notifyListeners();
       return;
     }
@@ -477,8 +635,23 @@ class RentingController extends ChangeNotifier {
         await repository.requestSessionReturn(
           rentalId: id,
           stationId: station.backendId,
+          latitude: position.latitude,
+          longitude: position.longitude,
+          stationQrToken: token,
         ),
       );
+      metrics = metrics.copyWith(
+        distanceKm: math.max(metrics.distanceKm, localDistance),
+      );
+    });
+  }
+
+  Future<void> extendRide() async {
+    final id = rentalId;
+    if (isBusy || id == null) return;
+    await _run(() async {
+      final localDistance = metrics.distanceKm;
+      _applySnapshot(await repository.extendRental(id));
       metrics = metrics.copyWith(
         distanceKm: math.max(metrics.distanceKm, localDistance),
       );
@@ -651,6 +824,9 @@ class RentingController extends ChangeNotifier {
         );
         selectedStation = null;
         isAtStation = false;
+        stationQrToken = null;
+        stationDistanceMeters = null;
+        _arrivalPosition = null;
         stage = RentalStage.riding;
         _startClock();
         break;
@@ -661,6 +837,8 @@ class RentingController extends ChangeNotifier {
         );
         selectedStation = _stationFromSnapshot(snapshot.endStation);
         isAtStation = true;
+        stationQrToken = null;
+        _arrivalPosition = null;
         stage = RentalStage.returning;
         _startClock();
         break;
@@ -699,6 +877,7 @@ class RentingController extends ChangeNotifier {
         stage = RentalStage.receipt;
         break;
       case RentalDatabaseStatus.cancelled:
+      case RentalDatabaseStatus.lost:
         _resetLocal();
         break;
     }
@@ -717,6 +896,9 @@ class RentingController extends ChangeNotifier {
         _ => _calculateDistanceMeters(station.latitude, station.longitude),
       },
       availableDocks: station.availableDocks,
+      qrToken: station.qrToken,
+      latitude: station.latitude,
+      longitude: station.longitude,
     );
   }
 
@@ -755,14 +937,33 @@ class RentingController extends ChangeNotifier {
     if (caught is! DatabaseException) return RentalError.connectionFailed;
     return switch (caught.code) {
       DatabaseErrorCode.notAuthenticated => RentalError.authenticationFailed,
+      DatabaseErrorCode.accountUnavailable => RentalError.accountSuspended,
       DatabaseErrorCode.activeRentalExists => RentalError.activeRentalExists,
       DatabaseErrorCode.bikeUnavailable => RentalError.bikeReserved,
       DatabaseErrorCode.notFound => RentalError.invalidQr,
       DatabaseErrorCode.stationFull => RentalError.stationFull,
+      DatabaseErrorCode.stationQrMismatch => RentalError.stationQrMismatch,
+      DatabaseErrorCode.outsideReturnZone => RentalError.outsideReturnZone,
+      DatabaseErrorCode.maxExtensionsReached =>
+        RentalError.maxExtensionsReached,
       DatabaseErrorCode.invalidRentalTransition =>
         RentalError.invalidTransition,
       _ => RentalError.connectionFailed,
     };
+  }
+
+  int _haversineMeters(double lat1, double lon1, double lat2, double lon2) {
+    const earthRadiusMeters = 6371000.0;
+    double radians(double degrees) => degrees * (math.pi / 180.0);
+    final dLat = radians(lat2 - lat1);
+    final dLon = radians(lon2 - lon1);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(radians(lat1)) *
+            math.cos(radians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return (earthRadiusMeters * c).round();
   }
 
   Future<bool> _run(Future<void> Function() operation) async {
@@ -820,6 +1021,9 @@ class RentingController extends ChangeNotifier {
     isBusy = false;
     gpsAvailable = true;
     isAtStation = false;
+    stationQrToken = null;
+    stationDistanceMeters = null;
+    _arrivalPosition = null;
     notifyListeners();
   }
 

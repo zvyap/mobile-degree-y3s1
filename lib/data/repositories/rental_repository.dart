@@ -19,6 +19,9 @@ abstract interface class RentalSessionRepository {
   Future<RentalSessionSnapshot> requestSessionReturn({
     required int rentalId,
     required int stationId,
+    required double latitude,
+    required double longitude,
+    required String stationQrToken,
   });
 
   Future<RentalSessionSnapshot> resumeSession(int rentalId);
@@ -27,6 +30,10 @@ abstract interface class RentalSessionRepository {
     required int rentalId,
     required double distanceKm,
   });
+
+  Future<void> sweepDeadlines();
+
+  Future<RentalSessionSnapshot> extendRental(int rentalId);
 }
 
 /// Debug-only escape hatch for the camera-less debug scan stage. Remove
@@ -48,7 +55,8 @@ class RentalRepository
       'per_minute_rate, hold_amount, reservation_expires_at, authorized_at, '
       'started_at, return_requested_at, ended_at, cancelled_at, '
       'duration_seconds, distance_km, charged_minutes, final_fare, '
-      'failure_reason, created_at, updated_at';
+      'failure_reason, ride_deadline_at, overdue_at, extensions_used, '
+      'created_at, updated_at';
 
   static const _historyColumns =
       '$_rentalColumns, '
@@ -105,9 +113,18 @@ class RentalRepository
   Future<RentalSessionSnapshot> requestSessionReturn({
     required int rentalId,
     required int stationId,
+    required double latitude,
+    required double longitude,
+    required String stationQrToken,
   }) async {
     return _hydrate(
-      await requestReturn(rentalId: rentalId, stationId: stationId),
+      await requestReturn(
+        rentalId: rentalId,
+        stationId: stationId,
+        latitude: latitude,
+        longitude: longitude,
+        stationQrToken: stationQrToken,
+      ),
     );
   }
 
@@ -124,6 +141,18 @@ class RentalRepository
     return _hydrate(
       await completeReturn(rentalId: rentalId, distanceKm: distanceKm),
     );
+  }
+
+  @override
+  Future<void> sweepDeadlines() async {
+    await _dataSource.rpcSingle('sweep_rental_deadlines');
+  }
+
+  @override
+  Future<RentalSessionSnapshot> extendRental(int rentalId) async {
+    return _hydrate(await _callRentalRpc('extend_rental', {
+      'p_rental_id': rentalId,
+    }));
   }
 
   Future<RentalDatabaseRecord> reserveBike({
@@ -147,10 +176,16 @@ class RentalRepository
   Future<RentalDatabaseRecord> requestReturn({
     required int rentalId,
     required int stationId,
+    required double latitude,
+    required double longitude,
+    required String stationQrToken,
   }) {
     return _callRentalRpc('request_return', {
       'p_rental_id': rentalId,
       'p_station_id': stationId,
+      'p_latitude': latitude,
+      'p_longitude': longitude,
+      'p_station_qr_token': stationQrToken,
     });
   }
 

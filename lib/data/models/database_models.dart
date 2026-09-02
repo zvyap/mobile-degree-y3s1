@@ -4,7 +4,7 @@ enum AppUserRole { rider, admin }
 
 enum AccountStatus { active, suspended }
 
-enum BikeDatabaseStatus { available, reserved, inUse, maintenance, retired }
+enum BikeDatabaseStatus { available, reserved, inUse, maintenance, retired, lost }
 
 enum RentalDatabaseStatus {
   reserved,
@@ -16,6 +16,7 @@ enum RentalDatabaseStatus {
   paymentFailed,
   completed,
   cancelled,
+  lost,
 }
 
 enum RentalPaymentKind { authorization, capture, release, refund }
@@ -78,6 +79,7 @@ class StationAvailabilityRecord {
     required this.availableDocks,
     required this.isActive,
     required this.updatedAt,
+    this.qrToken = '',
   });
 
   factory StationAvailabilityRecord.fromJson(JsonMap json) {
@@ -93,6 +95,7 @@ class StationAvailabilityRecord {
       availableDocks: _asInt(json['available_docks']),
       isActive: json['is_active'] as bool,
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      qrToken: json['qr_token'] as String? ?? '',
     );
   }
 
@@ -107,6 +110,7 @@ class StationAvailabilityRecord {
   final int availableDocks;
   final bool isActive;
   final DateTime updatedAt;
+  final String qrToken;
 }
 
 class BikeDatabaseRecord {
@@ -221,6 +225,9 @@ class RentalDatabaseRecord {
     this.cancelledAt,
     this.finalFare,
     this.failureReason,
+    this.rideDeadlineAt,
+    this.overdueAt,
+    this.extensionsUsed = 0,
   });
 
   factory RentalDatabaseRecord.fromJson(JsonMap json) {
@@ -254,6 +261,9 @@ class RentalDatabaseRecord {
       chargedMinutes: _asInt(json['charged_minutes']),
       finalFare: _asNullableDouble(json['final_fare']),
       failureReason: json['failure_reason'] as String?,
+      rideDeadlineAt: _asNullableDateTime(json['ride_deadline_at']),
+      overdueAt: _asNullableDateTime(json['overdue_at']),
+      extensionsUsed: _asInt(json['extensions_used'] ?? 0),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -284,6 +294,9 @@ class RentalDatabaseRecord {
   final int chargedMinutes;
   final double? finalFare;
   final String? failureReason;
+  final DateTime? rideDeadlineAt;
+  final DateTime? overdueAt;
+  final int extensionsUsed;
   final DateTime createdAt;
   final DateTime updatedAt;
 }

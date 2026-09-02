@@ -41,6 +41,11 @@ String _rentalError(BuildContext context, RentingController controller) {
     ),
     RentalError.chooseStation => l10n.errorChooseStation,
     RentalError.outsideReturnZone => l10n.errorOutsideReturnZone,
+    RentalError.stationQrMismatch => l10n.errorStationQrMismatch,
+    RentalError.maxExtensionsReached => l10n.errorMaxExtensionsReached,
+    RentalError.locationPermissionDenied =>
+      l10n.errorLocationPermissionDenied,
+    RentalError.accountSuspended => l10n.errorAccountSuspended,
     RentalError.dockNotDetected => l10n.errorDockNotDetected,
     RentalError.authenticationFailed => l10n.errorAuthenticationFailed,
     RentalError.connectionFailed => l10n.errorBackendConnection,
