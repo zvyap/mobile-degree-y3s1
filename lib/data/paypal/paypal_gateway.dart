@@ -123,7 +123,7 @@ class PayPalGateway implements PayPalPaymentGateway {
           'application_context': {
             'brand_name': 'BikeRent',
             'locale': 'en-MY',
-            'landing_page': 'LOGIN',
+            'landing_page': 'NO_PREFERENCE',
             'shipping_preference': 'NO_SHIPPING',
             'user_action': 'PAY_NOW',
             'return_url': returnUrl,

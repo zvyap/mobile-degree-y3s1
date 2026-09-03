@@ -47,6 +47,8 @@ class _PayPalCheckoutPageState extends State<PayPalCheckoutPage> {
           onProgress: (progress) {
             if (mounted) setState(() => _progress = progress);
           },
+          onUrlChange: (change) => _checkUrl(change.url),
+          onPageStarted: (url) => _checkUrl(url),
           onNavigationRequest: (request) {
             final url = Uri.tryParse(request.url);
             if (url == null) return NavigationDecision.prevent;
@@ -62,6 +64,16 @@ class _PayPalCheckoutPageState extends State<PayPalCheckoutPage> {
         ),
       )
       ..loadRequest(widget.approvalUrl);
+  }
+
+  void _checkUrl(String? urlString) {
+    if (urlString == null) return;
+    final url = Uri.tryParse(urlString);
+    if (url == null) return;
+    final result = paypalCheckoutResultForUrl(url);
+    if (result != null) {
+      _finish(result);
+    }
   }
 
   void _finish(PayPalCheckoutResult result) {
@@ -103,36 +115,6 @@ class _PayPalCheckoutPageState extends State<PayPalCheckoutPage> {
               label: context.l10n.paypalCheckoutSemantics,
               container: true,
               child: WebViewWidget(controller: _webViewController),
-            ),
-          ),
-        ),
-        bottomNavigationBar: SafeArea(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-              border: Border(top: BorderSide(color: scheme.outlineVariant)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    key: const ValueKey('paypal-demo-cancel'),
-                    onPressed: () => _finish(PayPalCheckoutResult.cancelled),
-                    icon: const Icon(Icons.close_rounded),
-                    label: const Text('Simulate Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton.icon(
-                    key: const ValueKey('paypal-demo-approve'),
-                    onPressed: () => _finish(PayPalCheckoutResult.approved),
-                    icon: const Icon(Icons.check_circle_rounded),
-                    label: const Text('Simulate Approve'),
-                  ),
-                ),
-              ],
             ),
           ),
         ),
