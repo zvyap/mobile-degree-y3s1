@@ -7,10 +7,12 @@ class AdminManagementPage extends StatelessWidget {
     super.key,
     required this.onNavigate,
     required this.onOpenBikeManagement,
+    this.onOpenStationManagement,
   });
 
   final ValueChanged<AppPage> onNavigate;
   final VoidCallback onOpenBikeManagement;
+  final VoidCallback? onOpenStationManagement;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +42,7 @@ class AdminManagementPage extends StatelessWidget {
           icon: Icons.map_rounded,
           title: context.l10n.stationManagement,
           subtitle: context.l10n.stationManagementDescription,
-          onTap: () => onNavigate(AppPage.stations),
+          onTap: onOpenStationManagement ?? () => onNavigate(AppPage.stations),
         ),
         _AdminDestination(
           actionKey: 'admin-bikes',

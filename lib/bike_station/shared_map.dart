@@ -172,6 +172,11 @@ class SharedBikeMap extends StatelessWidget {
   final bool isAdminMode;
   final Function(String stationId)? onStationTap;
   final Function(LatLng coordinates)? onMapLongPress;
+  final LatLng? initialCenter;
+  final double initialZoom;
+  final String? selectedStationId;
+  final LatLng? riderLocation;
+  final double? geofenceRadiusMeters;
 
   const SharedBikeMap({
     super.key,
@@ -179,14 +184,68 @@ class SharedBikeMap extends StatelessWidget {
     this.isAdminMode = false,
     this.onStationTap,
     this.onMapLongPress,
+    this.initialCenter,
+    this.initialZoom = 14.0,
+    this.selectedStationId,
+    this.riderLocation,
+    this.geofenceRadiusMeters,
   });
+
+  LatLng _computeInitialCenter() {
+    if (initialCenter != null) return initialCenter!;
+
+    if (selectedStationId != null) {
+      for (final s in stations) {
+        if (s['id']?.toString() == selectedStationId) {
+          final lat = _toDouble(s['latitude'] ?? s['lat']);
+          final lng = _toDouble(s['longitude'] ?? s['lng']);
+          if (lat != null && lng != null) return LatLng(lat, lng);
+        }
+      }
+    }
+
+    if (riderLocation != null) return riderLocation!;
+
+    for (final s in stations) {
+      final lat = _toDouble(s['latitude'] ?? s['lat']);
+      final lng = _toDouble(s['longitude'] ?? s['lng']);
+      if (lat != null && lng != null) return LatLng(lat, lng);
+    }
+
+    return const LatLng(5.4643, 100.2841); // Tanjung Bungah default
+  }
+
+  static double? _toDouble(dynamic val) {
+    if (val == null) return null;
+    if (val is num) return val.toDouble();
+    return double.tryParse(val.toString());
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final center = _computeInitialCenter();
+
+    // Find selected station coordinates for geofence circle
+    LatLng? selectedLatLng;
+    if (selectedStationId != null && geofenceRadiusMeters != null) {
+      for (final s in stations) {
+        if (s['id']?.toString() == selectedStationId) {
+          final lat = _toDouble(s['latitude'] ?? s['lat']);
+          final lng = _toDouble(s['longitude'] ?? s['lng']);
+          if (lat != null && lng != null) {
+            selectedLatLng = LatLng(lat, lng);
+            break;
+          }
+        }
+      }
+    }
+
     return FlutterMap(
       options: MapOptions(
-        initialCenter: const LatLng(5.4643, 100.2841), // Tanjung Bungah default
-        initialZoom: 14.0,
+        initialCenter: center,
+        initialZoom: initialZoom,
         onLongPress: (tapPosition, point) {
           if (isAdminMode && onMapLongPress != null) {
             onMapLongPress!(point);
@@ -199,13 +258,26 @@ class SharedBikeMap extends StatelessWidget {
           userAgentPackageName: 'com.zvyap.edu.mobile.bike_renting_app',
         ),
 
-        // 1. Dynamic scale builder based on current map zoom
+        // Optional geofence radius circle around selected station
+        if (selectedLatLng != null && geofenceRadiusMeters != null)
+          CircleLayer(
+            circles: [
+              CircleMarker(
+                point: selectedLatLng,
+                radius: geofenceRadiusMeters!,
+                useRadiusInMeter: true,
+                color: colorScheme.secondary.withValues(alpha: 0.18),
+                borderColor: colorScheme.secondary,
+                borderStrokeWidth: 2.0,
+              ),
+            ],
+          ),
+
+        // Dynamic markers for stations and rider
         Builder(
           builder: (context) {
             final zoom = MapCamera.of(context).zoom;
-
-            // 🔍 INCREASED SIZE RANGE: Capped between 48.0px and 72.0px
-            final double dynamicMarkerSize = (zoom * 4.5).clamp(48.0, 72.0);
+            final double dynamicMarkerSize = (zoom * 4.5).clamp(44.0, 68.0);
 
             return MarkerLayer(
               markers: _buildMarkers(context, dynamicMarkerSize),
@@ -217,47 +289,93 @@ class SharedBikeMap extends StatelessWidget {
   }
 
   List<Marker> _buildMarkers(BuildContext context, double markerSize) {
-    if (stations.isEmpty) return [];
-
     final colorScheme = Theme.of(context).colorScheme;
     final List<Marker> markers = [];
 
-    for (final station in stations) {
-      final rawLat = station['latitude'];
-      final rawLng = station['longitude'];
-      if (rawLat == null || rawLng == null) continue;
+    // Rider position marker
+    if (riderLocation != null) {
+      markers.add(
+        Marker(
+          point: riderLocation!,
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          child: Container(
+            decoration: BoxDecoration(
+              color: colorScheme.primary,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: const [
+                BoxShadow(color: Colors.black38, blurRadius: 6, offset: Offset(0, 2)),
+              ],
+            ),
+            child: const Icon(Icons.navigation, color: Colors.white, size: 20),
+          ),
+        ),
+      );
+    }
 
-      final double? lat = (rawLat is num) ? rawLat.toDouble() : double.tryParse(rawLat.toString());
-      final double? lng = (rawLng is num) ? rawLng.toDouble() : double.tryParse(rawLng.toString());
+    for (final station in stations) {
+      final double? lat = _toDouble(station['latitude'] ?? station['lat']);
+      final double? lng = _toDouble(station['longitude'] ?? station['lng']);
       if (lat == null || lng == null) continue;
 
       final String stationId = station['id']?.toString() ?? '';
       final String status = station['status']?.toString() ?? 'Normal';
+      final bool isSelected = selectedStationId != null &&
+          (stationId == selectedStationId ||
+              station['code']?.toString() == selectedStationId);
 
       Color markerColor = colorScheme.primary;
-      if (status == 'Under Maintenance') {
+      if (isSelected) {
+        markerColor = colorScheme.secondary;
+      } else if (status == 'Under Maintenance') {
         markerColor = colorScheme.tertiary;
       } else if (status == 'Terminated' || (isAdminMode && status != 'Normal')) {
         markerColor = const Color(0xFFDC2626);
       }
 
+      final double effectiveSize = isSelected ? markerSize * 1.2 : markerSize;
+
       markers.add(
         Marker(
           point: LatLng(lat, lng),
-          width: markerSize,
-          height: markerSize,
-          rotate: true, // Keeps marker upright on map rotation
-          alignment: Alignment.topCenter, // Anchors pin tip to exact coordinates
+          width: effectiveSize,
+          height: effectiveSize,
+          rotate: true,
+          alignment: Alignment.topCenter,
           child: GestureDetector(
             onTap: () {
               if (onStationTap != null && stationId.isNotEmpty) {
                 onStationTap!(stationId);
               }
             },
-            child: Icon(
-              Icons.location_on,
-              size: markerSize,
-              color: markerColor,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  Icons.location_on,
+                  size: effectiveSize,
+                  color: markerColor,
+                ),
+                if (isSelected)
+                  Positioned(
+                    top: effectiveSize * 0.16,
+                    child: Container(
+                      width: effectiveSize * 0.36,
+                      height: effectiveSize * 0.36,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.check,
+                        size: effectiveSize * 0.28,
+                        color: colorScheme.secondary,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),

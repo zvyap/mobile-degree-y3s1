@@ -31,10 +31,11 @@ class _StationStage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          _CityMap(
-            routeProgress: controller.isAtStation ? 1 : 0.72,
+          _ReturnStationMap(
+            stations: controller.stations,
             selectedStation: controller.selectedStation,
-            atStation: controller.isAtStation,
+            onSelectStation: controller.selectStation,
+            isAtStation: controller.isAtStation,
           ),
           const SizedBox(height: 10),
           for (final station in controller.stations) ...[
@@ -63,7 +64,7 @@ class _StationStage extends StatelessWidget {
                     )
                   : Icon(
                       controller.isAtStation
-                          ? Icons.check_rounded
+                          ? Icons.check_circle_rounded
                           : Icons.near_me_rounded,
                     ),
               label: Text(
@@ -86,25 +87,35 @@ class _StationStage extends StatelessWidget {
               Text(
                 context.l10n.stationDistance(controller.stationDistanceMeters!),
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.error,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
             ],
-          ],
-          const SizedBox(height: 8),
-          _ActionButton(
-            key: const ValueKey('rent-scan-station-qr'),
-            label: context.l10n.scanStationQr,
-            icon: Icons.qr_code_scanner_rounded,
-            onPressed: () => _handleStationScan(context, controller),
-          ),
-          if (controller.selectedStation != null &&
-              controller.stationQrToken != null) ...[
+            const SizedBox(height: 8),
+            _ActionButton(
+              key: const ValueKey('rent-scan-station-qr'),
+              label: context.l10n.scanStationQr,
+              icon: Icons.qr_code_scanner_rounded,
+              onPressed: () => _handleStationScan(context, controller),
+            ),
             const SizedBox(height: 12),
             _ActionButton(
               key: const ValueKey('rent-begin-return'),
-              label: context.l10n.continueToDock,
+              label: controller.isAtStation
+                  ? context.l10n.continueToDock
+                  : 'Return at ${controller.selectedStation!.name}',
               icon: Icons.keyboard_double_arrow_down_rounded,
-              onPressed: controller.beginReturn,
+              onPressed: controller.isBusy
+                  ? null
+                  : () async {
+                      if (!controller.isAtStation) {
+                        await controller.checkArrival();
+                        if (!controller.isAtStation) return;
+                      }
+                      await controller.beginReturn();
+                    },
             ),
           ],
         ],

@@ -1,3 +1,5 @@
+import 'package:bike_renting_app/bike_station/shared_map.dart';
+import 'package:bike_renting_app/bike_station/station_map.dart';
 import 'package:bike_renting_app/features/admin/admin_management_page.dart';
 import 'package:bike_renting_app/features/bike/bike_details.dart';
 import 'package:bike_renting_app/features/bike/bike_management_page.dart';
@@ -10,10 +12,8 @@ import 'package:bike_renting_app/features/history/ride_history_page.dart';
 import 'package:bike_renting_app/features/qr/qr_scan_page.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/settings/settings_page.dart';
-import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
-import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
 import 'package:bike_renting_app/features/bike/add_bike.dart';
 import 'package:bike_renting_app/features/bike/bike_report.dart';
@@ -98,17 +98,13 @@ class AppNavigator extends StatelessWidget {
   }
 
   Widget _buildPage(BuildContext context, AppPage page, Object? arguments) {
-    final l10n = context.l10n;
     return switch (page) {
       AppPage.home => HomePage(
         rentingController: rentingController,
         onNavigate: onSelectRootPage,
       ),
-      AppPage.stations => FeaturePlaceholderPage(
-        title: l10n.stations,
-        subtitle: l10n.stationsDescription,
-        accent: const Color(0xFFF59E0B),
-      ),
+      AppPage.stations => const RefinedUserBikeView(),
+      AppPage.stationManagement => const AdminStationMapScreen(),
       AppPage.scan => QrScanPage(
         controller: rentingController,
         onRequestExit: () => onSelectRootPage(AppPage.home),
@@ -128,6 +124,7 @@ class AppNavigator extends StatelessWidget {
       AppPage.admin => AdminManagementPage(
         onNavigate: onSelectRootPage,
         onOpenBikeManagement: () => onOpenPage(AppPage.bikeManagement),
+        onOpenStationManagement: () => onOpenPage(AppPage.stationManagement),
       ),
       AppPage.addbike => const AddBike(),
       AppPage.bikeDetail => BikeDetailsPage(

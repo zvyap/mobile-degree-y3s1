@@ -538,7 +538,7 @@ class RentingController extends ChangeNotifier {
       return;
     }
     selectedStation = station;
-    stationQrToken = null;
+    stationQrToken = station.qrToken.isNotEmpty ? station.qrToken : null;
     isAtStation = false;
     stationDistanceMeters = null;
     _arrivalPosition = null;
@@ -614,14 +614,8 @@ class RentingController extends ChangeNotifier {
   Future<void> beginReturn() async {
     final id = rentalId;
     final station = selectedStation;
-    final token = stationQrToken;
     if (station == null) {
       error = RentalError.chooseStation;
-      notifyListeners();
-      return;
-    }
-    if (token == null) {
-      error = RentalError.stationQrMismatch;
       notifyListeners();
       return;
     }
@@ -637,6 +631,8 @@ class RentingController extends ChangeNotifier {
       return;
     }
     if (id == null) return;
+
+    final token = stationQrToken ?? station.qrToken;
 
     await _run(() async {
       final localDistance = metrics.distanceKm;

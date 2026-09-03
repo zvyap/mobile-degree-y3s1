@@ -21,7 +21,7 @@ abstract interface class RentalSessionRepository {
     required int stationId,
     required double latitude,
     required double longitude,
-    required String stationQrToken,
+    String? stationQrToken,
   });
 
   Future<RentalSessionSnapshot> resumeSession(int rentalId);
@@ -115,7 +115,7 @@ class RentalRepository
     required int stationId,
     required double latitude,
     required double longitude,
-    required String stationQrToken,
+    String? stationQrToken,
   }) async {
     return _hydrate(
       await requestReturn(
@@ -178,14 +178,16 @@ class RentalRepository
     required int stationId,
     required double latitude,
     required double longitude,
-    required String stationQrToken,
+    String? stationQrToken,
   }) {
     return _callRentalRpc('request_return', {
       'p_rental_id': rentalId,
       'p_station_id': stationId,
       'p_latitude': latitude,
       'p_longitude': longitude,
-      'p_station_qr_token': stationQrToken,
+      'p_station_qr_token': (stationQrToken != null && stationQrToken.isNotEmpty)
+          ? stationQrToken
+          : null,
     });
   }
 

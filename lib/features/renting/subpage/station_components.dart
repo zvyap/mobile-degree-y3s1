@@ -106,8 +106,94 @@ class _StationTile extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: Icon(
+                    Icons.info_outline_rounded,
+                    size: 20,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  tooltip: 'Station details',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => StationDetailScreen(
+                          stationData: {
+                            'id': station.backendId,
+                            'name': station.name,
+                            'address': station.name,
+                            'latitude': station.latitude,
+                            'longitude': station.longitude,
+                            'available_bikes': 0,
+                            'capacity': station.availableDocks,
+                            'status': 'Normal',
+                          },
+                          isViewOnly: true,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReturnStationMap extends StatelessWidget {
+  const _ReturnStationMap({
+    required this.stations,
+    required this.selectedStation,
+    required this.onSelectStation,
+    required this.isAtStation,
+  });
+
+  final List<ReturnStation> stations;
+  final ReturnStation? selectedStation;
+  final ValueChanged<ReturnStation> onSelectStation;
+  final bool isAtStation;
+
+  @override
+  Widget build(BuildContext context) {
+    final stationMaps = stations
+        .map((s) => {
+              'id': s.id,
+              'backendId': s.backendId,
+              'name': s.name,
+              'latitude': s.latitude,
+              'longitude': s.longitude,
+              'status': s.availableDocks > 0 ? 'Normal' : 'Under Maintenance',
+            })
+        .toList(growable: false);
+
+    final selectedLatLng = selectedStation != null
+        ? LatLng(selectedStation!.latitude, selectedStation!.longitude)
+        : null;
+
+    return Semantics(
+      label: context.l10n.cityMapSemantics,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          width: double.infinity,
+          height: 200,
+          child: SharedBikeMap(
+            stations: stationMaps,
+            selectedStationId: selectedStation?.id,
+            geofenceRadiusMeters: 250,
+            initialCenter: selectedLatLng,
+            onStationTap: (stationId) {
+              final matched = stations.cast<ReturnStation?>().firstWhere(
+                    (s) => s?.id == stationId,
+                    orElse: () => null,
+                  );
+              if (matched != null) {
+                onSelectStation(matched);
+              }
+            },
           ),
         ),
       ),

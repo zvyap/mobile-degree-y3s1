@@ -761,15 +761,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paypalSandboxDescription => 'Local simulation · No real money';
 
   @override
-  String get paypalAccountSubtitle => 'PayPal Sandbox account';
-
-  @override
-  String get paypalCheckoutTitle => 'PayPal Sandbox';
-
-  @override
-  String get paypalCheckoutSemantics => 'Secure PayPal Sandbox approval page';
-
-  @override
   String get selected => 'Selected';
 
   @override

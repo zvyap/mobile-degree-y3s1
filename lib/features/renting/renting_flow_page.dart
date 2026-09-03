@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:bike_renting_app/bike_station/shared_map.dart';
+import 'package:bike_renting_app/bike_station/station_details.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
@@ -10,6 +12,7 @@ import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 part 'subpage/journey_header.dart';
