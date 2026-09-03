@@ -23,6 +23,7 @@ import 'package:bike_renting_app/features/bike/bike_service.dart';
 import 'package:bike_renting_app/features/bike/bike_report_detail_page.dart';
 import 'package:bike_renting_app/features/bike/pending_report_page.dart';
 import 'package:bike_renting_app/features/bike/report_form.dart';
+import 'package:bike_renting_app/features/bike/pending_report_detail.dart';
 class AppNavigator extends StatelessWidget {
   const AppNavigator({
     super.key,
@@ -186,8 +187,17 @@ class AppNavigator extends StatelessWidget {
       AppPage.reportForm => ReportFormPage(
         bikeId: arguments as String?,
       ),
-      AppPage.pendingBikeReports => const PendingBikeReportsPage(
+      AppPage.pendingBikeReports => PendingBikeReportsPage(
+        onOpenReportDetail: (reportId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.pendingReportDetail.routeName,
+            arguments: reportId,
+          );
+        },
 
+      ),
+      AppPage.pendingReportDetail => PendingReportDetail(
+        reportId: arguments as String,
       ),
       AppPage.bikeReportDetail => BikeReportDetailPage(
         reportId: arguments as String,
@@ -212,6 +222,7 @@ class AppNavigator extends StatelessWidget {
           );
         },
       ),
+
 
       AppPage.settings => SettingsPage(onToggleTheme: onToggleTheme),
     };
