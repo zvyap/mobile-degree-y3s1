@@ -64,7 +64,7 @@ class RideHistoryEntry {
         unlockFee: rental.unlockFee,
         perMinuteRate: rental.perMinuteRate,
         startedMinutes: rental.chargedMinutes,
-        finalFare: rental.finalFare!,
+        finalFare: rental.finalFare ?? 0.0,
         maskedPaymentMethod: paymentMethod,
       ),
     );

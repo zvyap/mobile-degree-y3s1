@@ -8,10 +8,12 @@ class HeroPanel extends StatelessWidget {
     super.key,
     required this.onScan,
     required this.onFindStation,
+    required this.onViewHistory,
   });
 
   final VoidCallback onScan;
   final VoidCallback onFindStation;
+  final VoidCallback onViewHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +50,11 @@ class HeroPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        _HomeActions(onScan: onScan, onFindStation: onFindStation),
+        _HomeActions(
+          onScan: onScan,
+          onFindStation: onFindStation,
+          onViewHistory: onViewHistory,
+        ),
         const SizedBox(height: 10),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,29 +90,50 @@ class HeroPanel extends StatelessWidget {
 }
 
 class _HomeActions extends StatelessWidget {
-  const _HomeActions({required this.onScan, required this.onFindStation});
+  const _HomeActions({
+    required this.onScan,
+    required this.onFindStation,
+    required this.onViewHistory,
+  });
 
   final VoidCallback onScan;
   final VoidCallback onFindStation;
+  final VoidCallback onViewHistory;
 
   @override
   Widget build(BuildContext context) {
     final usesLargeText = MediaQuery.textScalerOf(context).scale(14) > 18;
-    final scan = FilledButton.icon(
+    final scan = _HomeAction(
       key: const ValueKey<String>('home-scan'),
+      filled: true,
       onPressed: onScan,
-      icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
-      label: Text(context.l10n.scanBike),
+      icon: Icons.qr_code_scanner_rounded,
+      label: context.l10n.scanBike,
     );
-    final station = OutlinedButton.icon(
+    final station = _HomeAction(
       key: const ValueKey<String>('home-find-station'),
       onPressed: onFindStation,
-      icon: const Icon(Icons.near_me_rounded, size: 20),
-      label: Text(context.l10n.findStation),
+      icon: Icons.near_me_rounded,
+      label: context.l10n.findStation,
+    );
+    final history = _HomeAction(
+      key: const ValueKey<String>('home-view-history'),
+      onPressed: onViewHistory,
+      icon: Icons.history_rounded,
+      label: context.l10n.rideHistory,
     );
 
     if (usesLargeText) {
-      return Wrap(spacing: 8, runSpacing: 8, children: [scan, station]);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          scan,
+          const SizedBox(height: 8),
+          station,
+          const SizedBox(height: 8),
+          history,
+        ],
+      );
     }
 
     return Row(
@@ -114,7 +141,46 @@ class _HomeActions extends StatelessWidget {
         Expanded(child: scan),
         const SizedBox(width: 8),
         Expanded(child: station),
+        const SizedBox(width: 8),
+        Expanded(child: history),
       ],
+    );
+  }
+}
+
+class _HomeAction extends StatelessWidget {
+  const _HomeAction({
+    super.key,
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    this.filled = false,
+  });
+
+  final VoidCallback onPressed;
+  final IconData icon;
+  final String label;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(height: 4),
+          Text(label, maxLines: 2, softWrap: true, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+
+    return SizedBox(
+      height: 68,
+      child: filled
+          ? FilledButton(onPressed: onPressed, child: content)
+          : OutlinedButton(onPressed: onPressed, child: content),
     );
   }
 }

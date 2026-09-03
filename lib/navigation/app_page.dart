@@ -18,6 +18,7 @@ enum AppPage {
   serviceBike(routeName: '/admin/bike/service', icon: Icons.build_rounded,),
   bikeReportDetail(routeName: '/admin/bikes/reports/detail', icon: Icons.description_outlined,),
   pendingBikeReports(routeName: '/admin/bikes/reports/pending', icon: Icons.pending_actions_rounded,),
+  stationManagement(routeName: '/admin/stations', icon: Icons.map_rounded),
   settings(routeName: '/settings', icon: Icons.settings_rounded);
 
   const AppPage({required this.routeName, required this.icon});
@@ -34,6 +35,7 @@ enum AppPage {
     profile => l10n.profile,
     admin => l10n.adminManagement,
     bikeManagement => l10n.bikeManagement,
+    stationManagement => l10n.stationManagement,
     addbike => 'Add Bike',
     settings => l10n.settings,
     bikeDetail => 'Bike Detail',

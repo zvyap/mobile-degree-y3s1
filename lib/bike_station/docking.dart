@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class StationBikesScreen extends StatefulWidget {
-  const StationBikesScreen({super.key});
+  final Map<String, dynamic>? stationData;
+  const StationBikesScreen({super.key, this.stationData});
 
   @override
   State<StationBikesScreen> createState() => _StationBikesScreenState();
@@ -69,7 +70,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "Jalan Sungai Kelian Station",
+                    widget.stationData?['name']?.toString() ?? "Jalan Sungai Kelian Station",
                     style: theme.textTheme.headlineSmall?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
@@ -83,9 +84,9 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          "Tanjung Bungah, Penang",
+                          widget.stationData?['address']?.toString() ?? "Tanjung Bungah, Penang",
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurface.withOpacity(0.7),
+                            color: colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                       ),
@@ -109,16 +110,16 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
+                  border: Border.all(color: colorScheme.outline.withValues(alpha: 0.5)),
                 ),
                 child: TextField(
                   controller: _searchController,
                   onChanged: _filterBikes,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: InputDecoration(
-                    icon: Icon(Icons.search, color: colorScheme.onSurface.withOpacity(0.6)),
+                    icon: Icon(Icons.search, color: colorScheme.onSurface.withValues(alpha: 0.6)),
                     hintText: "Search bikes",
-                    hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
+                    hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
                     border: InputBorder.none,
                   ),
                 ),
@@ -200,7 +201,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                               },
                             ),
                             IconButton(
-                              icon: Icon(Icons.close, color: colorScheme.onSurface.withOpacity(0.5)),
+                              icon: Icon(Icons.close, color: colorScheme.onSurface.withValues(alpha: 0.5)),
                               onPressed: () {
                                 setState(() {
                                   allBikes.removeWhere((item) => item["id"] == bike["id"]);

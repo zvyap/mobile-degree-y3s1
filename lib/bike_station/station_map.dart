@@ -1,3 +1,5 @@
+import 'package:bike_renting_app/bike_station/shared_map.dart';
+import 'package:bike_renting_app/bike_station/station_details.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -98,50 +100,63 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
         children: [
           // BACKGROUND MAP
           Positioned.fill(
-            child: Container(
-              color: const Color(0xFFEAF5EB),
-              child: const Center(
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: 200.0),
-                  child: Text(
-                    'Interactive Map Layer Here\n(Pans underneath center marker)',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ),
-              ),
+            child: SharedBikeMap(
+              stations: stations,
+              selectedStationId: selectedStation?['id']?.toString(),
+              isAdminMode: widget.isAdminDeleteMode,
+              onStationTap: (stationId) {
+                final station = stations.firstWhere(
+                  (s) => s['id']?.toString() == stationId,
+                  orElse: () => {},
+                );
+                if (station.isNotEmpty) {
+                  setState(() => selectedStation = station);
+                  if (!widget.isAdminDeleteMode) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => StationDetailScreen(
+                          stationData: station,
+                          isViewOnly: true,
+                        ),
+                      ),
+                    );
+                  }
+                }
+              },
             ),
           ),
 
-          // MIDDLE LOCATION MARKER
-          Align(
-            alignment: Alignment.center,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 200.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black87,
-                      borderRadius: BorderRadius.circular(20),
+          // MIDDLE LOCATION MARKER (Admin Delete Mode crosshair)
+          if (widget.isAdminDeleteMode)
+            Align(
+              alignment: Alignment.center,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 200.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black87,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        "Selected Location",
+                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    child: Text(
-                      widget.isAdminDeleteMode ? "Selected Location" : "Your Location",
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    const SizedBox(height: 4),
+                    Icon(
+                      Icons.location_on,
+                      color: destructiveColor,
+                      size: 42,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Icon(
-                    Icons.location_on,
-                    color: widget.isAdminDeleteMode ? destructiveColor : colorScheme.primary,
-                    size: 42,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
 
           // TOP SEARCH BAR
           Positioned(
@@ -174,16 +189,16 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
+                      border: Border.all(color: colorScheme.outline.withValues(alpha: 0.5)),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4))
                       ],
                     ),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
                         widget.isAdminDeleteMode ? 'Search location...' : 'Search destination...',
-                        style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
+                        style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
                       ),
                     ),
                   ),
@@ -202,7 +217,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   )
@@ -235,7 +250,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
                       width: 40,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: colorScheme.onSurface.withOpacity(0.2),
+                        color: colorScheme.onSurface.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
@@ -246,7 +261,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
                     child: Text(
                       widget.isAdminDeleteMode ? "Target Station to Remove" : "Closest to you",
-                      style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 14, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -266,7 +281,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
                     child: Text(
                       widget.isAdminDeleteMode ? "All Active Stations" : "Top 3 Nearby Stations",
-                      style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 14, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -324,11 +339,11 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
         ),
         child: Row(
           children: [
-            Icon(Icons.info_outline, color: colorScheme.onSurface.withOpacity(0.5)),
+            Icon(Icons.info_outline, color: colorScheme.onSurface.withValues(alpha: 0.5)),
             const SizedBox(width: 12),
             Text(
               "No stations available",
-              style: TextStyle(color: colorScheme.onSurface.withOpacity(0.6), fontSize: 14),
+              style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14),
             ),
           ],
         ),
@@ -342,18 +357,29 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
       onTap: () {
         if (widget.isAdminDeleteMode) {
           _showDeleteConfirmationDialog(context, topStation, theme, colorScheme, destructiveColor);
+        } else {
+          setState(() => selectedStation = topStation);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => StationDetailScreen(
+                stationData: topStation,
+                isViewOnly: true,
+              ),
+            ),
+          );
         }
       },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: widget.isAdminDeleteMode
-              ? destructiveColor.withOpacity(0.15)
-              : colorScheme.primary.withOpacity(0.15),
+              ? destructiveColor.withValues(alpha: 0.15)
+              : colorScheme.primary.withValues(alpha: 0.15),
           border: Border.all(
             color: widget.isAdminDeleteMode
-                ? destructiveColor.withOpacity(0.5)
-                : colorScheme.primary.withOpacity(0.5),
+                ? destructiveColor.withValues(alpha: 0.5)
+                : colorScheme.primary.withValues(alpha: 0.5),
           ),
           borderRadius: BorderRadius.circular(16),
         ),
@@ -379,7 +405,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
                   const SizedBox(height: 4),
                   Text(
                     "${topStation["address"] ?? "No address"} • $availableBikes Bikes available",
-                    style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
+                    style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -404,7 +430,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
           padding: const EdgeInsets.all(20.0),
           child: Text(
             "No stations available in this area.",
-            style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
+            style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
           ),
         ),
       );
@@ -419,6 +445,17 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
           onTap: () {
             if (widget.isAdminDeleteMode) {
               _showDeleteConfirmationDialog(context, station, theme, colorScheme, destructiveColor);
+            } else {
+              setState(() => selectedStation = station);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => StationDetailScreen(
+                    stationData: station,
+                    isViewOnly: true,
+                  ),
+                ),
+              );
             }
           },
           child: _StandardStationTile(
@@ -527,7 +564,7 @@ class _StandardStationTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.location_on_outlined, color: colorScheme.onSurface.withOpacity(0.6), size: 28),
+          Icon(Icons.location_on_outlined, color: colorScheme.onSurface.withValues(alpha: 0.6), size: 28),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -537,7 +574,7 @@ class _StandardStationTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   address,
-                  style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
+                  style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

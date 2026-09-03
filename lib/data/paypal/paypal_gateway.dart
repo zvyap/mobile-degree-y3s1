@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:bike_renting_app/paypal_sandbox_constants.dart';
+import 'package:bike_renting_app/constants.dart';
 import 'package:http/http.dart' as http;
 
 enum PayPalFailureType {

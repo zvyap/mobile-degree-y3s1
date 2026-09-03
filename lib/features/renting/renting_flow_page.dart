@@ -1,13 +1,20 @@
 import 'dart:async';
 
+import 'package:bike_renting_app/bike_station/shared_map.dart';
+import 'package:bike_renting_app/bike_station/station_details.dart';
+import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/l10n/app_formats.dart';
 import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
+import 'package:bike_renting_app/features/renting/paypal_checkout_page.dart';
+import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart' hide Path;
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 part 'subpage/journey_header.dart';
 part 'subpage/scan_subpage.dart';
@@ -16,6 +23,7 @@ part 'subpage/authorization_subpage.dart';
 part 'subpage/unlock_subpage.dart';
 part 'subpage/ride_subpage.dart';
 part 'subpage/station_subpage.dart';
+part 'subpage/station_qr_sheet.dart';
 part 'subpage/return_subpage.dart';
 part 'subpage/charge_subpage.dart';
 part 'subpage/receipt_subpage.dart';
@@ -114,7 +122,7 @@ class _RentingFlowPageState extends State<RentingFlowPage> {
               horizontalInset,
               scanning ? 4 : 6,
               horizontalInset,
-              20,
+              96,
             ),
             children: [
               if (!scanning) ...[

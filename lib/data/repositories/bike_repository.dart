@@ -22,6 +22,17 @@ class BikeRepository {
     return json == null ? null : BikeDatabaseRecord.fromJson(json);
   }
 
+  /// DEBUG ONLY: every bike regardless of status, with qr tokens so the debug
+  /// scan picker can reserve the chosen bike through the normal token flow.
+  Future<List<BikeDatabaseRecord>> listBikes() async {
+    final json = await _dataSource.selectList(
+      table: 'bikes',
+      columns: _columns,
+      orderBy: 'code',
+    );
+    return json.map(BikeDatabaseRecord.fromJson).toList(growable: false);
+  }
+
   Future<BikeDatabaseRecord?> findById(int id) async {
     final json = await _dataSource.selectMaybeSingle(
       table: 'bikes',

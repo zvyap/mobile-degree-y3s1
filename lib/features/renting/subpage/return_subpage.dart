@@ -61,6 +61,14 @@ class _ReturnStage extends StatelessWidget {
             busy: controller.isBusy,
             onPressed: () => controller.confirmDock(),
           ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            key: const ValueKey('rent-change-station'),
+            style: _secondaryTextButtonStyle(context),
+            onPressed: controller.isBusy ? null : controller.resumeRide,
+            icon: const Icon(Icons.arrow_back_rounded),
+            label: Text(context.l10n.continueRide),
+          ),
         ],
       ),
     );

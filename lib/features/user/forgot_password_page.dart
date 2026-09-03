@@ -47,120 +47,115 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF020B2D),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: widget.onBack,
         ),
       ),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  'Forgot Password',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+        child: AnimatedBuilder(
+          animation: widget.authController,
+          builder: (context, child) {
+            final error = widget.authController.error;
 
-                const SizedBox(height: 32),
-
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    hintText: 'Email',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: widget.authController.isBusy
-                        ? null
-                        : _sendResetEmail,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF023E8A),
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFF023E8A),
-                      disabledForegroundColor: Colors.white70,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: widget.authController.isBusy
-                        ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                        : const Text(
-                      'Send Reset Email',
-                      style: TextStyle(
-                        fontSize: 16,
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Forgot Password',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: scheme.onSurface,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 32),
+
+                    // Email Input Field
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: TextStyle(color: scheme.onSurface),
+                      decoration: InputDecoration(
+                        hintText: 'Email',
+                        hintStyle: TextStyle(
+                          color: scheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                        filled: true,
+                        fillColor: scheme.surfaceContainerHighest,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: scheme.outline),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: scheme.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Submit Action Button
+                    FilledButton(
+                      onPressed: widget.authController.isBusy
+                          ? null
+                          : _sendResetEmail,
+                      child: widget.authController.isBusy
+                          ? SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: scheme.onPrimary,
+                        ),
+                      )
+                          : const Text('Send Reset Email'),
+                    ),
+
+                    if (_isSent) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Reset email sent! Check your inbox.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: scheme.secondary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+
+                    if (error != null) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        _errorMessage(error),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: scheme.error,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-
-                if (_isSent) ...[
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Reset email sent! Check your inbox.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-
-                if (widget.authController.error != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    _errorMessage(widget.authController.error!),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

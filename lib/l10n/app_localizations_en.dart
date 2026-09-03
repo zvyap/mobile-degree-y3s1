@@ -45,6 +45,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scanQrCode => 'Scan QR code';
 
   @override
+  String get currentRide => 'Current ride';
+
+  @override
+  String get rideInProgress => 'Your ride is in progress.';
+
+  @override
   String get stationsDescription =>
       'Dock capacity, nearby stations, and return points.';
 
@@ -215,6 +221,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get findStation => 'Find station';
+
+  @override
+  String get returnStationUnavailable =>
+      'No return station is available right now.';
 
   @override
   String get liveNetwork => 'Live network';
@@ -415,6 +425,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportBikeIssue => 'Report bike issue';
 
   @override
+  String reportingBike(String bikeCode) {
+    return 'Reporting an issue for $bikeCode';
+  }
+
+  @override
+  String get chooseIssueType => 'What is wrong?';
+
+  @override
+  String get chooseIssueTypeError => 'Choose an issue type.';
+
+  @override
+  String get issueBrakes => 'Brakes';
+
+  @override
+  String get issueTyres => 'Tyres';
+
+  @override
+  String get issueLights => 'Lights';
+
+  @override
+  String get issueLock => 'Lock';
+
+  @override
+  String get issueOther => 'Other';
+
+  @override
+  String get issueNoteOptional => 'Note (optional)';
+
+  @override
+  String get issueNoteHint => 'Add a short detail that may help.';
+
+  @override
+  String get issueSessionOnly =>
+      'This note stays in the current app session and is not sent to support.';
+
+  @override
+  String get noteIssue => 'Note issue';
+
+  @override
+  String get issueNoted => 'Issue noted';
+
+  @override
+  String get issueNotSent =>
+      'Saved for this app session only. It was not sent to support.';
+
+  @override
   String get change => 'Change';
 
   @override
@@ -524,6 +580,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueToDock => 'Continue to dock';
 
   @override
+  String get scanStationQr => 'Scan station QR';
+
+  @override
+  String get scanStationQrDescription =>
+      'Scan the QR poster at the station, or enter its code, to verify the return.';
+
+  @override
+  String get cameraUnavailable =>
+      'Camera unavailable. Enter the station code below instead.';
+
+  @override
+  String get stationCodeLabel => 'Station code';
+
+  @override
+  String get stationCodeHint => 'e.g. CENTRAL';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String rideDeadlineCountdown(int minutes) {
+    return '$minutes min left to return the bike';
+  }
+
+  @override
+  String get rideOverdueTitle => 'Ride overdue';
+
+  @override
+  String get rideOverdueBody =>
+      'You passed the maximum ride time. Return the bike now — if it is not returned in time, the rental is closed as lost and the account is suspended.';
+
+  @override
+  String extendRide(int count) {
+    return 'Extend +60 min ($count left)';
+  }
+
+  @override
+  String get noExtensionsLeft => 'No extensions left';
+
+  @override
   String get secureBike => 'Secure the bike';
 
   @override
@@ -550,6 +646,34 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other: '$count started minutes',
       one: '1 started minute',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rideDuration => 'Ride duration';
+
+  @override
+  String get timeFare => 'Time fare';
+
+  @override
+  String hourCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hours',
+      one: '1 hour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String minuteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes',
+      one: '1 minute',
     );
     return '$_temp0';
   }
@@ -637,6 +761,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paypalSandboxDescription => 'Local simulation · No real money';
 
   @override
+  String get paypalAccountSubtitle => 'PayPal Sandbox account';
+
+  @override
   String get paypalCheckoutTitle => 'PayPal Sandbox';
 
   @override
@@ -704,7 +831,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorOutsideReturnZone =>
-      'Move within 50 m of the selected station before returning the bike.';
+      'Move within 250 m of the selected station before returning the bike.';
+
+  @override
+  String get errorStationQrMismatch =>
+      'That QR does not match the selected station. Scan the QR poster at the station or enter its code.';
+
+  @override
+  String get errorMaxExtensionsReached =>
+      'No ride extensions left. Return the bike to finish the rental.';
+
+  @override
+  String get errorLocationPermissionDenied =>
+      'Location permission is needed to verify the return. Enable it and retry.';
+
+  @override
+  String get errorAccountSuspended =>
+      'Account suspended: a previous bike was not returned. Contact support to restore it.';
 
   @override
   String get errorDockNotDetected =>

@@ -5,7 +5,7 @@ class StationRepository {
   StationRepository(this._dataSource);
 
   static const _columns =
-      'id, code, name, address, latitude, longitude, capacity, '
+      'id, code, name, address, latitude, longitude, capacity, qr_token, '
       'available_bikes, available_docks, is_active, updated_at';
 
   final DatabaseDataSource _dataSource;

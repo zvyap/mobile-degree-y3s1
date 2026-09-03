@@ -24,7 +24,12 @@ class _ChargeStage extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _PriceRow(
-            label: context.l10n.startedMinutes(controller.chargedMinutes),
+            label: context.l10n.rideDuration,
+            value: _durationWords(context.l10n, controller.chargedMinutes),
+          ),
+          const SizedBox(height: 10),
+          _PriceRow(
+            label: context.l10n.timeFare,
             value: context.formats.currency(
               controller.chargedMinutes * controller.perMinuteRate,
             ),

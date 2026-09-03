@@ -143,6 +143,9 @@ class SupabaseDatabaseDataSource implements DatabaseDataSource {
       'invalid_rental_transition' => DatabaseErrorCode.invalidRentalTransition,
       'station_unavailable' => DatabaseErrorCode.stationUnavailable,
       'station_full' => DatabaseErrorCode.stationFull,
+      'station_qr_mismatch' => DatabaseErrorCode.stationQrMismatch,
+      'outside_return_zone' => DatabaseErrorCode.outsideReturnZone,
+      'max_extensions_reached' => DatabaseErrorCode.maxExtensionsReached,
       'invalid_distance' => DatabaseErrorCode.invalidDistance,
       'payment_already_pending' => DatabaseErrorCode.paymentAlreadyPending,
       'invalid_payment_transition' =>

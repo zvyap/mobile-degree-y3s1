@@ -19,6 +19,9 @@ abstract interface class RentalSessionRepository {
   Future<RentalSessionSnapshot> requestSessionReturn({
     required int rentalId,
     required int stationId,
+    required double latitude,
+    required double longitude,
+    String? stationQrToken,
   });
 
   Future<RentalSessionSnapshot> resumeSession(int rentalId);
@@ -27,9 +30,20 @@ abstract interface class RentalSessionRepository {
     required int rentalId,
     required double distanceKm,
   });
+
+  Future<void> sweepDeadlines();
+
+  Future<RentalSessionSnapshot> extendRental(int rentalId);
 }
 
-class RentalRepository implements RentalSessionRepository {
+/// Debug-only escape hatch for the camera-less debug scan stage. Remove
+/// together with the debug bike picker once camera scanning ships.
+abstract interface class DebugRentBikeSource {
+  Future<List<BikeDatabaseRecord>> listAllBikes();
+}
+
+class RentalRepository
+    implements RentalSessionRepository, DebugRentBikeSource {
   RentalRepository(this._dataSource)
     : _bikes = BikeRepository(_dataSource),
       _stations = StationRepository(_dataSource);
@@ -41,7 +55,8 @@ class RentalRepository implements RentalSessionRepository {
       'per_minute_rate, hold_amount, reservation_expires_at, authorized_at, '
       'started_at, return_requested_at, ended_at, cancelled_at, '
       'duration_seconds, distance_km, charged_minutes, final_fare, '
-      'failure_reason, created_at, updated_at';
+      'failure_reason, ride_deadline_at, overdue_at, extensions_used, '
+      'created_at, updated_at';
 
   static const _historyColumns =
       '$_rentalColumns, '
@@ -98,9 +113,18 @@ class RentalRepository implements RentalSessionRepository {
   Future<RentalSessionSnapshot> requestSessionReturn({
     required int rentalId,
     required int stationId,
+    required double latitude,
+    required double longitude,
+    String? stationQrToken,
   }) async {
     return _hydrate(
-      await requestReturn(rentalId: rentalId, stationId: stationId),
+      await requestReturn(
+        rentalId: rentalId,
+        stationId: stationId,
+        latitude: latitude,
+        longitude: longitude,
+        stationQrToken: stationQrToken,
+      ),
     );
   }
 
@@ -117,6 +141,18 @@ class RentalRepository implements RentalSessionRepository {
     return _hydrate(
       await completeReturn(rentalId: rentalId, distanceKm: distanceKm),
     );
+  }
+
+  @override
+  Future<void> sweepDeadlines() async {
+    await _dataSource.rpcSingle('sweep_rental_deadlines');
+  }
+
+  @override
+  Future<RentalSessionSnapshot> extendRental(int rentalId) async {
+    return _hydrate(await _callRentalRpc('extend_rental', {
+      'p_rental_id': rentalId,
+    }));
   }
 
   Future<RentalDatabaseRecord> reserveBike({
@@ -140,10 +176,18 @@ class RentalRepository implements RentalSessionRepository {
   Future<RentalDatabaseRecord> requestReturn({
     required int rentalId,
     required int stationId,
+    required double latitude,
+    required double longitude,
+    String? stationQrToken,
   }) {
     return _callRentalRpc('request_return', {
       'p_rental_id': rentalId,
       'p_station_id': stationId,
+      'p_latitude': latitude,
+      'p_longitude': longitude,
+      'p_station_qr_token': (stationQrToken != null && stationQrToken.isNotEmpty)
+          ? stationQrToken
+          : null,
     });
   }
 
@@ -164,6 +208,9 @@ class RentalRepository implements RentalSessionRepository {
   Future<RentalDatabaseRecord> requestPaymentRetry(int rentalId) {
     return _callRentalRpc('request_payment_retry', {'p_rental_id': rentalId});
   }
+
+  @override
+  Future<List<BikeDatabaseRecord>> listAllBikes() => _bikes.listBikes();
 
   Future<RentalDatabaseRecord?> getActive() async {
     final userId = _requireUserId();

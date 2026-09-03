@@ -53,3 +53,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Tests
+/test/
+/supabase/tests/
+*_test.dart
+*.test.sql

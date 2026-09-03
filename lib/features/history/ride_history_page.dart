@@ -17,9 +17,6 @@ class RideHistoryPage extends StatefulWidget {
 }
 
 class _RideHistoryPageState extends State<RideHistoryPage> {
-  static const _demoEmail = 'renting.demo.01@example.com';
-  static const _demoPassword = 'BikeRenting-Demo-01!2026';
-
   late Future<List<RideHistoryEntry>> _historyFuture;
 
   @override
@@ -30,16 +27,6 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
 
   Future<List<RideHistoryEntry>> _loadHistory() async {
     final client = Supabase.instance.client;
-    final currentEmail = client.auth.currentUser?.email?.toLowerCase();
-
-    if (currentEmail != _demoEmail) {
-      if (client.auth.currentSession != null) await client.auth.signOut();
-      await client.auth.signInWithPassword(
-        email: _demoEmail,
-        password: _demoPassword,
-      );
-    }
-
     final repository = RentalRepository(SupabaseDatabaseDataSource(client));
     final records = await repository.listHistory();
     return records.map(RideHistoryEntry.fromDatabase).toList(growable: false);
@@ -47,12 +34,17 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
 
   Future<void> _refresh() async {
     final nextHistory = _loadHistory();
-    setState(() => _historyFuture = nextHistory);
+    setState(() {
+      _historyFuture = nextHistory;
+    });
     await nextHistory;
   }
 
   void _retry() {
-    setState(() => _historyFuture = _loadHistory());
+    final next = _loadHistory();
+    setState(() {
+      _historyFuture = next;
+    });
   }
 
   @override

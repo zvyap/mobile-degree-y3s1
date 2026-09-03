@@ -1,3 +1,4 @@
+import 'package:bike_renting_app/bike_station/docking.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -158,7 +159,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     child: Text(
                       widget.isViewOnly ? "Station Photo" : "Click here to upload a photo",
                       style: TextStyle(
-                        color: colorScheme.onSurface.withOpacity(0.5),
+                        color: colorScheme.onSurface.withValues(alpha: 0.5),
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
@@ -204,7 +205,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                                 Text(
                                   "Station name",
                                   style: TextStyle(
-                                    color: nameHasError ? errorColor : colorScheme.onSurface.withOpacity(0.6),
+                                    color: nameHasError ? errorColor : colorScheme.onSurface.withValues(alpha: 0.6),
                                     fontSize: 13,
                                   ),
                                 ),
@@ -213,7 +214,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                                   stationName.trim().isEmpty ? "Enter station name *" : stationName,
                                   style: TextStyle(
                                     color: stationName.trim().isEmpty
-                                        ? (nameHasError ? errorColor : colorScheme.onSurface.withOpacity(0.4))
+                                        ? (nameHasError ? errorColor : colorScheme.onSurface.withValues(alpha: 0.4))
                                         : colorScheme.onSurface,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -224,7 +225,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                           ),
                           if (!widget.isViewOnly)
                             IconButton(
-                              icon: Icon(Icons.edit_square, color: nameHasError ? errorColor : colorScheme.onSurface.withOpacity(0.7)),
+                              icon: Icon(Icons.edit_square, color: nameHasError ? errorColor : colorScheme.onSurface.withValues(alpha: 0.7)),
                               onPressed: () => _showSingleInputDialog(
                                 "Station name",
                                 stationName,
@@ -261,7 +262,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                                   stationAddress.trim().isEmpty ? "Enter Station Address *" : stationAddress,
                                   style: TextStyle(
                                     color: stationAddress.trim().isEmpty
-                                        ? (addressHasError ? errorColor : colorScheme.onSurface.withOpacity(0.4))
+                                        ? (addressHasError ? errorColor : colorScheme.onSurface.withValues(alpha: 0.4))
                                         : colorScheme.onSurface,
                                     fontSize: 14,
                                   ),
@@ -269,14 +270,14 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   latLngDesc,
-                                  style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 12),
+                                  style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 12),
                                 ),
                               ],
                             ),
                           ),
                           if (!widget.isViewOnly)
                             IconButton(
-                              icon: Icon(Icons.edit_square, color: addressHasError ? errorColor : colorScheme.onSurface.withOpacity(0.7)),
+                              icon: Icon(Icons.edit_square, color: addressHasError ? errorColor : colorScheme.onSurface.withValues(alpha: 0.7)),
                               onPressed: () => _showSingleInputDialog(
                                 "Station Address",
                                 stationAddress,
@@ -322,7 +323,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                               ),
                               if (!widget.isViewOnly)
                                 IconButton(
-                                  icon: Icon(Icons.edit_square, color: colorScheme.onSurface.withOpacity(0.7)),
+                                  icon: Icon(Icons.edit_square, color: colorScheme.onSurface.withValues(alpha: 0.7)),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),
                                   onPressed: _showDetailsDialog,
@@ -334,15 +335,15 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                           // Read-Only Available Bikes
                           Row(
                             children: [
-                              Text("Current bike available", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
+                              Text("Current bike available", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13)),
                               const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: colorScheme.onSurface.withOpacity(0.1),
+                                  color: colorScheme.onSurface.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: Text("Read-Only", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.bold)),
+                                child: Text("Read-Only", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 10, fontWeight: FontWeight.bold)),
                               ),
                             ],
                           ),
@@ -371,8 +372,34 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     ),
                     const SizedBox(height: 40),
 
-                    // Main Save Button
-                    if (!widget.isViewOnly)
+                    // Main Save Button / User Action Button
+                    if (widget.isViewOnly)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colorScheme.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          ),
+                          icon: const Icon(Icons.directions_bike_rounded, color: Colors.white),
+                          label: const Text(
+                            "View Bikes at Station",
+                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StationBikesScreen(
+                                  stationData: widget.stationData,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      )
+                    else
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -442,7 +469,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     style: TextStyle(color: colorScheme.onSurface),
                     decoration: InputDecoration(
                       hintText: "Enter $title",
-                      hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.5)),
+                      hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
                       errorText: localError,
                       errorStyle: const TextStyle(color: errorColor, fontWeight: FontWeight.w600),
                       enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: localError != null ? errorColor : colorScheme.outline)),
@@ -543,15 +570,15 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                   const SizedBox(height: 20),
 
                   // Strictly Read-Only Display
-                  Text("Current bike available", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.6), fontSize: 13)),
+                  Text("Current bike available", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13)),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.directions_bike, color: colorScheme.onSurface.withOpacity(0.5)),
+                      Icon(Icons.directions_bike, color: colorScheme.onSurface.withValues(alpha: 0.5)),
                       const SizedBox(width: 8),
-                      Text("$currentBikes", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text("$currentBikes", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 20, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 8),
-                      Text("(Read-Only)", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.4), fontSize: 11, fontStyle: FontStyle.italic)),
+                      Text("(Read-Only)", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 11, fontStyle: FontStyle.italic)),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -563,7 +590,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     currentBikes > 0
                         ? "Cannot be lower than available bikes ($currentBikes)"
                         : "Minimum capacity is 1",
-                    style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 11),
+                    style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 11),
                   ),
                   const SizedBox(height: 8),
                   _bikeStepper(

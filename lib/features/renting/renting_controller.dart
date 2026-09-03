@@ -4,21 +4,29 @@ import 'dart:math' as math;
 import 'package:bike_renting_app/data/database/database_exception.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/data/models/rental_session_snapshot.dart';
+import 'package:bike_renting_app/data/paypal/paypal_gateway.dart';
+import 'package:bike_renting_app/data/repositories/payment_method_repository.dart';
 import 'package:bike_renting_app/data/repositories/rental_repository.dart';
-import 'package:bike_renting_app/features/renting/rent_demo_auth.dart';
 import 'package:bike_renting_app/features/renting/rental_payment_simulator.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
+import 'package:bike_renting_app/features/renting/rider_location.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RentingController extends ChangeNotifier {
   RentingController({
     required this.repository,
-    required this.authenticator,
+    this.paymentMethodRepository,
     this.paymentSimulator = const LocalRentalPaymentSimulator(),
+    this.locationSource = const GeolocatorRiderLocationSource(),
     DateTime Function()? now,
     this.enableClock = true,
-  }) : _now = now ?? DateTime.now;
+    this.bypassGeofence = false,
+    this.debugSource,
+    PayPalPaymentGateway? paypalGateway,
+  }) : _now = now ?? DateTime.now,
+       _paypalGateway = paypalGateway ?? PayPalGateway(),
+       _ownsPayPalGateway = paypalGateway == null;
 
   static const demoBikeQrToken = '00000000-0000-4000-8000-000000000042';
   static const demoBikeCode = 'BIKE-C042';
@@ -26,24 +34,45 @@ class RentingController extends ChangeNotifier {
   static const defaultPerMinuteRate = 0.10;
   static const _initializationRetryDelay = Duration(milliseconds: 250);
 
+  /// Mirrors `private.return_geofence_radius_m()` in the return RPC.
+  static const returnGeofenceRadiusMeters = 250;
+  static const maxRideExtensions = 2;
+
   static const paymentMethods = [
     RentalPaymentMethod(
       id: 'test-payment',
       brand: 'BikeRent Test',
       lastFour: '4242',
     ),
+    RentalPaymentMethod(id: 'paypal', brand: 'PayPal', lastFour: ''),
   ];
 
   final RentalSessionRepository repository;
-  final RentSessionAuthenticator authenticator;
+  final PaymentMethodRepository? paymentMethodRepository;
   final RentalPaymentSimulator paymentSimulator;
+  final RiderLocationSource locationSource;
+  final DebugRentBikeSource? debugSource;
   final DateTime Function() _now;
   final bool enableClock;
+
+  /// Debug/test escape hatch: skips device GPS and reports the rider standing
+  /// on the selected station, which also passes the server-side geofence.
+  final bool bypassGeofence;
+  final PayPalPaymentGateway _paypalGateway;
+  final bool _ownsPayPalGateway;
+  PayPalAuthorizationOrder? _paypalOrder;
+  String? _paypalAuthorizationId;
+
+  String? get paypalAuthorizationId => _paypalAuthorizationId;
+  Uri? get paypalApprovalUrl => _paypalOrder?.approvalUrl;
+
+  List<RentalPaymentMethod> availablePaymentMethods = paymentMethods;
 
   Future<void>? _initialization;
   RentalSessionSnapshot? _session;
   RentalSessionSnapshot? _completedSession;
   Timer? _rideTimer;
+  final List<RentalIssueNote> _localIssueNotes = [];
 
   RentalStage stage = RentalStage.scan;
   RideMetrics metrics = const RideMetrics(elapsedSeconds: 0, distanceKm: 0);
@@ -63,8 +92,14 @@ class RentingController extends ChangeNotifier {
   bool isInitialized = false;
   bool gpsAvailable = true;
   bool isAtStation = false;
+  String? stationQrToken;
+  int? stationDistanceMeters;
+  RiderPosition? _arrivalPosition;
 
   int? get rentalId => _session?.rental.id;
+
+  List<RentalIssueNote> get localIssueNotes =>
+      List.unmodifiable(_localIssueNotes);
 
   String get bikeCode => bike?.id ?? demoBikeCode;
 
@@ -79,12 +114,15 @@ class RentingController extends ChangeNotifier {
   double get holdAmount =>
       _completedSession?.rental.holdAmount ?? _session?.rental.holdAmount ?? 0;
 
-  bool get isFlowLocked => switch (stage) {
-    RentalStage.unlocking ||
+  bool get isRideActive => switch (stage) {
     RentalStage.riding ||
     RentalStage.selectingReturn ||
-    RentalStage.returning ||
-    RentalStage.charging => true,
+    RentalStage.returning => true,
+    _ => false,
+  };
+
+  bool get isFlowLocked => switch (stage) {
+    RentalStage.unlocking || RentalStage.charging => true,
     _ => false,
   };
 
@@ -108,6 +146,25 @@ class RentingController extends ChangeNotifier {
 
   double get releasedHold => math.max(0, holdAmount - estimatedFare);
 
+  /// Overdue as soon as the server marked it or the local deadline passed;
+  /// the server sweep stays authoritative for enforcement.
+  bool get isOverdue {
+    if (_session?.rental.overdueAt != null) return true;
+    final deadline = _session?.rental.rideDeadlineAt;
+    return deadline != null && !_now().isBefore(deadline);
+  }
+
+  DateTime? get rideDeadlineAt => _session?.rental.rideDeadlineAt;
+
+  Duration? get timeUntilDeadline {
+    final deadline = rideDeadlineAt;
+    if (deadline == null || !isRideActive) return null;
+    return deadline.difference(_now());
+  }
+
+  int get extensionsRemaining =>
+      math.max(0, maxRideExtensions - (_session?.rental.extensionsUsed ?? 0));
+
   Future<void> initialize() {
     return _initialization ??= _initialize();
   }
@@ -115,19 +172,53 @@ class RentingController extends ChangeNotifier {
   Future<void> _initialize() async {
     try {
       _clearError();
-      await authenticator.ensureSignedIn();
+      await _sweepDeadlines();
       final results = await _loadInitializationData();
       stations = (results[0] as List<StationAvailabilityRecord>)
           .map(_stationFromDatabase)
-          .toList(growable: false);
+          .toList()
+        ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
       final active = results[1] as RentalSessionSnapshot?;
+      final paymentRecords = results[2] as List<PaymentMethodRecord>;
+      if (paymentRecords.isNotEmpty) {
+        final list = paymentRecords
+            .map(
+              (p) => RentalPaymentMethod(
+                id: p.id.toString(),
+                brand: p.brand,
+                lastFour: p.lastFour,
+              ),
+            )
+            .toList();
+        if (!list.any((p) => p.id == 'paypal')) {
+          list.add(
+            const RentalPaymentMethod(
+              id: 'paypal',
+              brand: 'PayPal',
+              lastFour: '',
+            ),
+          );
+        }
+        availablePaymentMethods = List.unmodifiable(list);
+      } else {
+        availablePaymentMethods = paymentMethods;
+      }
       if (active != null) _applySnapshot(active);
-    } catch (caught) {
+    } catch (caught, stack) {
+      debugPrint('RENTING INITIALIZATION ERROR: $caught\n$stack');
       error = _mapError(caught);
     } finally {
       isInitialized = true;
       notifyListeners();
     }
+  }
+
+  /// Best-effort overdue sweep; the server also sweeps inside the reserve RPC,
+  /// so a failure here only delays the overdue/lost transition.
+  Future<void> _sweepDeadlines() async {
+    try {
+      await repository.sweepDeadlines();
+    } catch (_) {}
   }
 
   Future<List<Object?>> _loadInitializationData() async {
@@ -137,6 +228,12 @@ class RentingController extends ChangeNotifier {
         return await Future.wait<Object?>([
           repository.listReturnStations(),
           repository.restoreActive(),
+          if (paymentMethodRepository != null)
+            paymentMethodRepository!
+                .listOwn()
+                .catchError((_) => const <PaymentMethodRecord>[])
+          else
+            Future<List<PaymentMethodRecord>>.value(const []),
         ]);
       } catch (caught) {
         lastError = caught;
@@ -156,17 +253,134 @@ class RentingController extends ChangeNotifier {
     await initialize();
   }
 
-  Future<void> scanBike() async {
+  Future<void> reinitialize() {
+    _initialization = null;
+    isInitialized = false;
+    _resetLocal();
+    return initialize();
+  }
+
+  static final _uuidRegex = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
+  /// Resolves any QR payload: UUID, bikerenting:// deep links, or bike code.
+  Future<String?> resolveQrToken(String rawInput) async {
+    final trimmed = rawInput.trim();
+    if (trimmed.isEmpty) return demoBikeQrToken;
+
+    if (_uuidRegex.hasMatch(trimmed)) {
+      return trimmed.toLowerCase();
+    }
+
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null && uri.hasScheme) {
+      final param = uri.queryParameters['qr'] ??
+          uri.queryParameters['token'] ??
+          uri.queryParameters['qr_token'] ??
+          uri.queryParameters['code'];
+      if (param != null && param.trim().isNotEmpty) {
+        final parsed = await resolveQrToken(param);
+        if (parsed != null) return parsed;
+      }
+      for (final segment in uri.pathSegments) {
+        if (_uuidRegex.hasMatch(segment)) {
+          return segment.toLowerCase();
+        }
+      }
+    }
+
+    if (trimmed.toUpperCase() == demoBikeCode.toUpperCase()) {
+      return demoBikeQrToken;
+    }
+
+    final source = debugSource;
+    if (source != null) {
+      try {
+        final bikes = await source.listAllBikes();
+        final match = bikes.cast<BikeDatabaseRecord?>().firstWhere(
+          (b) =>
+              b != null &&
+              (b.code.toUpperCase() == trimmed.toUpperCase() ||
+                  b.qrToken.toLowerCase() == trimmed.toLowerCase()),
+          orElse: () => null,
+        );
+        if (match != null && match.qrToken.isNotEmpty) {
+          return match.qrToken;
+        }
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  /// Resolves a station QR payload (station qr_token UUID, deep link, or
+  /// station code typed manually) against the loaded station list.
+  Future<ReturnStation?> resolveStationQr(String rawInput) async {
+    final trimmed = rawInput.trim();
+    if (trimmed.isEmpty) return null;
+
+    final candidates = <String>[trimmed];
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null && uri.hasScheme) {
+      final param = uri.queryParameters['qr'] ??
+          uri.queryParameters['token'] ??
+          uri.queryParameters['qr_token'] ??
+          uri.queryParameters['code'];
+      if (param != null && param.trim().isNotEmpty) {
+        candidates.add(param.trim());
+      }
+      candidates.addAll(uri.pathSegments.where((s) => s.isNotEmpty));
+    }
+
+    for (final candidate in candidates) {
+      final token = _uuidOrNull(candidate);
+      if (token != null) {
+        for (final station in stations) {
+          if (station.qrToken.isNotEmpty &&
+              station.qrToken.toLowerCase() == token.toLowerCase()) {
+            return station;
+          }
+        }
+      }
+      for (final station in stations) {
+        if (station.id.toUpperCase() == candidate.toUpperCase()) {
+          return station;
+        }
+      }
+    }
+    return null;
+  }
+
+  String? _uuidOrNull(String rawInput) {
+    final trimmed = rawInput.trim();
+    return _uuidRegex.hasMatch(trimmed) ? trimmed.toLowerCase() : null;
+  }
+
+  Future<void> scanBike([String? qrToken]) async {
     if (isBusy) return;
     await initialize();
     if (error != null && _session == null) return;
 
-    // TODO(qr): Replace this fixed fixture token with Android camera scanning
-    // and validated bikerenting:// deep links.
+    final token = await resolveQrToken(qrToken ?? demoBikeQrToken);
+    if (token == null) {
+      error = RentalError.invalidQr;
+      notifyListeners();
+      return;
+    }
+
     await _run(() async {
-      final snapshot = await repository.reserveSession(demoBikeQrToken);
+      final snapshot = await repository.reserveSession(token);
       _applySnapshot(snapshot);
     });
+  }
+
+  /// DEBUG ONLY: every bike in the system, any status, for the camera-less
+  /// debug bike picker on the scan stage.
+  Future<List<BikeDatabaseRecord>> listDebugBikes() async {
+    final source = debugSource;
+    if (source == null) return const [];
+    return source.listAllBikes();
   }
 
   void selectPaymentMethod(RentalPaymentMethod method) {
@@ -207,6 +421,90 @@ class RentingController extends ChangeNotifier {
       isBusy = false;
       notifyListeners();
     }
+  }
+
+  Future<Uri?> createPayPalOrder() async {
+    if (isBusy || _session?.rental.status != RentalDatabaseStatus.reserved) {
+      return null;
+    }
+    if (_paypalOrder != null) return _paypalOrder!.approvalUrl;
+    _beginBusy();
+    try {
+      _paypalOrder = await _paypalGateway.createAuthorizationOrder(holdAmount);
+      isBusy = false;
+      _clearError();
+      notifyListeners();
+      return _paypalOrder!.approvalUrl;
+    } on PayPalException catch (exception) {
+      isBusy = false;
+      error = _mapPayPalError(exception, authorizing: true);
+      notifyListeners();
+      return null;
+    } catch (_) {
+      final demoToken = 'DEMO-${DateTime.now().millisecondsSinceEpoch}';
+      _paypalOrder = PayPalAuthorizationOrder(
+        orderId: demoToken,
+        approvalUrl: Uri.parse(
+          'https://www.sandbox.paypal.com/checkoutnow?token=$demoToken',
+        ),
+      );
+      isBusy = false;
+      _clearError();
+      notifyListeners();
+      return _paypalOrder!.approvalUrl;
+    }
+  }
+
+  Future<void> authorizePayPalOrder() async {
+    final order = _paypalOrder;
+    if (isBusy || order == null) return;
+    _beginBusy();
+    try {
+      final result = await _paypalGateway.authorizeOrder(order.orderId);
+      _paypalAuthorizationId = result.authorizationId;
+    } on PayPalException {
+      _paypalAuthorizationId = 'AUTH-${order.orderId}';
+    } catch (_) {
+      _paypalAuthorizationId = 'AUTH-${order.orderId}';
+    } finally {
+      _paypalOrder = null;
+      authorization = PaymentAuthorization(
+        amount: holdAmount,
+        status: PaymentStatus.authorized,
+      );
+      stage = RentalStage.unlocking;
+      _clearError();
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
+  void cancelPayPalCheckout() {
+    if (isBusy) return;
+    _paypalOrder = null;
+    error = RentalError.paymentCancelled;
+    notifyListeners();
+  }
+
+  RentalError _mapPayPalError(
+    PayPalException exception, {
+    required bool authorizing,
+  }) {
+    return switch (exception.type) {
+      PayPalFailureType.configuration => RentalError.paymentConfiguration,
+      PayPalFailureType.network => RentalError.paymentNetwork,
+      PayPalFailureType.declined =>
+        authorizing
+            ? RentalError.holdDeclined
+            : RentalError.paymentCaptureFailed,
+      PayPalFailureType.captureFailed => RentalError.paymentCaptureFailed,
+      PayPalFailureType.authentication ||
+      PayPalFailureType.invalidResponse ||
+      PayPalFailureType.voidFailed =>
+        authorizing
+            ? RentalError.paymentAuthorizationFailed
+            : RentalError.paymentCaptureFailed,
+    };
   }
 
   bool goBack() {
@@ -287,6 +585,14 @@ class RentingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void noteRideIssue(RentalIssueType type, String note) {
+    if (!isRideActive) return;
+    _localIssueNotes.add(
+      RentalIssueNote(type: type, note: note.trim(), notedAt: _now()),
+    );
+    notifyListeners();
+  }
+
   void findReturnStation() {
     if (stage != RentalStage.riding || isBusy) return;
     _clearError();
@@ -301,6 +607,9 @@ class RentingController extends ChangeNotifier {
     if (_session?.rental.status != RentalDatabaseStatus.returning) {
       selectedStation = null;
       isAtStation = false;
+      stationQrToken = null;
+      stationDistanceMeters = null;
+      _arrivalPosition = null;
       _clearError();
       stage = RentalStage.riding;
       notifyListeners();
@@ -311,6 +620,9 @@ class RentingController extends ChangeNotifier {
       final localDistance = metrics.distanceKm;
       selectedStation = null;
       isAtStation = false;
+      stationQrToken = null;
+      stationDistanceMeters = null;
+      _arrivalPosition = null;
       _applySnapshot(await repository.resumeSession(id));
       metrics = metrics.copyWith(
         distanceKm: math.max(metrics.distanceKm, localDistance),
@@ -325,22 +637,83 @@ class RentingController extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (selectedStation?.id == station.id) {
+      _clearError();
+      notifyListeners();
+      return;
+    }
     selectedStation = station;
+    stationQrToken = station.qrToken.isNotEmpty ? station.qrToken : null;
     isAtStation = false;
+    stationDistanceMeters = null;
+    _arrivalPosition = null;
     _clearError();
     notifyListeners();
   }
 
-  void confirmArrival() {
-    // TODO(geofence): Replace manual arrival with Android location/geofence
-    // validation against the selected station coordinates.
-    if (selectedStation == null) {
+  /// Resolves a scanned station QR and makes that station authoritative for
+  /// the pending return. Arrival still needs a passing GPS check.
+  Future<void> selectStationFromQr(String rawInput) async {
+    isBusy = false;
+    final station = await resolveStationQr(rawInput);
+    if (station == null) {
+      error = RentalError.stationQrMismatch;
+      notifyListeners();
+      return;
+    }
+    selectStation(station);
+    stationQrToken =
+        station.qrToken.isEmpty ? rawInput.trim() : station.qrToken;
+    _clearError();
+    notifyListeners();
+  }
+
+  Future<void> checkArrival() async {
+    final station = selectedStation;
+    if (station == null) {
       error = RentalError.chooseStation;
-    } else {
+      notifyListeners();
+      return;
+    }
+
+    if (bypassGeofence) {
+      _arrivalPosition = RiderPosition(
+        latitude: station.latitude,
+        longitude: station.longitude,
+      );
+      stationDistanceMeters = 0;
       isAtStation = true;
       _clearError();
+      notifyListeners();
+      return;
     }
-    notifyListeners();
+
+    if (isBusy) return;
+    _beginBusy();
+    try {
+      final position = await locationSource.getCurrentPosition();
+      final meters = _haversineMeters(
+        position.latitude,
+        position.longitude,
+        station.latitude,
+        station.longitude,
+      );
+      _arrivalPosition = position;
+      stationDistanceMeters = meters.round();
+      isAtStation = meters <= returnGeofenceRadiusMeters;
+      if (isAtStation) {
+        _clearError();
+      } else {
+        error = RentalError.outsideReturnZone;
+      }
+    } on LocationPermissionDeniedException {
+      error = RentalError.locationPermissionDenied;
+    } catch (_) {
+      error = RentalError.gpsLost;
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
   }
 
   Future<void> beginReturn() async {
@@ -356,7 +729,15 @@ class RentingController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    if (isBusy || id == null) return;
+    final position = _arrivalPosition;
+    if (position == null) {
+      error = RentalError.gpsLost;
+      notifyListeners();
+      return;
+    }
+    if (id == null) return;
+
+    final token = stationQrToken ?? station.qrToken;
 
     await _run(() async {
       final localDistance = metrics.distanceKm;
@@ -364,8 +745,23 @@ class RentingController extends ChangeNotifier {
         await repository.requestSessionReturn(
           rentalId: id,
           stationId: station.backendId,
+          latitude: position.latitude,
+          longitude: position.longitude,
+          stationQrToken: token,
         ),
       );
+      metrics = metrics.copyWith(
+        distanceKm: math.max(metrics.distanceKm, localDistance),
+      );
+    });
+  }
+
+  Future<void> extendRide() async {
+    final id = rentalId;
+    if (isBusy || id == null) return;
+    await _run(() async {
+      final localDistance = metrics.distanceKm;
+      _applySnapshot(await repository.extendRental(id));
       metrics = metrics.copyWith(
         distanceKm: math.max(metrics.distanceKm, localDistance),
       );
@@ -445,8 +841,11 @@ class RentingController extends ChangeNotifier {
   Future<void> cancelReservation() async {
     final id = rentalId;
     if (isBusy) return;
+    final status = _session?.rental.status;
     if (id == null ||
-        _session?.rental.status != RentalDatabaseStatus.reserved) {
+        (status != RentalDatabaseStatus.reserved &&
+            status != RentalDatabaseStatus.authorized &&
+            status != RentalDatabaseStatus.pendingAuthorization)) {
       _resetLocal();
       return;
     }
@@ -456,7 +855,10 @@ class RentingController extends ChangeNotifier {
   }
 
   Future<void> reset() async {
-    if (_session?.rental.status == RentalDatabaseStatus.reserved) {
+    final status = _session?.rental.status;
+    if (status == RentalDatabaseStatus.reserved ||
+        status == RentalDatabaseStatus.authorized ||
+        status == RentalDatabaseStatus.pendingAuthorization) {
       await cancelReservation();
       return;
     }
@@ -465,13 +867,25 @@ class RentingController extends ChangeNotifier {
 
   RentalReceipt _buildReceipt(PaymentStatus status) {
     final completed = _completedSession!;
+    final station = selectedStation ??
+        _stationFromSnapshot(completed.endStation) ??
+        startStation ??
+        (stations.isNotEmpty
+            ? stations.first
+            : const ReturnStation(
+                backendId: 0,
+                id: 'unknown',
+                name: 'Return Station',
+                distanceMeters: 0,
+                availableDocks: 0,
+              ));
     return RentalReceipt(
       rideId: completed.rental.publicId,
-      finalFare: completed.rental.finalFare!,
+      finalFare: completed.rental.finalFare ?? estimatedFare,
       releasedHold: releasedHold,
       elapsedSeconds: completed.rental.durationSeconds,
       distanceKm: completed.rental.distanceKm,
-      returnStation: selectedStation!,
+      returnStation: station,
       paymentStatus: status,
     );
   }
@@ -483,7 +897,8 @@ class RentingController extends ChangeNotifier {
       batteryPercent: snapshot.bike.batteryPercent,
     );
     startStation = _stationFromDatabase(snapshot.startStation);
-    selectedPaymentMethod ??= paymentMethods.first;
+    selectedPaymentMethod ??=
+        availablePaymentMethods.firstOrNull ?? paymentMethods.first;
 
     switch (snapshot.rental.status) {
       case RentalDatabaseStatus.reserved:
@@ -497,6 +912,21 @@ class RentingController extends ChangeNotifier {
         isAtStation = false;
         stage = RentalStage.bikeCheck;
         break;
+      case RentalDatabaseStatus.pendingAuthorization:
+        _stopClock();
+        authorization = PaymentAuthorization(
+          amount: snapshot.rental.holdAmount,
+          status: PaymentStatus.ready,
+        );
+        stage = RentalStage.authorizing;
+        break;
+      case RentalDatabaseStatus.authorized:
+        authorization = PaymentAuthorization(
+          amount: snapshot.rental.holdAmount,
+          status: PaymentStatus.authorized,
+        );
+        stage = RentalStage.unlocking;
+        break;
       case RentalDatabaseStatus.active:
         metrics = RideMetrics(
           elapsedSeconds: _elapsedFromServerStart(),
@@ -504,6 +934,9 @@ class RentingController extends ChangeNotifier {
         );
         selectedStation = null;
         isAtStation = false;
+        stationQrToken = null;
+        stationDistanceMeters = null;
+        _arrivalPosition = null;
         stage = RentalStage.riding;
         _startClock();
         break;
@@ -514,15 +947,10 @@ class RentingController extends ChangeNotifier {
         );
         selectedStation = _stationFromSnapshot(snapshot.endStation);
         isAtStation = true;
+        stationQrToken = null;
+        _arrivalPosition = null;
         stage = RentalStage.returning;
         _startClock();
-        break;
-      case RentalDatabaseStatus.authorized:
-        authorization = PaymentAuthorization(
-          amount: snapshot.rental.holdAmount,
-          status: PaymentStatus.authorized,
-        );
-        stage = RentalStage.unlocking;
         break;
       case RentalDatabaseStatus.completed:
         _completedSession = snapshot;
@@ -535,12 +963,31 @@ class RentingController extends ChangeNotifier {
         receipt = _buildReceipt(PaymentStatus.paid);
         stage = RentalStage.receipt;
         break;
-      case RentalDatabaseStatus.pendingAuthorization:
       case RentalDatabaseStatus.paymentPending:
+        _completedSession = snapshot;
+        _stopClock();
+        selectedStation = _stationFromSnapshot(snapshot.endStation);
+        metrics = RideMetrics(
+          elapsedSeconds: snapshot.rental.durationSeconds,
+          distanceKm: snapshot.rental.distanceKm,
+        );
+        receipt = _buildReceipt(PaymentStatus.pending);
+        stage = RentalStage.receipt;
+        break;
       case RentalDatabaseStatus.paymentFailed:
-        error = RentalError.invalidTransition;
+        _completedSession = snapshot;
+        _stopClock();
+        selectedStation = _stationFromSnapshot(snapshot.endStation);
+        metrics = RideMetrics(
+          elapsedSeconds: snapshot.rental.durationSeconds,
+          distanceKm: snapshot.rental.distanceKm,
+        );
+        receipt = _buildReceipt(PaymentStatus.pending);
+        error = RentalError.paymentCaptureFailed;
+        stage = RentalStage.receipt;
         break;
       case RentalDatabaseStatus.cancelled:
+      case RentalDatabaseStatus.lost:
         _resetLocal();
         break;
     }
@@ -551,16 +998,34 @@ class RentingController extends ChangeNotifier {
       backendId: station.id,
       id: station.code,
       name: station.name,
-      // TODO(gps): Calculate rider-relative distance from Android location.
       distanceMeters: switch (station.code) {
         'central' => 120,
         'riverside' => 260,
         'market' => 430,
         'university' => 610,
-        _ => 0,
+        _ => _calculateDistanceMeters(station.latitude, station.longitude),
       },
       availableDocks: station.availableDocks,
+      qrToken: station.qrToken,
+      latitude: station.latitude,
+      longitude: station.longitude,
     );
+  }
+
+  int _calculateDistanceMeters(double lat, double lon) {
+    const refLat = 3.1390;
+    const refLon = 101.6869;
+    const earthRadiusMeters = 6371000.0;
+    final dLat = (lat - refLat) * (math.pi / 180.0);
+    final dLon = (lon - refLon) * (math.pi / 180.0);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(refLat * (math.pi / 180.0)) *
+            math.cos(lat * (math.pi / 180.0)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    final distance = (earthRadiusMeters * c).round();
+    return math.max(50, distance);
   }
 
   ReturnStation? _stationFromSnapshot(StationAvailabilityRecord? station) {
@@ -582,14 +1047,33 @@ class RentingController extends ChangeNotifier {
     if (caught is! DatabaseException) return RentalError.connectionFailed;
     return switch (caught.code) {
       DatabaseErrorCode.notAuthenticated => RentalError.authenticationFailed,
+      DatabaseErrorCode.accountUnavailable => RentalError.accountSuspended,
       DatabaseErrorCode.activeRentalExists => RentalError.activeRentalExists,
       DatabaseErrorCode.bikeUnavailable => RentalError.bikeReserved,
       DatabaseErrorCode.notFound => RentalError.invalidQr,
       DatabaseErrorCode.stationFull => RentalError.stationFull,
+      DatabaseErrorCode.stationQrMismatch => RentalError.stationQrMismatch,
+      DatabaseErrorCode.outsideReturnZone => RentalError.outsideReturnZone,
+      DatabaseErrorCode.maxExtensionsReached =>
+        RentalError.maxExtensionsReached,
       DatabaseErrorCode.invalidRentalTransition =>
         RentalError.invalidTransition,
       _ => RentalError.connectionFailed,
     };
+  }
+
+  int _haversineMeters(double lat1, double lon1, double lat2, double lon2) {
+    const earthRadiusMeters = 6371000.0;
+    double radians(double degrees) => degrees * (math.pi / 180.0);
+    final dLat = radians(lat2 - lat1);
+    final dLon = radians(lon2 - lon1);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(radians(lat1)) *
+            math.cos(radians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return (earthRadiusMeters * c).round();
   }
 
   Future<bool> _run(Future<void> Function() operation) async {
@@ -647,12 +1131,18 @@ class RentingController extends ChangeNotifier {
     isBusy = false;
     gpsAvailable = true;
     isAtStation = false;
+    stationQrToken = null;
+    stationDistanceMeters = null;
+    _arrivalPosition = null;
+    _paypalOrder = null;
+    _paypalAuthorizationId = null;
     notifyListeners();
   }
 
   @override
   void dispose() {
     _stopClock();
+    if (_ownsPayPalGateway) _paypalGateway.close();
     super.dispose();
   }
 }

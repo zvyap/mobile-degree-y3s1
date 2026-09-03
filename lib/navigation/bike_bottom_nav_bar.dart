@@ -7,10 +7,12 @@ class BikeBottomNavBar extends StatelessWidget {
   const BikeBottomNavBar({
     super.key,
     required this.selectedPage,
+    required this.rideActive,
     required this.onSelected,
   });
 
   final AppPage selectedPage;
+  final bool rideActive;
   final ValueChanged<AppPage> onSelected;
 
   @override
@@ -96,6 +98,7 @@ class BikeBottomNavBar extends StatelessWidget {
             child: _CenterNavButton(
               page: AppPage.scan,
               selected: selectedPage == AppPage.scan,
+              rideActive: rideActive,
               onTap: () => onSelected(AppPage.scan),
             ),
           ),
@@ -182,11 +185,13 @@ class _CenterNavButton extends StatelessWidget {
   const _CenterNavButton({
     required this.page,
     required this.selected,
+    required this.rideActive,
     required this.onTap,
   });
 
   final AppPage page;
   final bool selected;
+  final bool rideActive;
   final VoidCallback onTap;
 
   @override
@@ -194,27 +199,57 @@ class _CenterNavButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final duration = motionDuration(context, 200);
 
+    final label = rideActive
+        ? context.l10n.currentRide
+        : context.l10n.scanQrCode;
+    final background = rideActive
+        ? scheme.secondary
+        : selected
+        ? scheme.secondary
+        : scheme.primary;
+
     return Semantics(
       selected: selected,
       button: true,
-      label: context.l10n.scanQrCode,
+      label: label,
       child: AnimatedScale(
         scale: selected ? 1.05 : 1,
         duration: duration,
         curve: Curves.easeOutCubic,
-        child: Material(
-          color: selected ? scheme.secondary : scheme.primary,
-          shape: const CircleBorder(),
-          elevation: selected ? 12 : 8,
-          shadowColor: scheme.primary.withValues(alpha: 0.35),
-          child: InkWell(
-            key: const ValueKey<String>('nav-scan'),
-            onTap: onTap,
-            customBorder: const CircleBorder(),
-            child: SizedBox(
-              width: 72,
-              height: 72,
-              child: Icon(page.icon, color: Colors.white, size: 30),
+        child: AnimatedContainer(
+          duration: duration,
+          padding: EdgeInsets.all(rideActive ? 3 : 0),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: rideActive
+                ? Border.all(
+                    color: scheme.secondary.withValues(alpha: 0.42),
+                    width: 2,
+                  )
+                : null,
+          ),
+          child: Material(
+            color: background,
+            shape: const CircleBorder(),
+            elevation: selected || rideActive ? 12 : 8,
+            shadowColor: background.withValues(alpha: 0.35),
+            child: InkWell(
+              key: const ValueKey<String>('nav-scan'),
+              onTap: onTap,
+              customBorder: const CircleBorder(),
+              child: SizedBox(
+                width: rideActive ? 66 : 72,
+                height: rideActive ? 66 : 72,
+                child: AnimatedSwitcher(
+                  duration: duration,
+                  child: Icon(
+                    rideActive ? Icons.directions_bike_rounded : page.icon,
+                    key: ValueKey<bool>(rideActive),
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ),
             ),
           ),
         ),

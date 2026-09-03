@@ -108,31 +108,166 @@ class _PriceRow extends StatelessWidget {
 }
 
 class _PaymentMethodTile extends StatelessWidget {
-  const _PaymentMethodTile({required this.method});
+  const _PaymentMethodTile({required this.method, this.onTap});
 
   final RentalPaymentMethod method;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(14),
+    final choosable = onTap != null;
+    final tile = Ink(
       decoration: BoxDecoration(
         border: Border.all(color: scheme.outline),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.account_balance_wallet_rounded, color: scheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              '${method.brand}\n${_paymentMethodLabel(context.l10n, method)}',
-              style: const TextStyle(height: 1.35),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 48),
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Icon(Icons.account_balance_wallet_rounded, color: scheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '${method.brand}\n${_paymentMethodLabel(context.l10n, method)}',
+                style: const TextStyle(height: 1.35),
+              ),
             ),
-          ),
-        ],
+            if (choosable) ...[
+              const SizedBox(width: 12),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: scheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    return Semantics(
+      button: choosable,
+      child: Material(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        child: choosable
+            ? InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(8),
+                child: tile,
+              )
+            : tile,
       ),
     );
   }
+}
+
+Future<void> _showPaymentMethodPicker(
+  BuildContext context,
+  RentingController controller,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    builder: (context) => _PaymentMethodPickerSheet(controller: controller),
+  );
+}
+
+class _PaymentMethodPickerSheet extends StatelessWidget {
+  const _PaymentMethodPickerSheet({required this.controller});
+
+  final RentingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.choosePaymentMethod,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final method in controller.availablePaymentMethods)
+              _PaymentMethodOption(
+                method: method,
+                selected: method.id == controller.selectedPaymentMethod?.id,
+                onTap: () {
+                  controller.selectPaymentMethod(method);
+                  Navigator.of(context).pop();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentMethodOption extends StatelessWidget {
+  const _PaymentMethodOption({
+    required this.method,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final RentalPaymentMethod method;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected
+            ? scheme.primary.withValues(alpha: 0.09)
+            : scheme.surfaceContainerHighest.withValues(alpha: 0.36),
+        borderRadius: BorderRadius.circular(9),
+        child: InkWell(
+          key: ValueKey<String>('rent-payment-${method.id}'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(9),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(_methodIcon(method.id), color: scheme.primary, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${method.brand}\n${_paymentMethodLabel(context.l10n, method)}',
+                    style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
+                  ),
+                ),
+                if (selected)
+                  Icon(Icons.check_rounded, color: scheme.primary, size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+IconData _methodIcon(String methodId) {
+  return methodId == 'paypal'
+      ? Icons.account_balance_wallet_rounded
+      : Icons.credit_card_rounded;
 }

@@ -61,7 +61,15 @@ class _BikeCheckStage extends StatelessWidget {
                     TextButton(
                       key: const ValueKey<String>('rent-bike-view'),
                       style: _secondaryTextButtonStyle(context),
-                      onPressed: () {},
+                      onPressed: () {
+                        final bikeCode = controller.bike?.id;
+                        if (bikeCode != null) {
+                          Navigator.of(context).pushNamed(
+                            AppPage.bikeDetail.routeName,
+                            arguments: bikeCode,
+                          );
+                        }
+                      },
                       child: Text(context.l10n.view),
                     ),
                   ],
@@ -77,7 +85,15 @@ class _BikeCheckStage extends StatelessWidget {
                 child: TextButton.icon(
                   key: const ValueKey<String>('rent-report-issue-bike-check'),
                   style: _dangerTextButtonStyle(context),
-                  onPressed: () {},
+                  onPressed: () {
+                    final bikeCode = controller.bike?.id;
+                    if (bikeCode != null) {
+                      Navigator.of(context).pushNamed(
+                        AppPage.bikeReport.routeName,
+                        arguments: bikeCode,
+                      );
+                    }
+                  },
                   icon: const Icon(Icons.report_problem_outlined),
                   label: Text(context.l10n.reportBikeIssue),
                 ),
@@ -85,7 +101,10 @@ class _BikeCheckStage extends StatelessWidget {
               const SizedBox(height: 12),
               _FareCalculationPanel(controller: controller),
               const SizedBox(height: 12),
-              _PaymentMethodTile(method: method),
+              _PaymentMethodTile(
+                method: method,
+                onTap: () => _showPaymentMethodPicker(context, controller),
+              ),
               const SizedBox(height: 18),
               _ActionButton(
                 key: const ValueKey('rent-review-hold'),

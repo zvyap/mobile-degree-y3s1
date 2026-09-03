@@ -1,4 +1,4 @@
-enum UserError {
+enum UserError { // got issue
   invalidEmail,
   emailRequired,
   passwordRequired,

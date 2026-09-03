@@ -1,5 +1,5 @@
 import 'package:bike_renting_app/l10n/l10n.dart';
-import 'package:bike_renting_app/paypal_sandbox_constants.dart';
+import 'package:bike_renting_app/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -103,6 +103,36 @@ class _PayPalCheckoutPageState extends State<PayPalCheckoutPage> {
               label: context.l10n.paypalCheckoutSemantics,
               container: true,
               child: WebViewWidget(controller: _webViewController),
+            ),
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              border: Border(top: BorderSide(color: scheme.outlineVariant)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('paypal-demo-cancel'),
+                    onPressed: () => _finish(PayPalCheckoutResult.cancelled),
+                    icon: const Icon(Icons.close_rounded),
+                    label: const Text('Simulate Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    key: const ValueKey('paypal-demo-approve'),
+                    onPressed: () => _finish(PayPalCheckoutResult.approved),
+                    icon: const Icon(Icons.check_circle_rounded),
+                    label: const Text('Simulate Approve'),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

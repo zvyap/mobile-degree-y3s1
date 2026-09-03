@@ -12,9 +12,12 @@ enum RentalStage {
 
 enum PaymentStatus { ready, authorized, paid, pending }
 
+enum RentalIssueType { brakes, tyres, lights, lock, other }
+
 enum RentalError {
   authenticationFailed,
   connectionFailed,
+  accountSuspended,
   activeRentalExists,
   invalidTransition,
   invalidQr,
@@ -27,10 +30,25 @@ enum RentalError {
   paymentCaptureFailed,
   lockFailed,
   gpsLost,
+  locationPermissionDenied,
   stationFull,
   chooseStation,
   outsideReturnZone,
+  stationQrMismatch,
   dockNotDetected,
+  maxExtensionsReached,
+}
+
+class RentalIssueNote {
+  const RentalIssueNote({
+    required this.type,
+    required this.note,
+    required this.notedAt,
+  });
+
+  final RentalIssueType type;
+  final String note;
+  final DateTime notedAt;
 }
 
 class RentalBike {
@@ -61,6 +79,9 @@ class ReturnStation {
     required this.name,
     required this.distanceMeters,
     required this.availableDocks,
+    this.qrToken = '',
+    this.latitude = 0,
+    this.longitude = 0,
   });
 
   final int backendId;
@@ -68,6 +89,9 @@ class ReturnStation {
   final String name;
   final int distanceMeters;
   final int availableDocks;
+  final String qrToken;
+  final double latitude;
+  final double longitude;
 }
 
 class RentalPaymentMethod {
