@@ -7,6 +7,7 @@ String _stationName(AppLocalizations l10n, ReturnStation station) {
 String _paymentMethodLabel(AppLocalizations l10n, RentalPaymentMethod method) {
   return switch (method.id) {
     'test-payment' => l10n.paypalSandboxDescription,
+    'paypal' => l10n.paypalAccountSubtitle,
     _ => method.brand,
   };
 }

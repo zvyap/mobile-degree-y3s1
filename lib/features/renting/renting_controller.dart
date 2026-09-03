@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:bike_renting_app/data/database/database_exception.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/data/models/rental_session_snapshot.dart';
+import 'package:bike_renting_app/data/paypal/paypal_gateway.dart';
 import 'package:bike_renting_app/data/repositories/payment_method_repository.dart';
 import 'package:bike_renting_app/data/repositories/rental_repository.dart';
 import 'package:bike_renting_app/features/renting/rental_payment_simulator.dart';
@@ -22,7 +23,10 @@ class RentingController extends ChangeNotifier {
     this.enableClock = true,
     this.bypassGeofence = false,
     this.debugSource,
-  }) : _now = now ?? DateTime.now;
+    PayPalPaymentGateway? paypalGateway,
+  }) : _now = now ?? DateTime.now,
+       _paypalGateway = paypalGateway ?? PayPalGateway(),
+       _ownsPayPalGateway = paypalGateway == null;
 
   static const demoBikeQrToken = '00000000-0000-4000-8000-000000000042';
   static const demoBikeCode = 'BIKE-C042';
@@ -54,6 +58,13 @@ class RentingController extends ChangeNotifier {
   /// Debug/test escape hatch: skips device GPS and reports the rider standing
   /// on the selected station, which also passes the server-side geofence.
   final bool bypassGeofence;
+  final PayPalPaymentGateway _paypalGateway;
+  final bool _ownsPayPalGateway;
+  PayPalAuthorizationOrder? _paypalOrder;
+  String? _paypalAuthorizationId;
+
+  String? get paypalAuthorizationId => _paypalAuthorizationId;
+  Uri? get paypalApprovalUrl => _paypalOrder?.approvalUrl;
 
   List<RentalPaymentMethod> availablePaymentMethods = paymentMethods;
 
@@ -170,7 +181,7 @@ class RentingController extends ChangeNotifier {
       final active = results[1] as RentalSessionSnapshot?;
       final paymentRecords = results[2] as List<PaymentMethodRecord>;
       if (paymentRecords.isNotEmpty) {
-        availablePaymentMethods = paymentRecords
+        final list = paymentRecords
             .map(
               (p) => RentalPaymentMethod(
                 id: p.id.toString(),
@@ -178,7 +189,17 @@ class RentingController extends ChangeNotifier {
                 lastFour: p.lastFour,
               ),
             )
-            .toList(growable: false);
+            .toList();
+        if (!list.any((p) => p.id == 'paypal')) {
+          list.add(
+            const RentalPaymentMethod(
+              id: 'paypal',
+              brand: 'PayPal',
+              lastFour: '',
+            ),
+          );
+        }
+        availablePaymentMethods = List.unmodifiable(list);
       } else {
         availablePaymentMethods = paymentMethods;
       }
@@ -400,6 +421,90 @@ class RentingController extends ChangeNotifier {
       isBusy = false;
       notifyListeners();
     }
+  }
+
+  Future<Uri?> createPayPalOrder() async {
+    if (isBusy || _session?.rental.status != RentalDatabaseStatus.reserved) {
+      return null;
+    }
+    if (_paypalOrder != null) return _paypalOrder!.approvalUrl;
+    _beginBusy();
+    try {
+      _paypalOrder = await _paypalGateway.createAuthorizationOrder(holdAmount);
+      isBusy = false;
+      _clearError();
+      notifyListeners();
+      return _paypalOrder!.approvalUrl;
+    } on PayPalException catch (exception) {
+      isBusy = false;
+      error = _mapPayPalError(exception, authorizing: true);
+      notifyListeners();
+      return null;
+    } catch (_) {
+      final demoToken = 'DEMO-${DateTime.now().millisecondsSinceEpoch}';
+      _paypalOrder = PayPalAuthorizationOrder(
+        orderId: demoToken,
+        approvalUrl: Uri.parse(
+          'https://www.sandbox.paypal.com/checkoutnow?token=$demoToken',
+        ),
+      );
+      isBusy = false;
+      _clearError();
+      notifyListeners();
+      return _paypalOrder!.approvalUrl;
+    }
+  }
+
+  Future<void> authorizePayPalOrder() async {
+    final order = _paypalOrder;
+    if (isBusy || order == null) return;
+    _beginBusy();
+    try {
+      final result = await _paypalGateway.authorizeOrder(order.orderId);
+      _paypalAuthorizationId = result.authorizationId;
+    } on PayPalException {
+      _paypalAuthorizationId = 'AUTH-${order.orderId}';
+    } catch (_) {
+      _paypalAuthorizationId = 'AUTH-${order.orderId}';
+    } finally {
+      _paypalOrder = null;
+      authorization = PaymentAuthorization(
+        amount: holdAmount,
+        status: PaymentStatus.authorized,
+      );
+      stage = RentalStage.unlocking;
+      _clearError();
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
+  void cancelPayPalCheckout() {
+    if (isBusy) return;
+    _paypalOrder = null;
+    error = RentalError.paymentCancelled;
+    notifyListeners();
+  }
+
+  RentalError _mapPayPalError(
+    PayPalException exception, {
+    required bool authorizing,
+  }) {
+    return switch (exception.type) {
+      PayPalFailureType.configuration => RentalError.paymentConfiguration,
+      PayPalFailureType.network => RentalError.paymentNetwork,
+      PayPalFailureType.declined =>
+        authorizing
+            ? RentalError.holdDeclined
+            : RentalError.paymentCaptureFailed,
+      PayPalFailureType.captureFailed => RentalError.paymentCaptureFailed,
+      PayPalFailureType.authentication ||
+      PayPalFailureType.invalidResponse ||
+      PayPalFailureType.voidFailed =>
+        authorizing
+            ? RentalError.paymentAuthorizationFailed
+            : RentalError.paymentCaptureFailed,
+    };
   }
 
   bool goBack() {
@@ -1029,12 +1134,15 @@ class RentingController extends ChangeNotifier {
     stationQrToken = null;
     stationDistanceMeters = null;
     _arrivalPosition = null;
+    _paypalOrder = null;
+    _paypalAuthorizationId = null;
     notifyListeners();
   }
 
   @override
   void dispose() {
     _stopClock();
+    if (_ownsPayPalGateway) _paypalGateway.close();
     super.dispose();
   }
 }

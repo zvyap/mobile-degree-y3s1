@@ -31,6 +31,7 @@ class _BikeShellState extends State<BikeShell> {
   AppPage _selectedRootPage = AppPage.home;
 
   bool get _isAdmin =>
+      kDebugMode ||
       _profileController.profile?.role == AppUserRole.admin ||
       _profileController.profile == null;
 

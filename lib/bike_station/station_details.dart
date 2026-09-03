@@ -391,7 +391,9 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const StationBikesScreen(),
+                                builder: (_) => StationBikesScreen(
+                                  stationData: widget.stationData,
+                                ),
                               ),
                             );
                           },

@@ -1326,6 +1326,24 @@ abstract class AppLocalizations {
   /// **'Local simulation · No real money'**
   String get paypalSandboxDescription;
 
+  /// No description provided for @paypalAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal Sandbox account'**
+  String get paypalAccountSubtitle;
+
+  /// No description provided for @paypalCheckoutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal Sandbox'**
+  String get paypalCheckoutTitle;
+
+  /// No description provided for @paypalCheckoutSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure PayPal Sandbox approval page'**
+  String get paypalCheckoutSemantics;
+
   /// No description provided for @selected.
   ///
   /// In en, this message translates to:

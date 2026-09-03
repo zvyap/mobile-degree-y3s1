@@ -34,7 +34,10 @@ class _AuthorizationStage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          _PaymentMethodTile(method: controller.selectedPaymentMethod!),
+          _PaymentMethodTile(
+            method: controller.selectedPaymentMethod!,
+            onTap: () => _showPaymentMethodPicker(context, controller),
+          ),
           if (controller.error != null) ...[
             const SizedBox(height: 16),
             _ErrorPanel(message: _rentalError(context, controller)),
@@ -47,7 +50,7 @@ class _AuthorizationStage extends StatelessWidget {
             ),
             icon: Icons.verified_user_rounded,
             busy: controller.isBusy,
-            onPressed: controller.authorizePayment,
+            onPressed: () => _handleAuthorize(context, controller),
           ),
           const SizedBox(height: 8),
           Center(
@@ -76,5 +79,31 @@ class _AuthorizationStage extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+Future<void> _handleAuthorize(
+  BuildContext context,
+  RentingController controller,
+) async {
+  if (controller.selectedPaymentMethod?.id == 'paypal') {
+    final approvalUrl = await controller.createPayPalOrder();
+    if (!context.mounted || approvalUrl == null) return;
+
+    final result = await Navigator.of(context, rootNavigator: true)
+        .push<PayPalCheckoutResult>(
+          MaterialPageRoute(
+            builder: (context) => PayPalCheckoutPage(approvalUrl: approvalUrl),
+          ),
+        );
+    if (!context.mounted) return;
+
+    if (result == PayPalCheckoutResult.approved) {
+      await controller.authorizePayPalOrder();
+    } else {
+      controller.cancelPayPalCheckout();
+    }
+  } else {
+    await controller.authorizePayment();
   }
 }
