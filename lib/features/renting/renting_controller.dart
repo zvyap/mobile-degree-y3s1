@@ -101,7 +101,9 @@ class RentingController extends ChangeNotifier {
   List<RentalIssueNote> get localIssueNotes =>
       List.unmodifiable(_localIssueNotes);
 
-  String get bikeCode => bike?.id ?? demoBikeCode;
+  String? _scannedBikeCode;
+
+  String get bikeCode => bike?.id ?? _scannedBikeCode ?? demoBikeCode;
 
   double get unlockFee =>
       _completedSession?.rental.unlockFee ?? _session?.rental.unlockFee ?? 0;
@@ -369,10 +371,40 @@ class RentingController extends ChangeNotifier {
       return;
     }
 
+    _scannedBikeCode = await _resolveBikeCode(qrToken ?? token);
+
     await _run(() async {
       final snapshot = await repository.reserveSession(token);
       _applySnapshot(snapshot);
     });
+  }
+
+  Future<String?> _resolveBikeCode(String rawInput) async {
+    final trimmed = rawInput.trim();
+    if (trimmed.isEmpty) return demoBikeCode;
+    if (trimmed.toUpperCase() == demoBikeCode.toUpperCase()) return demoBikeCode;
+
+    final source = debugSource;
+    if (source != null) {
+      try {
+        final bikes = await source.listAllBikes();
+        final match = bikes.cast<BikeDatabaseRecord?>().firstWhere(
+          (b) =>
+              b != null &&
+              (b.code.toUpperCase() == trimmed.toUpperCase() ||
+                  b.qrToken.toLowerCase() == trimmed.toLowerCase()),
+          orElse: () => null,
+        );
+        if (match != null && match.code.isNotEmpty) {
+          return match.code;
+        }
+      } catch (_) {}
+    }
+
+    if (!_uuidRegex.hasMatch(trimmed) && !trimmed.startsWith('http')) {
+      return trimmed;
+    }
+    return null;
   }
 
   /// DEBUG ONLY: every bike in the system, any status, for the camera-less
@@ -1136,6 +1168,7 @@ class RentingController extends ChangeNotifier {
     _arrivalPosition = null;
     _paypalOrder = null;
     _paypalAuthorizationId = null;
+    _scannedBikeCode = null;
     notifyListeners();
   }
 
