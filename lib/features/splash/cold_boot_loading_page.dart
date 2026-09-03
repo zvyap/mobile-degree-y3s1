@@ -153,7 +153,7 @@ class _ColdBootBannerView extends StatelessWidget {
                           ),
                           SizedBox(width: 8),
                           Text(
-                            'Smart Mobility Malaysia',
+                            'BikeRent',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 13,
