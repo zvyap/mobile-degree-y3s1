@@ -1,15 +1,16 @@
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
+
 import '../models/bike.dart';
 import '../repositories/bike_repository.dart';
 
-class BikeManagementPage extends StatelessWidget {
+class BikeManagementPage extends StatefulWidget {
   const BikeManagementPage({
     super.key,
     required this.onAddBike,
     required this.onOpenBikeDetails,
     required this.onOpenReportList,
-    required this.onMakeReport
+    required this.onMakeReport,
   });
 
   static const Color _cardColor = Color(0xFF1D2939);
@@ -19,193 +20,362 @@ class BikeManagementPage extends StatelessWidget {
   final ValueChanged<String> onOpenBikeDetails;
   final VoidCallback onOpenReportList;
   final VoidCallback onAddBike;
-  // Add this
   final ValueChanged<String> onMakeReport;
+
+  @override
+  State<BikeManagementPage> createState() =>
+      _BikeManagementPageState();
+}
+
+class _BikeManagementPageState extends State<BikeManagementPage> {
+  final BikeRepository _bikeRepository = BikeRepository();
+
+  List<Bike> _bikes = [];
+
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBikes();
+  }
+
+  // ===========================================================================
+  // LOAD BIKES FROM SUPABASE
+  // ===========================================================================
+
+  Future<void> _loadBikes() async {
+    try {
+      if (_bikes.isEmpty) {
+        setState(() {
+          _isLoading = true;
+          _error = null;
+        });
+      }
+
+      final bikes = await _bikeRepository.getBikes();
+
+      if (!mounted) return;
+
+      setState(() {
+        _bikes = bikes;
+        _isLoading = false;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  // ===========================================================================
+  // BUILD PAGE
+  // ===========================================================================
+
   @override
   Widget build(BuildContext context) {
-    return ListView(
-          key: const ValueKey<String>('bike-management-page'),
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
-          children: [
+    return RefreshIndicator(
+      onRefresh: _loadBikes,
+      child: ListView(
+        key: const ValueKey<String>('bike-management-page'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+        children: [
+          // -------------------------------------------------------------------
+          // Title + buttons
+          // -------------------------------------------------------------------
 
-            // -------------------------------------------------------
-            // Page title
-            // -------------------------------------------------------
-            Row(
+          Row(
             children: [
-            Text(
-            context.l10n.fleetDescription,
-            style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.80),
-            fontSize: 16,
-            ),
-            ),FilledButton.icon(onPressed: onAddBike, icon: const Icon(Icons.add_rounded) ,label: const Text("Add Bike")),
+              Expanded(
+                child: Text(
+                  context.l10n.fleetDescription,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.80),
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+
+              FilledButton.icon(
+                onPressed: widget.onAddBike,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Add Bike'),
+              ),
+
               const SizedBox(width: 8),
+
               OutlinedButton.icon(
-                onPressed: onOpenReportList,
+                onPressed: widget.onOpenReportList,
                 icon: const Icon(Icons.report_outlined),
                 label: const Text('Reports'),
               ),
             ],
-            ),
+          ),
 
-            const SizedBox(height: 4),
+          const SizedBox(height: 28),
 
+          // -------------------------------------------------------------------
+          // Search
+          // -------------------------------------------------------------------
 
-            const SizedBox(height: 24),
+          const _SearchSection(),
 
-            // -------------------------------------------------------
-            // Search + filter button
-            // -------------------------------------------------------
-            const _SearchSection(),
+          const SizedBox(height: 18),
 
-            const SizedBox(height: 18),
+          // -------------------------------------------------------------------
+          // Status filters
+          // -------------------------------------------------------------------
 
-            // -------------------------------------------------------
-            // Status filters
-            // -------------------------------------------------------
-            const _BikeStatusFilters(),
+          _BikeStatusFilters(
+            bikes: _bikes,
+          ),
 
-            const SizedBox(height: 24),
+          const SizedBox(height: 24),
 
-            // -------------------------------------------------------
-            // Bike count and sorting
-            // -------------------------------------------------------
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '40 bikes',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+          // -------------------------------------------------------------------
+          // Bike count
+          // -------------------------------------------------------------------
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${_bikes.length} ${_bikes.length == 1 ? 'bike' : 'bikes'}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Text(
+                'Sort: Status',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // -------------------------------------------------------------------
+          // Loading state
+          // -------------------------------------------------------------------
+
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 50),
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            )
+
+          // -------------------------------------------------------------------
+          // Error state
+          // -------------------------------------------------------------------
+
+          else if (_error != null)
+            _buildErrorSection()
+
+          // -------------------------------------------------------------------
+          // Empty state
+          // -------------------------------------------------------------------
+
+          else if (_bikes.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 50),
+                child: Center(
+                  child: Text(
+                    'No bikes found',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
-                Text(
-                  'Sort: Status',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+              )
+
+            // -------------------------------------------------------------------
+            // Bike cards from Supabase
+            // -------------------------------------------------------------------
+
+            else
+              for (int index = 0; index < _bikes.length; index++) ...[
+                _buildBikeCard(
+                  context,
+                  _bikes[index],
                 ),
+                if (index != _bikes.length - 1)
+                  const SizedBox(height: 16),
               ],
-            ),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 16),
+  // ===========================================================================
+  // CREATE CARD FROM BIKE MODEL
+  // ===========================================================================
 
-            // -------------------------------------------------------
-            // Bikes
-            // -------------------------------------------------------
-             _BikeCard(
-              bikeId: 'BR-1028',
-              model: 'Standard Road Bike',
-              status: BikeStatus.available,
-              location: 'Gurney Paragon',
-              description: 'Last service 4 days ago',
+  Widget _buildBikeCard(
+      BuildContext context,
+      Bike bike,
+      ) {
+    final BikeStatus bikeStatus = _convertBikeStatus(
+      bike.status,
+    );
 
-               onViewDetails: () {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                   const SnackBar(
-                     content: Text('Opening details'),
-                   ),
-                 );
-                 onOpenBikeDetails('BR-1028');
-               },
+    return _BikeCard(
+      bikeId: bike.code,
 
-               onMakeReport: () {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                   const SnackBar(
-                     content: Text('Opening reports'),
-                   ),
-                 );
+      // Temporary until "model" exists in your Supabase table.
+      model: 'Standard Bike',
 
-                 onMakeReport('BR-1028');
-               },
-            ),
+      status: bikeStatus,
 
-            const SizedBox(height: 16),
+      // Temporary: currently this displays current_station_id.
+      location:
+      bike.stationName ??
+          'No station assigned',
 
-            _BikeCard(
-              bikeId: 'BR-1042',
-              model: 'Standard City Bike',
-              status: BikeStatus.inService,
-              location: 'Folk Valley',
-              description: 'Brake issue • Finish by 24/07/2026',
+      description: _buildBikeDescription(bike),
 
-              onViewDetails: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Opening details'),
-                  ),
-                );
-              },
-
-              onMakeReport: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Opening reports'),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            _BikeCard(
-              bikeId: 'BR-0986',
-              model: 'Standard City Bike',
-              status: BikeStatus.rented,
-              location: 'University TARUMT',
-              description: 'Return By 23 July 22:48',
-
-              onViewDetails: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Opening details'),
-                  ),
-                );
-              },
-
-              onMakeReport: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Opening reports'),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            _BikeCard(
-              bikeId: 'BR-1107',
-              model: 'Standard Road Bike',
-              status: BikeStatus.unavailable,
-              location: 'University TARUMT',
-              description: 'Tyre puncture • 1 Open Report',
-
-              onViewDetails: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Opening details'),
-                  ),
-                );
-                onOpenBikeDetails('BR-1107');
-              },
-
-              onMakeReport: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Opening reports'),
-                  ),
-                );
-                onMakeReport('BR-1107');
-              },
-            ),
-          ],
+      onViewDetails: () {
+        widget.onOpenBikeDetails(
+          bike.id,
         );
+      },
+
+      onMakeReport: () {
+        widget.onMakeReport(
+          bike.id,
+        );
+      },
+    );
+  }
+
+  // ===========================================================================
+  // BIKE DESCRIPTION
+  // ===========================================================================
+
+  String _buildBikeDescription(Bike bike) {
+    final List<String> description = [];
+
+    if (bike.batteryPercent != null) {
+      description.add(
+        'Battery ${bike.batteryPercent}%',
+      );
+    }
+
+    if (bike.lastServiceAt != null) {
+      description.add(
+        'Last service ${_formatDate(bike.lastServiceAt!)}',
+      );
+    }
+
+    if (description.isEmpty) {
+      return 'No additional information';
+    }
+
+    return description.join(' • ');
+  }
+
+  String _formatDate(DateTime date) {
+    final String day = date.day.toString().padLeft(2, '0');
+    final String month = date.month.toString().padLeft(2, '0');
+
+    return '$day/$month/${date.year}';
+  }
+
+  // ===========================================================================
+  // CONVERT DATABASE STATUS -> UI STATUS
+  // ===========================================================================
+
+  BikeStatus _convertBikeStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'available':
+        return BikeStatus.available;
+
+      case 'maintenance':
+      case 'in_service':
+      case 'in service':
+      case 'service':
+        return BikeStatus.inService;
+
+      case 'rented':
+      case 'in_use':
+      case 'in use':
+        return BikeStatus.rented;
+
+      case 'unavailable':
+      case 'disabled':
+      case 'lost':
+        return BikeStatus.unavailable;
+
+      default:
+        return BikeStatus.unavailable;
+    }
+  }
+
+  // ===========================================================================
+  // ERROR SECTION
+  // ===========================================================================
+
+  Widget _buildErrorSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        vertical: 40,
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: Colors.redAccent,
+            size: 48,
+          ),
+
+          const SizedBox(height: 12),
+
+          const Text(
+            'Unable to load bikes',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            _error ?? '',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          OutlinedButton.icon(
+            onPressed: _loadBikes,
+            icon: const Icon(
+              Icons.refresh_rounded,
+            ),
+            label: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -271,7 +441,7 @@ class _SearchSection extends StatelessWidget {
           ),
           child: IconButton(
             onPressed: () {
-              // Filter functionality later
+              // Filter functionality later.
             },
             icon: const Icon(
               Icons.filter_alt_outlined,
@@ -285,39 +455,88 @@ class _SearchSection extends StatelessWidget {
 }
 
 // ===========================================================================
-// FILTER CHIPS
+// STATUS FILTERS
 // ===========================================================================
 
 class _BikeStatusFilters extends StatelessWidget {
-  const _BikeStatusFilters();
+  const _BikeStatusFilters({
+    required this.bikes,
+  });
+
+  final List<Bike> bikes;
 
   @override
   Widget build(BuildContext context) {
-    return const SingleChildScrollView(
+    final int availableCount = bikes.where((bike) {
+      return bike.status.toLowerCase() == 'available';
+    }).length;
+
+    final int maintenanceCount = bikes.where((bike) {
+      final String status = bike.status.toLowerCase();
+
+      return status == 'maintenance' ||
+          status == 'in_service' ||
+          status == 'in service' ||
+          status == 'service';
+    }).length;
+
+    final int rentedCount = bikes.where((bike) {
+      final String status = bike.status.toLowerCase();
+
+      return status == 'rented' ||
+          status == 'in_use' ||
+          status == 'in use';
+    }).length;
+
+    final int unavailableCount = bikes.where((bike) {
+      final String status = bike.status.toLowerCase();
+
+      return status == 'unavailable' ||
+          status == 'disabled' ||
+          status == 'lost';
+    }).length;
+
+    return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
           _StatusFilterChip(
-            label: 'All 40',
+            label: 'All ${bikes.length}',
             selected: true,
           ),
-          SizedBox(width: 10),
+
+          const SizedBox(width: 10),
+
           _StatusFilterChip(
-            label: 'Available',
+            label: 'Available $availableCount',
           ),
-          SizedBox(width: 10),
+
+          const SizedBox(width: 10),
+
           _StatusFilterChip(
-            label: 'Maintenance',
+            label: 'Maintenance $maintenanceCount',
           ),
-          SizedBox(width: 10),
+
+          const SizedBox(width: 10),
+
           _StatusFilterChip(
-            label: 'Unavailable',
+            label: 'Rented $rentedCount',
+          ),
+
+          const SizedBox(width: 10),
+
+          _StatusFilterChip(
+            label: 'Unavailable $unavailableCount',
           ),
         ],
       ),
     );
   }
 }
+
+// ===========================================================================
+// STATUS FILTER CHIP
+// ===========================================================================
 
 class _StatusFilterChip extends StatelessWidget {
   const _StatusFilterChip({
@@ -368,7 +587,6 @@ class _BikeCard extends StatelessWidget {
     required this.description,
     required this.onViewDetails,
     required this.onMakeReport,
-
   });
 
   final String bikeId;
@@ -377,7 +595,6 @@ class _BikeCard extends StatelessWidget {
   final String location;
   final String description;
 
-  //callnack
   final VoidCallback onViewDetails;
   final VoidCallback onMakeReport;
 
@@ -396,9 +613,10 @@ class _BikeCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ---------------------------------------------------------
-          // Image placeholder
-          // ---------------------------------------------------------
+          // -------------------------------------------------------------------
+          // Bike image placeholder
+          // -------------------------------------------------------------------
+
           Container(
             width: 92,
             height: 92,
@@ -415,9 +633,10 @@ class _BikeCard extends StatelessWidget {
 
           const SizedBox(width: 14),
 
-          // ---------------------------------------------------------
+          // -------------------------------------------------------------------
           // Bike information
-          // ---------------------------------------------------------
+          // -------------------------------------------------------------------
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,7 +654,9 @@ class _BikeCard extends StatelessWidget {
                       ),
                     ),
 
-                    _BikeStatusBadge(status: status),
+                    _BikeStatusBadge(
+                      status: status,
+                    ),
                   ],
                 ),
 
@@ -473,45 +694,51 @@ class _BikeCard extends StatelessWidget {
                       ),
                     ),
 
-                   PopupMenuButton<BikeMenuAction>(
-                     icon: const Icon(
-                       Icons.more_horiz_rounded,
-                       color: Colors.white,
-                       size: 28,
-                     ),
+                    PopupMenuButton<BikeMenuAction>(
+                      icon: const Icon(
+                        Icons.more_horiz_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      onSelected: (action) {
+                        switch (action) {
+                          case BikeMenuAction.details:
+                            onViewDetails();
+                            break;
 
-                     onSelected: (action) {
-                       if (action == BikeMenuAction.details) {
-                         onViewDetails();
-                       } else if (action == BikeMenuAction.makeReport) {
-                          onMakeReport();
-                       }
-                     },
+                          case BikeMenuAction.makeReport:
+                            onMakeReport();
+                            break;
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem<BikeMenuAction>(
+                          value: BikeMenuAction.details,
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline_rounded,
+                              ),
+                              SizedBox(width: 10),
+                              Text('Bike details'),
+                            ],
+                          ),
+                        ),
 
-                     itemBuilder: (context) => const [
-                       PopupMenuItem(
-                         value: BikeMenuAction.details,
-                         child: Row(
-                           children: [
-                             Icon(Icons.info_outline_rounded),
-                             SizedBox(width: 10),
-                             Text('Bike details'),
-                           ],
-                         ),
-                       ),
-
-                       PopupMenuItem(
-                         value: BikeMenuAction.makeReport,
-                         child: Row(
-                           children: [
-                             Icon(Icons.report_outlined),
-                             SizedBox(width: 10),
-                             Text('Reports'),
-                           ],
-                         ),
-                       ),
-                     ],
-                   )
+                        PopupMenuItem<BikeMenuAction>(
+                          value: BikeMenuAction.makeReport,
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.report_outlined,
+                              ),
+                              SizedBox(width: 10),
+                              Text('Reports'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
 
@@ -633,10 +860,10 @@ enum BikeStatus {
 }
 
 // ===========================================================================
-// BikeCard Action
+// BIKE CARD ACTION
 // ===========================================================================
 
-enum BikeMenuAction{
+enum BikeMenuAction {
   details,
   makeReport,
 }

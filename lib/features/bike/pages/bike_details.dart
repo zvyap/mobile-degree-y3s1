@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/bike.dart';
+import '../repositories/bike_repository.dart';
+
 enum BikeDetailMenuAction {
   makeReport,
   deleteBike,
@@ -20,12 +23,63 @@ class BikeDetailsPage extends StatefulWidget {
   final VoidCallback onTransferBike;
   final VoidCallback onServiceBike;
   final VoidCallback onMakeReport;
+
   @override
   State<BikeDetailsPage> createState() => _BikeDetailsPageState();
 }
 
 class _BikeDetailsPageState extends State<BikeDetailsPage> {
+  final BikeRepository _bikeRepository = BikeRepository();
+
+  Bike? _bike;
+
+  bool _isLoading = true;
+  String? _error;
+
   int _selectedTab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _loadBike();
+  }
+
+  // ===========================================================================
+  // LOAD BIKE
+  // ===========================================================================
+
+  Future<void> _loadBike() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final bike = await _bikeRepository.getBike(
+        widget.bikeId,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _bike = bike;
+        _isLoading = false;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  // ===========================================================================
+  // SNACKBAR
+  // ===========================================================================
 
   void showSnackBar(String message) {
     final messenger = ScaffoldMessenger.of(context);
@@ -39,333 +93,542 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
     );
   }
 
+  // ===========================================================================
+  // MENU
+  // ===========================================================================
+
   void _handleMenuAction(BikeDetailMenuAction action) {
-    if (action == BikeDetailMenuAction.makeReport) {
-      widget.onMakeReport();
-    } else if (action == BikeDetailMenuAction.deleteBike) {
-      showSnackBar('Delete bike');
+    switch (action) {
+      case BikeDetailMenuAction.makeReport:
+        widget.onMakeReport();
+        break;
+
+      case BikeDetailMenuAction.deleteBike:
+        showSnackBar('Delete bike');
+        break;
     }
   }
+
+  // ===========================================================================
+  // STATUS HELPERS
+  // ===========================================================================
+
+  String _statusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'available':
+        return 'Available';
+
+      case 'maintenance':
+      case 'in_service':
+      case 'in service':
+      case 'service':
+        return 'In service';
+
+      case 'rented':
+      case 'in_use':
+      case 'in use':
+        return 'Rented';
+
+      case 'unavailable':
+      case 'disabled':
+      case 'lost':
+        return 'Unavailable';
+
+      default:
+        return status;
+    }
+  }
+
+  Color _statusBackgroundColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'available':
+        return const Color(0xFFDDF7E9);
+
+      case 'maintenance':
+      case 'in_service':
+      case 'in service':
+      case 'service':
+        return const Color(0xFFFFF3D6);
+
+      case 'rented':
+      case 'in_use':
+      case 'in use':
+        return const Color(0xFFEDE5FF);
+
+      default:
+        return const Color(0xFFFFE5E5);
+    }
+  }
+
+  Color _statusTextColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'available':
+        return const Color(0xFF159A67);
+
+      case 'maintenance':
+      case 'in_service':
+      case 'in service':
+      case 'service':
+        return const Color(0xFFE6A919);
+
+      case 'rented':
+      case 'in_use':
+      case 'in use':
+        return const Color(0xFF8C5AE8);
+
+      default:
+        return const Color(0xFFE24B4B);
+    }
+  }
+
+  // ===========================================================================
+  // DATE FORMAT
+  // ===========================================================================
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+
+    return '$day/$month/${date.year}';
+  }
+
+  // ===========================================================================
+  // BUILD
+  // ===========================================================================
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 32),
-      children: [
-        // ===========================================================
-        // BIKE MAIN CARD
-        // ===========================================================
+    // -------------------------------------------------------------------------
+    // Loading
+    // -------------------------------------------------------------------------
 
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: scheme.outline.withValues(alpha: 0.8),
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Error
+    // -------------------------------------------------------------------------
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // -------------------------------------------------------
-              // Bike image placeholder
-              // -------------------------------------------------------
+              Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: scheme.error,
+              ),
 
-              Container(
-                width: 104,
-                height: 104,
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  Icons.directions_bike_rounded,
-                  size: 70,
-                  color: scheme.onPrimaryContainer,
+              const SizedBox(height: 12),
+
+              const Text(
+                'Unable to load bike',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
 
-              const SizedBox(width: 16),
+              const SizedBox(height: 8),
 
-              // -------------------------------------------------------
-              // Bike information
-              // -------------------------------------------------------
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+              ),
 
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            widget.bikeId,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
+              const SizedBox(height: 16),
 
-                        // Status
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDDF7E9),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            'Available',
-                            style: TextStyle(
-                              color: Color(0xFF159A67),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-
-                        // ---------------------------------------------------
-                        // Three-dot menu
-                        // ---------------------------------------------------
-
-                        PopupMenuButton<BikeDetailMenuAction>(
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(
-                            Icons.more_vert_rounded,
-                          ),
-                          onSelected: _handleMenuAction,
-                          itemBuilder: (context) {
-                            return [
-                              const PopupMenuItem(
-                                value: BikeDetailMenuAction.makeReport,
-                                child: Text('Make Report'),
-                              ),
-                              PopupMenuItem(
-                                value: BikeDetailMenuAction.deleteBike,
-                                child: Text(
-                                  'Delete Bike',
-                                  style: TextStyle(
-                                    color: scheme.error,
-                                  ),
-                                ),
-                              ),
-                            ];
-                          },
-                        ),
-                      ],
-                    ),
-
-                    Text(
-                      'Road Bike',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 19,
-                          color: scheme.primary,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            'Gurney Paragon',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    Divider(
-                      height: 1,
-                      color: scheme.outline.withValues(alpha: 0.7),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'QR: R1028-ABC',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-
-                        // QR placeholder
-                        Container(
-                          width: 42,
-                          height: 42,
-                          color: Colors.white,
-                          child: const Icon(
-                            Icons.qr_code_2_rounded,
-                            color: Colors.black,
-                            size: 38,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+              OutlinedButton.icon(
+                onPressed: _loadBike,
+                icon: const Icon(
+                  Icons.refresh_rounded,
                 ),
+                label: const Text('Retry'),
               ),
             ],
           ),
         ),
+      );
+    }
 
-        const SizedBox(height: 14),
+    final bike = _bike!;
 
-        // ===========================================================
-        // ACTION BUTTONS
-        // ===========================================================
+    // -------------------------------------------------------------------------
+    // Main page
+    // -------------------------------------------------------------------------
 
-        Row(
-          children: [
-            Expanded(
-              child: _BikeActionButton(
-                icon: Icons.edit_outlined,
-                label: 'Edit',
-                onPressed: widget.onEditBike,
-              ),
-            ),
-
-            const SizedBox(width: 10),
-
-            Expanded(
-              child: _BikeActionButton(
-                icon: Icons.compare_arrows_rounded,
-                label: 'Transfer',
-                onPressed: widget.onTransferBike,
-              ),
-            ),
-
-            const SizedBox(width: 10),
-
-            Expanded(
-              child: _BikeActionButton(
-                icon: Icons.build_rounded,
-                label: 'Service',
-                onPressed: widget.onServiceBike,
-              ),
-            ),
-          ],
+    return RefreshIndicator(
+      onRefresh: _loadBike,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          18,
+          16,
+          18,
+          32,
         ),
+        children: [
+          // ===================================================================
+          // BIKE MAIN CARD
+          // ===================================================================
 
-        const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: scheme.outline.withValues(
+                  alpha: 0.8,
+                ),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // -------------------------------------------------------------
+                // Bike image placeholder
+                // -------------------------------------------------------------
 
-        // ===========================================================
-        // PERFORMANCE OVERVIEW
-        // ===========================================================
+                Container(
+                  width: 104,
+                  height: 104,
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    Icons.directions_bike_rounded,
+                    size: 70,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                ),
 
-        Text(
-          'Performance overview',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
+                const SizedBox(width: 16),
+
+                // -------------------------------------------------------------
+                // Bike information
+                // -------------------------------------------------------------
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              bike.code,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+
+                          // ---------------------------------------------------
+                          // Status
+                          // ---------------------------------------------------
+
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _statusBackgroundColor(
+                                bike.status,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _statusLabel(
+                                bike.status,
+                              ),
+                              style: TextStyle(
+                                color: _statusTextColor(
+                                  bike.status,
+                                ),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+
+                          // ---------------------------------------------------
+                          // Three-dot menu
+                          // ---------------------------------------------------
+
+                          PopupMenuButton<BikeDetailMenuAction>(
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(
+                              Icons.more_vert_rounded,
+                            ),
+                            onSelected: _handleMenuAction,
+                            itemBuilder: (context) {
+                              return [
+                                const PopupMenuItem<
+                                    BikeDetailMenuAction>(
+                                  value:
+                                  BikeDetailMenuAction.makeReport,
+                                  child: Text(
+                                    'Make Report',
+                                  ),
+                                ),
+
+                                PopupMenuItem<
+                                    BikeDetailMenuAction>(
+                                  value:
+                                  BikeDetailMenuAction.deleteBike,
+                                  child: Text(
+                                    'Delete Bike',
+                                    style: TextStyle(
+                                      color: scheme.error,
+                                    ),
+                                  ),
+                                ),
+                              ];
+                            },
+                          ),
+                        ],
+                      ),
+
+                      // -------------------------------------------------------
+                      // Bike model - temporary
+                      // -------------------------------------------------------
+
+
+
+                      const SizedBox(height: 10),
+
+                      // -------------------------------------------------------
+                      // Station
+                      // -------------------------------------------------------
+
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 19,
+                            color: scheme.primary,
+                          ),
+
+                          const SizedBox(width: 4),
+
+                          Expanded(
+                            child: Text(
+                              bike.stationName ??
+                                  'No station assigned',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      Divider(
+                        height: 1,
+                        color: scheme.outline.withValues(
+                          alpha: 0.7,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // -------------------------------------------------------
+                      // QR
+                      // -------------------------------------------------------
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'QR: ${bike.qrToken}',
+                              style:
+                              theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+
+                          Container(
+                            width: 42,
+                            height: 42,
+                            color: Colors.white,
+                            child: const Icon(
+                              Icons.qr_code_2_rounded,
+                              color: Colors.black,
+                              size: 38,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
 
-        const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
-        Row(
-          children: [
-            Expanded(
-              child: _PerformanceCard(
-                label: 'Rental count',
-                value: '342',
+          // ===================================================================
+          // ACTION BUTTONS
+          // ===================================================================
+
+          Row(
+            children: [
+              Expanded(
+                child: _BikeActionButton(
+                  icon: Icons.edit_outlined,
+                  label: 'Edit',
+                  onPressed: widget.onEditBike,
+                ),
               ),
-            ),
 
-            const SizedBox(width: 10),
+              const SizedBox(width: 10),
 
-            Expanded(
-              child: _PerformanceCard(
-                label: 'Distance',
-                value: '1,248 km',
+              Expanded(
+                child: _BikeActionButton(
+                  icon: Icons.compare_arrows_rounded,
+                  label: 'Transfer',
+                  onPressed: widget.onTransferBike,
+                ),
               ),
-            ),
 
-            const SizedBox(width: 10),
+              const SizedBox(width: 10),
 
-            Expanded(
-              child: _PerformanceCard(
-                label: 'Condition',
-                value: 'Good',
+              Expanded(
+                child: _BikeActionButton(
+                  icon: Icons.build_rounded,
+                  label: 'Service',
+                  onPressed: widget.onServiceBike,
+                ),
               ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // ===================================================================
+          // PERFORMANCE OVERVIEW
+          // ===================================================================
+
+          Text(
+            'Performance overview',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
-          ],
-        ),
+          ),
 
-        const SizedBox(height: 20),
+          const SizedBox(height: 10),
 
-        // ===========================================================
-        // OVERVIEW / REPORTS TABS
-        // ===========================================================
-
-        Row(
-          children: [
-            Expanded(
-              child: _BikeDetailsTab(
-                label: 'Overview',
-                selected: _selectedTab == 0,
-                onTap: () {
-                  setState(() {
-                    _selectedTab = 0;
-                  });
-                },
+          const Row(
+            children: [
+              Expanded(
+                child: _PerformanceCard(
+                  label: 'Rental count',
+                  value: '-',
+                ),
               ),
-            ),
-            Expanded(
-              child: _BikeDetailsTab(
-                label: 'Reports',
-                selected: _selectedTab == 1,
-                onTap: () {
-                  setState(() {
-                    _selectedTab = 1;
-                  });
-                },
+
+              SizedBox(width: 10),
+
+              Expanded(
+                child: _PerformanceCard(
+                  label: 'Distance',
+                  value: '-',
+                ),
               ),
-            ),
-          ],
-        ),
 
-        Divider(
-          height: 1,
-          color: scheme.outline,
-        ),
+              SizedBox(width: 10),
 
-        const SizedBox(height: 16),
+              Expanded(
+                child: _PerformanceCard(
+                  label: 'Condition',
+                  value: 'N/A',
+                ),
+              ),
+            ],
+          ),
 
-        // ===========================================================
-        // TAB CONTENT
-        // ===========================================================
+          const SizedBox(height: 20),
 
-        if (_selectedTab == 0)
-          _buildOverview(context)
-        else
-          _buildReports(context),
-      ],
+          // ===================================================================
+          // OVERVIEW / REPORT TABS
+          // ===================================================================
+
+          Row(
+            children: [
+              Expanded(
+                child: _BikeDetailsTab(
+                  label: 'Overview',
+                  selected: _selectedTab == 0,
+                  onTap: () {
+                    setState(() {
+                      _selectedTab = 0;
+                    });
+                  },
+                ),
+              ),
+
+              Expanded(
+                child: _BikeDetailsTab(
+                  label: 'Reports',
+                  selected: _selectedTab == 1,
+                  onTap: () {
+                    setState(() {
+                      _selectedTab = 1;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+
+          Divider(
+            height: 1,
+            color: scheme.outline,
+          ),
+
+          const SizedBox(height: 16),
+
+          // ===================================================================
+          // TAB CONTENT
+          // ===================================================================
+
+          if (_selectedTab == 0)
+            _buildOverview(
+              context,
+              bike,
+            )
+          else
+            _buildReports(context),
+        ],
+      ),
     );
   }
 
-  // =========================================================================
+  // ===========================================================================
   // OVERVIEW TAB
-  // =========================================================================
+  // ===========================================================================
 
-  Widget _buildOverview(BuildContext context) {
+  Widget _buildOverview(
+      BuildContext context,
+      Bike bike,
+      ) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,22 +642,42 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
 
         const SizedBox(height: 4),
 
-        const _InformationRow(
+        _InformationRow(
           label: 'Current station',
-          value: 'Gurney Paragon',
+          value: bike.stationName ?? 'Not assigned',
+        ),
+
+        _InformationRow(
+          label: 'Battery',
+          value: bike.batteryPercent != null
+              ? '${bike.batteryPercent}%'
+              : 'Not recorded',
+        ),
+
+        _InformationRow(
+          label: 'Last service',
+          value: bike.lastServiceAt != null
+              ? _formatDate(
+            bike.lastServiceAt!,
+          )
+              : 'Not recorded',
         ),
 
         const _InformationRow(
           label: 'Purchase date',
-          value: '18 Jan 2025',
+          value: 'Not recorded',
         ),
 
         const _InformationRow(
           label: 'Next service',
-          value: '02 Aug 2026',
+          value: 'Not recorded',
         ),
 
-        const SizedBox(height: 64),
+        const SizedBox(height: 32),
+
+        // =====================================================================
+        // RECENT ACTIVITY
+        // =====================================================================
 
         Text(
           'Recent activity',
@@ -405,38 +688,28 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
 
         const SizedBox(height: 10),
 
-        Row(
-          children: [
-            const Icon(
-              Icons.circle,
-              size: 11,
-              color: Color(0xFF19C997),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: scheme.outline,
             ),
-
-            const SizedBox(width: 10),
-
-            Expanded(
-              child: Text(
-                'Returned to Central Park Station',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-
-            Text(
-              '09:52',
-              style: theme.textTheme.labelSmall,
-            ),
-          ],
+          ),
+          child: Text(
+            'No activity loaded yet.',
+            style: theme.textTheme.bodySmall,
+          ),
         ),
       ],
     );
   }
 
-  // =========================================================================
+  // ===========================================================================
   // REPORT TAB
-  // =========================================================================
+  // ===========================================================================
 
   Widget _buildReports(BuildContext context) {
     final theme = Theme.of(context);
@@ -453,7 +726,9 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
           Icon(
             Icons.report_outlined,
             size: 48,
-            color: scheme.onSurface.withValues(alpha: 0.5),
+            color: scheme.onSurface.withValues(
+              alpha: 0.5,
+            ),
           ),
 
           const SizedBox(height: 10),
@@ -471,7 +746,9 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
             'Reports related to this bike will appear here.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.6),
+              color: scheme.onSurface.withValues(
+                alpha: 0.6,
+              ),
             ),
           ),
         ],
@@ -569,9 +846,13 @@ class _PerformanceCard extends StatelessWidget {
             label,
             style: theme.textTheme.labelSmall,
           ),
+
           const SizedBox(height: 5),
+
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
             ),
@@ -620,11 +901,14 @@ class _BikeDetailsTab extends StatelessWidget {
         ),
         child: Text(
           label,
+          textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: selected
                 ? scheme.onSurface
-                : scheme.onSurface.withValues(alpha: 0.65),
+                : scheme.onSurface.withValues(
+              alpha: 0.65,
+            ),
           ),
         ),
       ),
@@ -657,7 +941,9 @@ class _InformationRow extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: scheme.outline.withValues(alpha: 0.8),
+            color: scheme.outline.withValues(
+              alpha: 0.8,
+            ),
           ),
         ),
       ),
@@ -672,10 +958,13 @@ class _InformationRow extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          Text(
-            value,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
