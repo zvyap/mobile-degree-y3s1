@@ -1,8 +1,8 @@
 import 'package:bike_renting_app/bike_station/shared_map.dart';
 import 'package:bike_renting_app/bike_station/station_map.dart';
 import 'package:bike_renting_app/features/admin/admin_management_page.dart';
-import 'package:bike_renting_app/features/bike/bike_details.dart';
-import 'package:bike_renting_app/features/bike/bike_management_page.dart';
+import 'package:bike_renting_app/features/bike/pages/bike_details.dart';
+import 'package:bike_renting_app/features/bike/pages/bike_management_page.dart';
 import 'package:bike_renting_app/features/home/home_page.dart';
 import 'package:bike_renting_app/features/user/profile_controller.dart';
 import 'package:bike_renting_app/features/user/profile_page.dart';
@@ -15,15 +15,15 @@ import 'package:bike_renting_app/features/settings/settings_page.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:flutter/material.dart';
-import 'package:bike_renting_app/features/bike/add_bike.dart';
-import 'package:bike_renting_app/features/bike/bike_report.dart';
-import 'package:bike_renting_app/features/bike/edit_bike.dart';
-import 'package:bike_renting_app/features/bike/transfer_bike.dart';
-import 'package:bike_renting_app/features/bike/bike_service.dart';
-import 'package:bike_renting_app/features/bike/bike_report_detail_page.dart';
-import 'package:bike_renting_app/features/bike/pending_report_page.dart';
-import 'package:bike_renting_app/features/bike/report_form.dart';
-import 'package:bike_renting_app/features/bike/pending_report_detail.dart';
+import 'package:bike_renting_app/features/bike/pages/add_bike.dart';
+import 'package:bike_renting_app/features/bike/pages/bike_report.dart';
+import 'package:bike_renting_app/features/bike/pages/edit_bike.dart';
+import 'package:bike_renting_app/features/bike/pages/transfer_bike.dart';
+import 'package:bike_renting_app/features/bike/pages/bike_service.dart';
+import 'package:bike_renting_app/features/bike/pages/bike_report_detail_page.dart';
+import 'package:bike_renting_app/features/bike/pages/pending_report_page.dart';
+import 'package:bike_renting_app/features/bike/pages/report_form.dart';
+import 'package:bike_renting_app/features/bike/pages/pending_report_detail.dart';
 class AppNavigator extends StatelessWidget {
   const AppNavigator({
     super.key,

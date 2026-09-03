@@ -1,5 +1,7 @@
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
+import '../models/bike.dart';
+import '../repositories/bike_repository.dart';
 
 class BikeManagementPage extends StatelessWidget {
   const BikeManagementPage({
