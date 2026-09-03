@@ -22,6 +22,8 @@ class _BikeCheckStage extends StatelessWidget {
                 subtitle: context.l10n.bikeReadyDescription,
               ),
               const SizedBox(height: 12),
+              _ReservationTimerBadge(controller: controller),
+              const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(

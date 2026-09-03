@@ -138,6 +138,63 @@ class _DepositSummaryTile extends StatelessWidget {
   }
 }
 
+class _ReservationTimerBadge extends StatelessWidget {
+  const _ReservationTimerBadge({required this.controller});
+
+  final RentingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final remainingSeconds = controller.bikeReadyRemainingSeconds;
+    if (remainingSeconds == null) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final minutes = remainingSeconds ~/ 60;
+    final seconds = remainingSeconds % 60;
+    final formattedTime =
+        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final isExpiringSoon = remainingSeconds <= 60;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isExpiringSoon
+            ? scheme.errorContainer.withValues(alpha: 0.35)
+            : scheme.secondaryContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isExpiringSoon
+              ? scheme.error.withValues(alpha: 0.5)
+              : scheme.secondary.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.timer_outlined,
+            size: 18,
+            color: isExpiringSoon ? scheme.error : scheme.secondary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Reservation expires in $formattedTime',
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isExpiringSoon
+                    ? scheme.onErrorContainer
+                    : scheme.onSecondaryContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PriceRow extends StatelessWidget {
   const _PriceRow({
     required this.label,
