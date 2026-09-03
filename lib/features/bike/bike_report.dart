@@ -3,14 +3,15 @@ import 'package:flutter/material.dart';
 class BikeReportPage extends StatelessWidget {
   const BikeReportPage({
     super.key,
-    required this.bikeId,
     required this.onOpenReportDetail,
     required this.onOpenPendingReports,
+    required this.onAddReport,
   });
 
-  final String bikeId;
+
   final ValueChanged<String> onOpenReportDetail;
   final VoidCallback onOpenPendingReports;
+  final VoidCallback onAddReport;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -225,9 +226,8 @@ class BikeReportPage extends StatelessWidget {
           right: 22,
           bottom: 24,
           child: FloatingActionButton(
-            onPressed: () {
-              // Create report later
-            },
+            onPressed:onAddReport
+            ,
             child: const Icon(
               Icons.add_rounded,
               size: 34,

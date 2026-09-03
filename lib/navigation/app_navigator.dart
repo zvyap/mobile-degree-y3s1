@@ -22,6 +22,7 @@ import 'package:bike_renting_app/features/bike/transfer_bike.dart';
 import 'package:bike_renting_app/features/bike/bike_service.dart';
 import 'package:bike_renting_app/features/bike/bike_report_detail_page.dart';
 import 'package:bike_renting_app/features/bike/pending_report_page.dart';
+import 'package:bike_renting_app/features/bike/report_form.dart';
 class AppNavigator extends StatelessWidget {
   const AppNavigator({
     super.key,
@@ -149,7 +150,7 @@ class AppNavigator extends StatelessWidget {
         },
         onMakeReport: () {
           navigatorKey.currentState?.pushNamed(
-            AppPage.bikeReport.routeName,
+            AppPage.reportForm.routeName,
             arguments: arguments,
           );
         },
@@ -164,7 +165,6 @@ class AppNavigator extends StatelessWidget {
         bikeId: arguments as String,
       ),
       AppPage.bikeReport => BikeReportPage(
-        bikeId: arguments as String,
         onOpenReportDetail: (reportId) {
           navigatorKey.currentState?.pushNamed(
             AppPage.bikeReportDetail.routeName,
@@ -176,6 +176,15 @@ class AppNavigator extends StatelessWidget {
             AppPage.pendingBikeReports.routeName,
           );
         },
+        onAddReport: () {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.reportForm.routeName,
+            arguments: arguments,
+          );
+        },
+      ),
+      AppPage.reportForm => ReportFormPage(
+        bikeId: arguments as String?,
       ),
       AppPage.pendingBikeReports => const PendingBikeReportsPage(
 
@@ -191,15 +200,19 @@ class AppNavigator extends StatelessWidget {
             arguments: bikeId,
           );
         },
-        onOpenBikeReports: (bikeId) {
+        onOpenReportList: () {
           navigatorKey.currentState?.pushNamed(
             AppPage.bikeReport.routeName,
+          );
+        },
+        onMakeReport: (bikeId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.reportForm.routeName,
             arguments: bikeId,
           );
         },
-
-
       ),
+
       AppPage.settings => SettingsPage(onToggleTheme: onToggleTheme),
     };
   }

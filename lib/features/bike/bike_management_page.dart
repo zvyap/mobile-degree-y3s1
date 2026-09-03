@@ -6,7 +6,8 @@ class BikeManagementPage extends StatelessWidget {
     super.key,
     required this.onAddBike,
     required this.onOpenBikeDetails,
-    required this.onOpenBikeReports,
+    required this.onOpenReportList,
+    required this.onMakeReport
   });
 
   static const Color _cardColor = Color(0xFF1D2939);
@@ -14,9 +15,10 @@ class BikeManagementPage extends StatelessWidget {
   static const Color _borderColor = Color(0xFFD2DCE6);
 
   final ValueChanged<String> onOpenBikeDetails;
-  final ValueChanged<String> onOpenBikeReports;
-
+  final VoidCallback onOpenReportList;
   final VoidCallback onAddBike;
+  // Add this
+  final ValueChanged<String> onMakeReport;
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -35,7 +37,13 @@ class BikeManagementPage extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.80),
             fontSize: 16,
             ),
-            ),FilledButton.icon(onPressed: onAddBike, icon: const Icon(Icons.add_rounded) ,label: const Text("Add Bike"))
+            ),FilledButton.icon(onPressed: onAddBike, icon: const Icon(Icons.add_rounded) ,label: const Text("Add Bike")),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: onOpenReportList,
+                icon: const Icon(Icons.report_outlined),
+                label: const Text('Reports'),
+              ),
             ],
             ),
 
@@ -104,13 +112,14 @@ class BikeManagementPage extends StatelessWidget {
                  onOpenBikeDetails('BR-1028');
                },
 
-               onViewReports: () {
+               onMakeReport: () {
                  ScaffoldMessenger.of(context).showSnackBar(
                    const SnackBar(
                      content: Text('Opening reports'),
                    ),
                  );
-                 onOpenBikeReports('BR-1028');
+
+                 onMakeReport('BR-1028');
                },
             ),
 
@@ -131,7 +140,7 @@ class BikeManagementPage extends StatelessWidget {
                 );
               },
 
-              onViewReports: () {
+              onMakeReport: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Opening reports'),
@@ -157,7 +166,7 @@ class BikeManagementPage extends StatelessWidget {
                 );
               },
 
-              onViewReports: () {
+              onMakeReport: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Opening reports'),
@@ -184,13 +193,13 @@ class BikeManagementPage extends StatelessWidget {
                 onOpenBikeDetails('BR-1107');
               },
 
-              onViewReports: () {
+              onMakeReport: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Opening reports'),
                   ),
                 );
-                onOpenBikeReports('BR-1107');
+                onMakeReport('BR-1107');
               },
             ),
           ],
@@ -356,7 +365,8 @@ class _BikeCard extends StatelessWidget {
     required this.location,
     required this.description,
     required this.onViewDetails,
-    required this.onViewReports,
+    required this.onMakeReport,
+
   });
 
   final String bikeId;
@@ -367,7 +377,7 @@ class _BikeCard extends StatelessWidget {
 
   //callnack
   final VoidCallback onViewDetails;
-  final VoidCallback onViewReports;
+  final VoidCallback onMakeReport;
 
   @override
   Widget build(BuildContext context) {
@@ -471,8 +481,8 @@ class _BikeCard extends StatelessWidget {
                      onSelected: (action) {
                        if (action == BikeMenuAction.details) {
                          onViewDetails();
-                       } else if (action == BikeMenuAction.reports) {
-                         onViewReports();
+                       } else if (action == BikeMenuAction.makeReport) {
+                          onMakeReport();
                        }
                      },
 
@@ -489,7 +499,7 @@ class _BikeCard extends StatelessWidget {
                        ),
 
                        PopupMenuItem(
-                         value: BikeMenuAction.reports,
+                         value: BikeMenuAction.makeReport,
                          child: Row(
                            children: [
                              Icon(Icons.report_outlined),
@@ -626,5 +636,5 @@ enum BikeStatus {
 
 enum BikeMenuAction{
   details,
-  reports,
+  makeReport,
 }
