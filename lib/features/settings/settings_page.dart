@@ -1,5 +1,6 @@
-import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/data/repositories/auth_repository.dart';
+import 'package:bike_renting_app/features/legal/legal.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -57,6 +58,25 @@ class SettingsPage extends StatelessWidget {
           title: Text(context.l10n.rideNotifications),
           subtitle: Text(context.l10n.rideNotificationsDescription),
           trailing: const Icon(Icons.chevron_right_rounded),
+        ),
+        const Divider(),
+        ListTile(
+          key: const ValueKey<String>('settings-terms-of-service'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+          leading: const Icon(Icons.description_outlined),
+          title: const Text('Terms of Service'),
+          subtitle: const Text('Rental rules, safety policies, and liabilities'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => TermsOfServicePage.open(context),
+        ),
+        ListTile(
+          key: const ValueKey<String>('settings-privacy-policy'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+          leading: const Icon(Icons.privacy_tip_outlined),
+          title: const Text('Privacy Policy'),
+          subtitle: const Text('Data protection, GPS location, and privacy rights'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => PrivacyPolicyPage.open(context),
         ),
 
         const SizedBox(height: 32),

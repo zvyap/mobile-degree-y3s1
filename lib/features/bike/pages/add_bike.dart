@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/bike_qr_modal.dart';
 
 class AddBike extends StatefulWidget {
   const AddBike({super.key});
@@ -591,8 +592,11 @@ class _AddBikeState extends State<AddBike> {
 
                   IconButton(
                     onPressed: () {
-                      showSnackBar(
-                        'Full screen QR will be implemented later',
+                      final code = _bikeIdController.text.trim();
+                      BikeQrModal.show(
+                        context,
+                        bikeCode: code.isEmpty ? 'BR-NEW' : code,
+                        qrToken: code.isEmpty ? 'BR-NEW' : code,
                       );
                     },
                     icon: const Icon(
@@ -659,8 +663,11 @@ class _AddBikeState extends State<AddBike> {
                 alignment: Alignment.centerRight,
                 child: IconButton(
                   onPressed: () {
-                    showSnackBar(
-                      'QR download will be implemented later',
+                    final code = _bikeIdController.text.trim();
+                    BikeQrModal.show(
+                      context,
+                      bikeCode: code.isEmpty ? 'BR-NEW' : code,
+                      qrToken: code.isEmpty ? 'BR-NEW' : code,
                     );
                   },
                   icon: const Icon(

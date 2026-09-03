@@ -198,7 +198,7 @@ class _PendingBikeReportsPageState extends State<PendingBikeReportsPage> {
             severity: 'High',
 
             onOpenDetail: () {
-                widget.onOpenReportDetail!('RPT-1000');
+                widget.onOpenReportDetail('RPT-1000');
             },
 
             onDecline: _declineReport,

@@ -1,9 +1,101 @@
 part of '../renting_flow_page.dart';
 
-class _ScanStage extends StatelessWidget {
+class _ScanStage extends StatefulWidget {
   const _ScanStage({required this.controller});
 
   final RentingController controller;
+
+  @override
+  State<_ScanStage> createState() => _ScanStageState();
+}
+
+class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
+  MobileScannerController? _scannerController;
+  bool _isProcessing = false;
+  bool _torchOn = false;
+  String? _lastScannedValue;
+  DateTime? _lastScanTime;
+
+  bool get _isTest => Platform.environment.containsKey('FLUTTER_TEST');
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    if (!_isTest) {
+      _initScanner();
+    }
+  }
+
+  void _initScanner() {
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.normal,
+      detectionTimeoutMs: 250,
+      formats: const [BarcodeFormat.qrCode],
+      autoZoom: true,
+      returnImage: false,
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_isTest || _scannerController == null) return;
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_scannerController?.start());
+    } else if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      unawaited(_scannerController?.stop());
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _scannerController?.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_isProcessing || widget.controller.isBusy) return;
+    final now = DateTime.now();
+
+    for (final barcode in capture.barcodes) {
+      final raw = barcode.rawValue?.trim();
+      if (raw == null || raw.isEmpty) continue;
+
+      if (raw == _lastScannedValue &&
+          _lastScanTime != null &&
+          now.difference(_lastScanTime!).inMilliseconds < 2000) {
+        continue;
+      }
+
+      _lastScannedValue = raw;
+      _lastScanTime = now;
+      _isProcessing = true;
+
+      widget.controller.scanBike(raw).whenComplete(() {
+        if (mounted) {
+          setState(() => _isProcessing = false);
+        }
+      });
+      break;
+    }
+  }
+
+  Future<void> _toggleTorch() async {
+    if (_scannerController == null) return;
+    try {
+      await _scannerController!.toggleTorch();
+      setState(() => _torchOn = !_torchOn);
+    } catch (_) {}
+  }
+
+  Future<void> _switchCamera() async {
+    if (_scannerController == null) return;
+    try {
+      await _scannerController!.switchCamera();
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,106 +106,30 @@ class _ScanStage extends StatelessWidget {
       children: [
         AspectRatio(
           aspectRatio: 0.82,
-          child: Semantics(
-            button: true,
-            label: context.l10n.cameraPreviewSemantics,
-            child: GestureDetector(
-              key: const ValueKey<String>('rent-camera-preview'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _handleCameraTap(context, controller),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      const Color(0xFF111827),
-                      scheme.primary.withValues(alpha: 0.30),
-                      const Color(0xFF071018),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: _isTest || _scannerController == null
+                ? _buildFallbackPreview(context)
+                : Stack(
+                    children: [
+                      Positioned.fill(
+                        child: MobileScanner(
+                          controller: _scannerController,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error) {
+                            return _buildFallbackPreview(context);
+                          },
+                          onDetect: _onDetect,
+                        ),
+                      ),
+                      _buildOverlay(context),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: 14,
-                      left: 14,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.46),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.camera_alt_rounded,
-                              color: Colors.white,
-                              size: 17,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              context.l10n.cameraReady,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: SizedBox.square(
-                        dimension: 252,
-                        child: Stack(
-                          children: [
-                            for (final alignment in const [
-                              Alignment.topLeft,
-                              Alignment.topRight,
-                              Alignment.bottomLeft,
-                              Alignment.bottomRight,
-                            ])
-                              _ScannerCorner(alignment: alignment),
-                            Center(
-                              child: Icon(
-                                Icons.qr_code_2_rounded,
-                                size: 92,
-                                color: Colors.white.withValues(alpha: 0.34),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Text(
-                          context.l10n.pointCamera,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ),
         ),
-        if (controller.error != null) ...[
+        if (widget.controller.error != null) ...[
           const SizedBox(height: 10),
-          _ErrorPanel(message: _rentalError(context, controller)),
+          _ErrorPanel(message: _rentalError(context, widget.controller)),
         ],
         const SizedBox(height: 8),
         Text(
@@ -126,7 +142,7 @@ class _ScanStage extends StatelessWidget {
         const SizedBox(height: 12),
         OutlinedButton.icon(
           key: const ValueKey<String>('rent-choose-bike-button'),
-          onPressed: () => _handleCameraTap(context, controller),
+          onPressed: () => _handleCameraTap(context, widget.controller),
           icon: const Icon(Icons.touch_app_rounded),
           label: const Text('Choose Bike or Enter Code'),
           style: OutlinedButton.styleFrom(
@@ -134,6 +150,248 @@ class _ScanStage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildOverlay(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Stack(
+      children: [
+        // Camera status pill top left
+        Positioned(
+          top: 14,
+          left: 14,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.camera_alt_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _isProcessing ? 'Scanning...' : context.l10n.cameraReady,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Controls top right (Torch & Camera Switch)
+        Positioned(
+          top: 10,
+          right: 10,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    _torchOn
+                        ? Icons.flash_on_rounded
+                        : Icons.flash_off_rounded,
+                    color: _torchOn ? Colors.amber : Colors.white,
+                    size: 20,
+                  ),
+                  tooltip: 'Flashlight',
+                  onPressed: _toggleTorch,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.cameraswitch_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  tooltip: 'Switch camera',
+                  onPressed: _switchCamera,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Viewfinder corners in the center
+        Center(
+          child: SizedBox.square(
+            dimension: 252,
+            child: Stack(
+              children: [
+                for (final alignment in const [
+                  Alignment.topLeft,
+                  Alignment.topRight,
+                  Alignment.bottomLeft,
+                  Alignment.bottomRight,
+                ])
+                  _ScannerCorner(alignment: alignment),
+                if (_isProcessing)
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+
+        // Bottom guide text
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                context.l10n.pointCamera,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFallbackPreview(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Semantics(
+      button: true,
+      label: context.l10n.cameraPreviewSemantics,
+      child: GestureDetector(
+        key: const ValueKey<String>('rent-camera-preview'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _handleCameraTap(context, widget.controller),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF111827),
+                scheme.primary.withValues(alpha: 0.30),
+                const Color(0xFF071018),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: 14,
+                left: 14,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.46),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.camera_alt_rounded,
+                        color: Colors.white,
+                        size: 17,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        context.l10n.cameraReady,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Center(
+                child: SizedBox.square(
+                  dimension: 252,
+                  child: Stack(
+                    children: [
+                      for (final alignment in const [
+                        Alignment.topLeft,
+                        Alignment.topRight,
+                        Alignment.bottomLeft,
+                        Alignment.bottomRight,
+                      ])
+                        _ScannerCorner(alignment: alignment),
+                      Center(
+                        child: Icon(
+                          Icons.qr_code_2_rounded,
+                          size: 92,
+                          color: Colors.white.withValues(alpha: 0.34),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    context.l10n.pointCamera,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

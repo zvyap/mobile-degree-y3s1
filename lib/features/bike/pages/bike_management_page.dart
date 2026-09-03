@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../models/bike.dart';
 import '../repositories/bike_repository.dart';
+import '../widgets/bike_qr_modal.dart';
 
 class BikeManagementPage extends StatefulWidget {
   const BikeManagementPage({
@@ -257,6 +258,16 @@ class _BikeManagementPageState extends State<BikeManagementPage> {
       onMakeReport: () {
         widget.onMakeReport(
           bike.id,
+        );
+      },
+
+      onShowQr: () {
+        BikeQrModal.show(
+          context,
+          bikeCode: bike.code,
+          qrToken: bike.qrToken,
+          stationName: bike.stationName,
+          status: bike.status,
         );
       },
     );
@@ -587,6 +598,7 @@ class _BikeCard extends StatelessWidget {
     required this.description,
     required this.onViewDetails,
     required this.onMakeReport,
+    required this.onShowQr,
   });
 
   final String bikeId;
@@ -597,6 +609,7 @@ class _BikeCard extends StatelessWidget {
 
   final VoidCallback onViewDetails;
   final VoidCallback onMakeReport;
+  final VoidCallback onShowQr;
 
   @override
   Widget build(BuildContext context) {
@@ -694,6 +707,16 @@ class _BikeCard extends StatelessWidget {
                       ),
                     ),
 
+                    IconButton(
+                      icon: const Icon(
+                        Icons.qr_code_2_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      tooltip: 'View QR code',
+                      onPressed: onShowQr,
+                    ),
+
                     PopupMenuButton<BikeMenuAction>(
                       icon: const Icon(
                         Icons.more_horiz_rounded,
@@ -709,6 +732,10 @@ class _BikeCard extends StatelessWidget {
                           case BikeMenuAction.makeReport:
                             onMakeReport();
                             break;
+
+                          case BikeMenuAction.showQr:
+                            onShowQr();
+                            break;
                         }
                       },
                       itemBuilder: (context) => const [
@@ -721,6 +748,19 @@ class _BikeCard extends StatelessWidget {
                               ),
                               SizedBox(width: 10),
                               Text('Bike details'),
+                            ],
+                          ),
+                        ),
+
+                        PopupMenuItem<BikeMenuAction>(
+                          value: BikeMenuAction.showQr,
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.qr_code_2_rounded,
+                              ),
+                              SizedBox(width: 10),
+                              Text('QR code'),
                             ],
                           ),
                         ),
@@ -866,4 +906,5 @@ enum BikeStatus {
 enum BikeMenuAction {
   details,
   makeReport,
+  showQr,
 }

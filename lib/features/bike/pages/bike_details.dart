@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/bike.dart';
 import '../repositories/bike_repository.dart';
+import '../widgets/bike_qr_modal.dart';
 
 enum BikeDetailMenuAction {
   makeReport,
@@ -449,29 +450,64 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
                       // QR
                       // -------------------------------------------------------
 
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'QR: ${bike.qrToken}',
-                              style:
-                              theme.textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
+                      InkWell(
+                        key: const ValueKey('bike-details-qr-button'),
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () {
+                          BikeQrModal.show(
+                            context,
+                            bikeCode: bike.code,
+                            qrToken: bike.qrToken,
+                            stationName: bike.stationName,
+                            status: bike.status,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 2,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'QR: ${bike.qrToken}',
+                                      style:
+                                          theme.textTheme.labelSmall?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Tap to view / export QR code',
+                                      style:
+                                          theme.textTheme.labelSmall?.copyWith(
+                                        color: scheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(
+                                  Icons.qr_code_2_rounded,
+                                  color: Colors.black,
+                                  size: 36,
+                                ),
+                              ),
+                            ],
                           ),
-
-                          Container(
-                            width: 42,
-                            height: 42,
-                            color: Colors.white,
-                            child: const Icon(
-                              Icons.qr_code_2_rounded,
-                              color: Colors.black,
-                              size: 38,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
