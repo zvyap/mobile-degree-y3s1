@@ -89,13 +89,21 @@ Future<void> _handleAuthorize(
   RentingController controller,
 ) async {
   if (controller.selectedPaymentMethod?.id == 'paypal') {
-    final approvalUrl = await controller.createPayPalOrder();
+    // Automatically detect and use client language (e.g. Chinese -> zh-CN, English -> en-US)
+    final clientLocale = PayPalLocaleService.resolveClientLocale(context);
+
+    final approvalUrl = await controller.createPayPalOrder(
+      locale: clientLocale.bcp47,
+    );
     if (!context.mounted || approvalUrl == null) return;
 
     final result = await Navigator.of(context, rootNavigator: true)
         .push<PayPalCheckoutResult>(
           MaterialPageRoute(
-            builder: (context) => PayPalCheckoutPage(approvalUrl: approvalUrl),
+            builder: (context) => PayPalCheckoutPage(
+              approvalUrl: approvalUrl,
+              initialLocale: clientLocale,
+            ),
           ),
         );
     if (!context.mounted) return;

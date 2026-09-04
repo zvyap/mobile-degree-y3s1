@@ -1,3 +1,4 @@
+import 'package:bike_renting_app/data/paypal/paypal_locale.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/constants.dart';
 import 'package:flutter/foundation.dart';
@@ -24,9 +25,16 @@ PayPalCheckoutResult? paypalCheckoutResultForUrl(
 }
 
 class PayPalCheckoutPage extends StatefulWidget {
-  const PayPalCheckoutPage({super.key, required this.approvalUrl});
+  const PayPalCheckoutPage({
+    super.key,
+    required this.approvalUrl,
+    this.initialLocale,
+    @visibleForTesting this.customWebView,
+  });
 
   final Uri approvalUrl;
+  final PayPalLocale? initialLocale;
+  final Widget? customWebView;
 
   @override
   State<PayPalCheckoutPage> createState() => _PayPalCheckoutPageState();
@@ -34,37 +42,49 @@ class PayPalCheckoutPage extends StatefulWidget {
 
 class _PayPalCheckoutPageState extends State<PayPalCheckoutPage> {
   late final WebViewController _webViewController;
+  late PayPalLocale _currentLocale;
   int _progress = 0;
   bool _completed = false;
 
   @override
   void initState() {
     super.initState();
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.transparent)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (progress) {
-            if (mounted) setState(() => _progress = progress);
-          },
-          onUrlChange: (change) => _checkUrl(change.url),
-          onPageStarted: (url) => _checkUrl(url),
-          onNavigationRequest: (request) {
-            final url = Uri.tryParse(request.url);
-            if (url == null) return NavigationDecision.prevent;
-            final result = paypalCheckoutResultForUrl(url);
-            if (result != null) {
-              _finish(result);
-              return NavigationDecision.prevent;
-            }
-            return url.scheme == 'https'
-                ? NavigationDecision.navigate
-                : NavigationDecision.prevent;
-          },
-        ),
-      )
-      ..loadRequest(widget.approvalUrl);
+    _currentLocale =
+        widget.initialLocale ?? PayPalLocaleService.resolveClientLocale();
+    final localizedUrl = PayPalLocaleService.applyLocaleToUrl(
+      widget.approvalUrl,
+      _currentLocale.webCode,
+    );
+    if (widget.customWebView == null) {
+      _webViewController = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(Colors.transparent)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onProgress: (progress) {
+              if (mounted) setState(() => _progress = progress);
+            },
+            onUrlChange: (change) => _checkUrl(change.url),
+            onPageStarted: (url) => _checkUrl(url),
+            onNavigationRequest: (request) {
+              final url = Uri.tryParse(request.url);
+              if (url == null) return NavigationDecision.prevent;
+              final result = paypalCheckoutResultForUrl(url);
+              if (result != null) {
+                _finish(result);
+                return NavigationDecision.prevent;
+              }
+              return url.scheme == 'https'
+                  ? NavigationDecision.navigate
+                  : NavigationDecision.prevent;
+            },
+          ),
+        )
+        ..loadRequest(
+          localizedUrl,
+          headers: PayPalLocaleService.buildHeaders(_currentLocale.bcp47),
+        );
+    }
   }
 
   void _checkUrl(String? urlString) {
@@ -124,7 +144,8 @@ class _PayPalCheckoutPageState extends State<PayPalCheckoutPage> {
             child: Semantics(
               label: context.l10n.paypalCheckoutSemantics,
               container: true,
-              child: WebViewWidget(controller: _webViewController),
+              child: widget.customWebView ??
+                  WebViewWidget(controller: _webViewController),
             ),
           ),
         ),

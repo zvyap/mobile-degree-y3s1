@@ -58,7 +58,10 @@ class PayPalCaptureResult {
 }
 
 abstract interface class PayPalPaymentGateway {
-  Future<PayPalAuthorizationOrder> createAuthorizationOrder(double amount);
+  Future<PayPalAuthorizationOrder> createAuthorizationOrder(
+    double amount, {
+    String? locale,
+  });
 
   Future<PayPalAuthorizationResult> authorizeOrder(String orderId);
 
@@ -99,8 +102,9 @@ class PayPalGateway implements PayPalPaymentGateway {
 
   @override
   Future<PayPalAuthorizationOrder> createAuthorizationOrder(
-    double amount,
-  ) async {
+    double amount, {
+    String? locale,
+  }) async {
     _validateConfiguration();
     final token = await _getAccessToken();
     final requestId = _pendingCreateRequestId ??= _newRequestId('order');
@@ -122,7 +126,7 @@ class PayPalGateway implements PayPalPaymentGateway {
           ],
           'application_context': {
             'brand_name': 'BikeRent',
-            'locale': 'en-MY',
+            'locale': locale ?? 'en-MY',
             'landing_page': 'NO_PREFERENCE',
             'shipping_preference': 'NO_SHIPPING',
             'user_action': 'PAY_NOW',

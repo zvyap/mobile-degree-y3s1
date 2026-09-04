@@ -70,6 +70,7 @@ class RentingController extends ChangeNotifier {
   final PayPalPaymentGateway _paypalGateway;
   final bool _ownsPayPalGateway;
   PayPalAuthorizationOrder? _paypalOrder;
+  String? _paypalOrderLocale;
   String? _paypalAuthorizationId;
 
   String? get paypalAuthorizationId => _paypalAuthorizationId;
@@ -494,14 +495,21 @@ class RentingController extends ChangeNotifier {
     }
   }
 
-  Future<Uri?> createPayPalOrder() async {
+  Future<Uri?> createPayPalOrder({String? locale}) async {
     if (isBusy || _session?.rental.status != RentalDatabaseStatus.reserved) {
       return null;
     }
-    if (_paypalOrder != null) return _paypalOrder!.approvalUrl;
+    if (_paypalOrder != null && _paypalOrderLocale == locale) {
+      return _paypalOrder!.approvalUrl;
+    }
+    _paypalOrder = null;
+    _paypalOrderLocale = locale;
     _beginBusy();
     try {
-      _paypalOrder = await _paypalGateway.createAuthorizationOrder(holdAmount);
+      _paypalOrder = await _paypalGateway.createAuthorizationOrder(
+        holdAmount,
+        locale: locale,
+      );
       isBusy = false;
       _clearError();
       notifyListeners();
@@ -539,6 +547,7 @@ class RentingController extends ChangeNotifier {
       _paypalAuthorizationId = 'AUTH-${order.orderId}';
     } finally {
       _paypalOrder = null;
+      _paypalOrderLocale = null;
       _stopBikeReadyTimer();
       authorization = PaymentAuthorization(
         amount: holdAmount,
@@ -554,6 +563,7 @@ class RentingController extends ChangeNotifier {
   void cancelPayPalCheckout() {
     if (isBusy) return;
     _paypalOrder = null;
+    _paypalOrderLocale = null;
     error = RentalError.paymentCancelled;
     notifyListeners();
   }
@@ -1410,6 +1420,7 @@ class RentingController extends ChangeNotifier {
     stationDistanceMeters = null;
     _arrivalPosition = null;
     _paypalOrder = null;
+    _paypalOrderLocale = null;
     _paypalAuthorizationId = null;
     _scannedBikeCode = null;
     riderLatLng = null;
