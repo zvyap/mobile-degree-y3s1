@@ -1,451 +1,810 @@
 import 'package:flutter/material.dart';
 
+import '../models/bike_report.dart';
+import '../repositories/bike_report_repository.dart';
+
 class PendingBikeReportsPage extends StatefulWidget {
   const PendingBikeReportsPage({
     super.key,
     required this.onOpenReportDetail,
   });
 
-  // Optional for now.
-  // Later you can pass the report ID to the detail page.
-  final ValueChanged<String> onOpenReportDetail;
+  final ValueChanged<int> onOpenReportDetail;
 
   @override
   State<PendingBikeReportsPage> createState() =>
       _PendingBikeReportsPageState();
 }
 
-class _PendingBikeReportsPageState extends State<PendingBikeReportsPage> {
-  bool _showReport = true;
+class _PendingBikeReportsPageState
+    extends State<PendingBikeReportsPage> {
+  final BikeReportRepository _reportRepository =
+  BikeReportRepository();
 
-  void showSnackBar(String message) {
-    final messenger = ScaffoldMessenger.of(context);
+  final TextEditingController _searchController =
+  TextEditingController();
 
-    messenger.clearSnackBars();
+  List<BikeReport> _reports = [];
 
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
-    );
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _loadReports();
+
+    _searchController.addListener(_onSearchChanged);
   }
 
-  void _approveReport() {
-    setState(() {
-      _showReport = false;
-    });
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
 
-    // TODO: Update report status in database later.
-
-    showSnackBar('Report approved');
+    super.dispose();
   }
 
-  void _declineReport() {
-    setState(() {
-      _showReport = false;
-    });
+  // ===========================================================================
+  // SEARCH
+  // ===========================================================================
 
-    // TODO: Update report status in database later.
-
-    showSnackBar('Report declined');
+  void _onSearchChanged() {
+    setState(() {});
   }
+
+  // ===========================================================================
+  // LOAD PENDING REPORTS
+  // ===========================================================================
+
+  Future<void> _loadReports() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final reports =
+      await _reportRepository.getPendingReports();
+
+      if (!mounted) return;
+
+      setState(() {
+        _reports = reports;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  // ===========================================================================
+  // FILTERED REPORTS
+  // ===========================================================================
+
+  List<BikeReport> get _filteredReports {
+    final query =
+    _searchController.text.trim().toLowerCase();
+
+    if (query.isEmpty) {
+      return _reports;
+    }
+
+    return _reports.where((report) {
+      final reportId =
+      _formatReportId(report.id).toLowerCase();
+
+      final bikeCode =
+          report.bikeCode?.toLowerCase() ?? '';
+
+      final category =
+      _categoryLabel(report.category)
+          .toLowerCase();
+
+      final description =
+      report.description.toLowerCase();
+
+      final station =
+          report.stationName?.toLowerCase() ?? '';
+
+      return reportId.contains(query) ||
+          bikeCode.contains(query) ||
+          category.contains(query) ||
+          description.contains(query) ||
+          station.contains(query);
+    }).toList();
+  }
+
+  // ===========================================================================
+  // HELPERS
+  // ===========================================================================
+
+  String _formatReportId(int id) {
+    return 'RPT-${id.toString().padLeft(4, '0')}';
+  }
+
+  String _categoryLabel(String category) {
+    switch (category) {
+      case 'brakes':
+        return 'Brake System';
+
+      case 'tyres':
+        return 'Tyres';
+
+      case 'chain_gears':
+        return 'Chain & Gears';
+
+      case 'seat_frame':
+        return 'Seat & Frame';
+
+      case 'bell_lights':
+        return 'Bell & Lights';
+
+      case 'qr_lock':
+        return 'QR / Lock';
+
+      case 'other':
+        return 'Other';
+
+      default:
+        return category;
+    }
+  }
+
+  String _formatDateTime(DateTime date) {
+    final local = date.toLocal();
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    final hour =
+    local.hour.toString().padLeft(2, '0');
+
+    final minute =
+    local.minute.toString().padLeft(2, '0');
+
+    return '${local.day} '
+        '${months[local.month - 1]} '
+        '${local.year} • '
+        '$hour:$minute';
+  }
+
+  // ===========================================================================
+  // BUILD
+  // ===========================================================================
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 32),
-      children: [
-        // ============================================================
-        // TITLE
-        // ============================================================
+    // -------------------------------------------------------------------------
+    // LOADING
+    // -------------------------------------------------------------------------
 
-        Text(
-          'Pending reports',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
-        const SizedBox(height: 3),
+    // -------------------------------------------------------------------------
+    // ERROR
+    // -------------------------------------------------------------------------
 
-        Text(
-          'Review and Approve pending reports',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: scheme.onSurface.withValues(alpha: 0.7),
-          ),
-        ),
-
-        const SizedBox(height: 18),
-
-        // ============================================================
-        // SEARCH + FILTER
-        // ============================================================
-
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search report or bike ID',
-                  prefixIcon: const Icon(
-                    Icons.search_rounded,
-                  ),
-                  filled: true,
-                  fillColor: scheme.surfaceContainer,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 10),
-
-            SizedBox(
-              width: 52,
-              height: 52,
-              child: OutlinedButton(
-                onPressed: () {
-                  // TODO: Filter later.
-                },
-                style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                ),
-                child: const Icon(
-                  Icons.filter_alt_outlined,
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        // ============================================================
-        // SEVERITY FILTERS
-        // ============================================================
-
-        const SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _PendingReportFilter(
-                label: 'All 1',
-                selected: true,
+              Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: scheme.error,
               ),
 
-              SizedBox(width: 8),
+              const SizedBox(height: 12),
 
-              _PendingReportFilter(
-                label: 'High Severity 1',
+              Text(
+                'Unable to load pending reports',
+                style:
+                theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
 
-              SizedBox(width: 8),
+              const SizedBox(height: 8),
 
-              _PendingReportFilter(
-                label: 'Medium Severity 0',
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall,
               ),
 
-              SizedBox(width: 8),
+              const SizedBox(height: 16),
 
-              _PendingReportFilter(
-                label: 'Low Severity 0',
+              OutlinedButton.icon(
+                onPressed: _loadReports,
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                ),
+                label: const Text(
+                  'Retry',
+                ),
               ),
             ],
           ),
         ),
+      );
+    }
 
-        const SizedBox(height: 18),
+    final reports = _filteredReports;
 
-        // ============================================================
-        // PRIORITY QUEUE
-        // ============================================================
-
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Priority queue',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-
-            Text(
-              'Newest first',
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+    return RefreshIndicator(
+      onRefresh: _loadReports,
+      child: ListView(
+        physics:
+        const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          18,
+          16,
+          18,
+          32,
         ),
-
-        const SizedBox(height: 18),
-
-        // ============================================================
-        // PENDING REPORT
-        // ============================================================
-
-        if (_showReport)
-          _PendingReportCard(
-            reportId: 'RPT-1000',
-            bikeId: 'BR-1000',
-            issue: 'Front & Rear Tyres Issue',
-            location: 'ABC Arena',
-            severity: 'High',
-
-            onOpenDetail: () {
-                widget.onOpenReportDetail('RPT-1000');
-            },
-
-            onDecline: _declineReport,
-            onApprove: _approveReport,
-          ),
-
-        if (!_showReport)
-          Padding(
-            padding: const EdgeInsets.only(top: 50),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.inbox_outlined,
-                  size: 52,
-                  color: scheme.onSurface.withValues(alpha: 0.4),
-                ),
-
-                const SizedBox(height: 10),
-
-                Text(
-                  'No pending reports',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-// ============================================================================
-// PENDING REPORT CARD
-// ============================================================================
-
-class _PendingReportCard extends StatelessWidget {
-  const _PendingReportCard({
-    required this.reportId,
-    required this.bikeId,
-    required this.issue,
-    required this.location,
-    required this.severity,
-    required this.onOpenDetail,
-    required this.onDecline,
-    required this.onApprove,
-  });
-
-  final String reportId;
-  final String bikeId;
-  final String issue;
-  final String location;
-  final String severity;
-
-  final VoidCallback onOpenDetail;
-  final VoidCallback onDecline;
-  final VoidCallback onApprove;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.8),
-        ),
-      ),
-      child: Column(
         children: [
+          // ===================================================================
+          // TITLE
+          // ===================================================================
+
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --------------------------------------------------------
-              // Bike image placeholder
-              // --------------------------------------------------------
-
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.directions_bike_rounded,
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              // --------------------------------------------------------
-              // Report information
-              // --------------------------------------------------------
-
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          reportId,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-
-                        const SizedBox(width: 2),
-
-                        InkWell(
-                          onTap: onOpenDetail,
-                          borderRadius: BorderRadius.circular(20),
-                          child: const Icon(
-                            Icons.chevron_right_rounded,
-                            size: 20,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Pending reports',
+                      style: theme
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(
+                        fontWeight:
+                        FontWeight.w800,
+                      ),
                     ),
 
                     const SizedBox(height: 3),
 
                     Text(
-                      '$bikeId • $issue',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                      'Review and approve pending reports',
+                      style: theme
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(
+                        color: scheme.onSurface
+                            .withValues(
+                          alpha: 0.7,
+                        ),
                       ),
-                    ),
-
-                    const SizedBox(height: 6),
-
-                    Text(
-                      location,
-                      style: theme.textTheme.bodySmall,
                     ),
                   ],
                 ),
               ),
 
-              // --------------------------------------------------------
-              // Severity
-              // --------------------------------------------------------
+              // ---------------------------------------------------------------
+              // PENDING COUNT
+              // ---------------------------------------------------------------
 
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 13,
+                padding:
+                const EdgeInsets.symmetric(
+                  horizontal: 12,
                   vertical: 7,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFE5E5),
-                  borderRadius: BorderRadius.circular(20),
+                  color:
+                  const Color(0xFFFFF3D6),
+                  borderRadius:
+                  BorderRadius.circular(20),
                 ),
-                child: Text(
-                  severity,
-                  style: const TextStyle(
-                    color: Color(0xFFE84D4D),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: Row(
+                  mainAxisSize:
+                  MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.schedule_rounded,
+                      size: 17,
+                      color:
+                      Color(0xFFE6A919),
+                    ),
+
+                    const SizedBox(width: 5),
+
+                    Text(
+                      '${_reports.length}',
+                      style:
+                      const TextStyle(
+                        color:
+                        Color(0xFFE6A919),
+                        fontWeight:
+                        FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 18),
+
+          // ===================================================================
+          // SEARCH
+          // ===================================================================
+
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText:
+              'Search report or bike ID',
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+              ),
+              suffixIcon:
+              _searchController.text.isEmpty
+                  ? null
+                  : IconButton(
+                onPressed: () {
+                  _searchController
+                      .clear();
+                },
+                icon: const Icon(
+                  Icons.close_rounded,
+                ),
+              ),
+              filled: true,
+              fillColor:
+              scheme.surfaceContainer,
+              border: OutlineInputBorder(
+                borderRadius:
+                BorderRadius.circular(14),
+              ),
+            ),
           ),
 
           const SizedBox(height: 20),
 
-          // ==========================================================
-          // APPROVE / DECLINE
-          // ==========================================================
+          // ===================================================================
+          // QUEUE HEADER
+          // ===================================================================
 
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
             children: [
-              TextButton(
-                onPressed: onDecline,
-                child: Text(
-                  'Decline',
-                  style: TextStyle(
-                    color: scheme.error,
-                    fontWeight: FontWeight.w700,
-                  ),
+              Text(
+                'Review queue',
+                style: theme
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(
+                  fontWeight:
+                  FontWeight.w800,
                 ),
               ),
 
-              const SizedBox(width: 4),
-
-              TextButton(
-                onPressed: onApprove,
-                child: const Text(
-                  'Approve',
-                  style: TextStyle(
-                    color: Color(0xFF18C796),
-                    fontWeight: FontWeight.w700,
+              Text(
+                'Newest first',
+                style: theme
+                    .textTheme
+                    .labelMedium
+                    ?.copyWith(
+                  fontWeight:
+                  FontWeight.w700,
+                  color: scheme.onSurface
+                      .withValues(
+                    alpha: 0.6,
                   ),
                 ),
               ),
             ],
           ),
+
+          const SizedBox(height: 14),
+
+          // ===================================================================
+          // REPORTS
+          // ===================================================================
+
+          if (reports.isEmpty)
+            _EmptyPendingReports(
+              searching: _searchController
+                  .text
+                  .trim()
+                  .isNotEmpty,
+            )
+          else
+            ...reports.map(
+                  (report) => Padding(
+                padding:
+                const EdgeInsets.only(
+                  bottom: 12,
+                ),
+                child: _PendingReportCard(
+                  reportId:
+                  _formatReportId(
+                    report.id,
+                  ),
+                  bikeId:
+                  report.bikeCode ??
+                      'Bike #${report.bikeId}',
+                  issue:
+                  _categoryLabel(
+                    report.category,
+                  ),
+                  description:
+                  report.description,
+                  location:
+                  report.stationName ??
+                      'No station assigned',
+                  reportedTime:
+                  _formatDateTime(
+                    report.createdAt,
+                  ),
+                  onOpenDetail: () {
+                    widget.onOpenReportDetail(
+                      report.id,
+                    );
+                  },
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
-// ============================================================================
-// FILTER
-// ============================================================================
+// =============================================================================
+// PENDING REPORT CARD
+// =============================================================================
 
-class _PendingReportFilter extends StatelessWidget {
-  const _PendingReportFilter({
-    required this.label,
-    this.selected = false,
+class _PendingReportCard extends StatelessWidget {
+  const _PendingReportCard({
+    required this.reportId,
+    required this.bikeId,
+    required this.issue,
+    required this.description,
+    required this.location,
+    required this.reportedTime,
+    required this.onOpenDetail,
   });
 
-  final String label;
-  final bool selected;
+  final String reportId;
+  final String bikeId;
+  final String issue;
+  final String description;
+  final String location;
+  final String reportedTime;
+
+  final VoidCallback onOpenDetail;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 7,
-      ),
-      decoration: BoxDecoration(
-        color: selected
-            ? scheme.primary
-            : scheme.surface,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: selected
-              ? scheme.onPrimary
-              : scheme.onSurface,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+    return InkWell(
+      onTap: onOpenDetail,
+      borderRadius:
+      BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainer,
+          borderRadius:
+          BorderRadius.circular(16),
+          border: Border.all(
+            color: scheme.outline
+                .withValues(
+              alpha: 0.8,
+            ),
+          ),
         ),
+        child: Column(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+              children: [
+                // -------------------------------------------------------------
+                // BIKE ICON
+                // -------------------------------------------------------------
+
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color:
+                    scheme.primaryContainer,
+                    borderRadius:
+                    BorderRadius.circular(9),
+                  ),
+                  child: Icon(
+                    Icons
+                        .directions_bike_rounded,
+                    color: scheme
+                        .onPrimaryContainer,
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                // -------------------------------------------------------------
+                // REPORT INFO
+                // -------------------------------------------------------------
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              reportId,
+                              style: theme
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                fontWeight:
+                                FontWeight
+                                    .w800,
+                              ),
+                            ),
+                          ),
+
+                          const Icon(
+                            Icons
+                                .chevron_right_rounded,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                        '$bikeId • $issue',
+                        style: theme
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(
+                          fontWeight:
+                          FontWeight.w800,
+                        ),
+                      ),
+
+                      const SizedBox(height: 5),
+
+                      Text(
+                        description,
+                        maxLines: 2,
+                        overflow:
+                        TextOverflow.ellipsis,
+                        style:
+                        theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            Divider(
+              height: 1,
+              color: scheme.outline
+                  .withValues(
+                alpha: 0.5,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // -----------------------------------------------------------------
+            // LOCATION + STATUS
+            // -----------------------------------------------------------------
+
+            Row(
+              children: [
+                Icon(
+                  Icons.location_on_outlined,
+                  size: 16,
+                  color: scheme.primary,
+                ),
+
+                const SizedBox(width: 4),
+
+                Expanded(
+                  child: Text(
+                    location,
+                    style: theme
+                        .textTheme
+                        .labelSmall,
+                  ),
+                ),
+
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                    const Color(
+                      0xFFFFF3D6,
+                    ),
+                    borderRadius:
+                    BorderRadius.circular(
+                      20,
+                    ),
+                  ),
+                  child: const Text(
+                    'Pending',
+                    style: TextStyle(
+                      color:
+                      Color(0xFFE6A919),
+                      fontSize: 11,
+                      fontWeight:
+                      FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              'Reported $reportedTime',
+              style: theme
+                  .textTheme
+                  .labelSmall
+                  ?.copyWith(
+                color: scheme.onSurface
+                    .withValues(
+                  alpha: 0.6,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // -----------------------------------------------------------------
+            // REVIEW BUTTON
+            // -----------------------------------------------------------------
+
+            Align(
+              alignment:
+              Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onOpenDetail,
+                icon: const Icon(
+                  Icons
+                      .rate_review_outlined,
+                  size: 18,
+                ),
+                label: const Text(
+                  'Review',
+                  style: TextStyle(
+                    fontWeight:
+                    FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// EMPTY STATE
+// =============================================================================
+
+class _EmptyPendingReports
+    extends StatelessWidget {
+  const _EmptyPendingReports({
+    required this.searching,
+  });
+
+  final bool searching;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Padding(
+      padding:
+      const EdgeInsets.symmetric(
+        vertical: 60,
+      ),
+      child: Column(
+        children: [
+          Icon(
+            searching
+                ? Icons.search_off_rounded
+                : Icons.task_alt_rounded,
+            size: 56,
+            color: scheme.onSurface
+                .withValues(
+              alpha: 0.35,
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          Text(
+            searching
+                ? 'No matching reports'
+                : 'No pending reports',
+            style: theme
+                .textTheme
+                .titleMedium
+                ?.copyWith(
+              fontWeight:
+              FontWeight.w800,
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          Text(
+            searching
+                ? 'Try another search term.'
+                : 'All submitted bike reports have been reviewed.',
+            textAlign:
+            TextAlign.center,
+            style: theme
+                .textTheme
+                .bodySmall
+                ?.copyWith(
+              color: scheme.onSurface
+                  .withValues(
+                alpha: 0.6,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

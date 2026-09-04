@@ -6,7 +6,7 @@ class PendingReportDetail extends StatelessWidget {
     required this.reportId,
   });
 
-  final String reportId;
+  final int reportId;
 
   void _showSnackBar(BuildContext context, String message) {
     final messenger = ScaffoldMessenger.of(context);

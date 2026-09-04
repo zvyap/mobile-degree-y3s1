@@ -197,7 +197,7 @@ class AppNavigator extends StatelessWidget {
 
       ),
       AppPage.pendingReportDetail => PendingReportDetail(
-        reportId: arguments as String,
+        reportId: arguments as int,
       ),
       AppPage.bikeReportDetail => BikeReportDetailPage(
         reportId: arguments as int,
