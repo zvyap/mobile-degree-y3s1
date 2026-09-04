@@ -78,11 +78,28 @@ class _HomePageState extends State<HomePage> {
                           onScan: () => widget.onNavigate(AppPage.scan),
                           onFindStation: () => widget.onNavigate(AppPage.stations),
                           onViewHistory: () => widget.onNavigate(AppPage.history),
+                          availableBikes: widget.rentingController.isInitialized
+                              ? widget.rentingController.totalAvailableBikes
+                              : null,
+                          totalStations: widget.rentingController.isInitialized
+                              ? widget.rentingController.totalStations
+                              : null,
                         ),
                 ),
                 if (!rideActive) ...[
                   const SizedBox(height: 18),
-                  const NetworkSummary(),
+                  NetworkSummary(
+                    bikesCount: widget.rentingController.isInitialized
+                        ? widget.rentingController.totalAvailableBikes
+                        : null,
+                    openDocksCount: widget.rentingController.isInitialized
+                        ? widget.rentingController.totalAvailableDocks
+                        : null,
+                    stationsCount: widget.rentingController.isInitialized
+                        ? widget.rentingController.totalStations
+                        : null,
+                    isLoading: !widget.rentingController.isInitialized,
+                  ),
                 ],
                 const SizedBox(height: 18),
                 RideConditionsPanel(key: _weatherPanelKey),
@@ -94,6 +111,8 @@ class _HomePageState extends State<HomePage> {
                   )
                 else
                   StationPreview(
+                    stations: widget.rentingController.stations,
+                    isLoading: !widget.rentingController.isInitialized,
                     onViewAll: () => widget.onNavigate(AppPage.stations),
                   ),
               ],

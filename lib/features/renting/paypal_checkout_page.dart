@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:bike_renting_app/data/paypal/paypal_locale.dart';
+import 'package:bike_renting_app/features/renting/renting_controller.dart';
+import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-enum PayPalCheckoutResult { approved, cancelled }
+enum PayPalCheckoutResult { approved, cancelled, timedOut }
 
 PayPalCheckoutResult? paypalCheckoutResultForUrl(
   Uri url, {
@@ -29,11 +33,13 @@ class PayPalCheckoutPage extends StatefulWidget {
     super.key,
     required this.approvalUrl,
     this.initialLocale,
+    this.controller,
     @visibleForTesting this.customWebView,
   });
 
   final Uri approvalUrl;
   final PayPalLocale? initialLocale;
+  final RentingController? controller;
   final Widget? customWebView;
 
   @override
@@ -45,6 +51,7 @@ class _PayPalCheckoutPageState extends State<PayPalCheckoutPage> {
   late PayPalLocale _currentLocale;
   int _progress = 0;
   bool _completed = false;
+  StreamSubscription<void>? _timeoutSubscription;
 
   @override
   void initState() {
@@ -55,6 +62,12 @@ class _PayPalCheckoutPageState extends State<PayPalCheckoutPage> {
       widget.approvalUrl,
       _currentLocale.webCode,
     );
+
+    widget.controller?.addListener(_checkTimeout);
+    _timeoutSubscription = widget.controller?.onRentalTimeout.listen((_) {
+      _finish(PayPalCheckoutResult.timedOut);
+    });
+
     if (widget.customWebView == null) {
       _webViewController = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -85,6 +98,23 @@ class _PayPalCheckoutPageState extends State<PayPalCheckoutPage> {
           headers: PayPalLocaleService.buildHeaders(_currentLocale.bcp47),
         );
     }
+  }
+
+  void _checkTimeout() {
+    final ctrl = widget.controller;
+    if (ctrl == null) return;
+    if (ctrl.stage != RentalStage.authorizing ||
+        (ctrl.bikeReadyRemainingSeconds != null &&
+            ctrl.bikeReadyRemainingSeconds! <= 0)) {
+      _finish(PayPalCheckoutResult.timedOut);
+    }
+  }
+
+  @override
+  void dispose() {
+    _timeoutSubscription?.cancel();
+    widget.controller?.removeListener(_checkTimeout);
+    super.dispose();
   }
 
   void _checkUrl(String? urlString) {

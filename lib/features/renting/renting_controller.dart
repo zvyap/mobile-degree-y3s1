@@ -73,6 +73,10 @@ class RentingController extends ChangeNotifier {
   String? _paypalOrderLocale;
   String? _paypalAuthorizationId;
 
+  final StreamController<void> _timeoutController =
+      StreamController<void>.broadcast();
+  Stream<void> get onRentalTimeout => _timeoutController.stream;
+
   String? get paypalAuthorizationId => _paypalAuthorizationId;
   Uri? get paypalApprovalUrl => _paypalOrder?.approvalUrl;
   DateTime? get bikeReadyExpiresAt => _bikeReadyExpiresAt;
@@ -197,6 +201,14 @@ class RentingController extends ChangeNotifier {
 
   int get extensionsRemaining =>
       math.max(0, maxRideExtensions - (_session?.rental.extensionsUsed ?? 0));
+
+  int get totalAvailableBikes =>
+      stations.fold<int>(0, (sum, s) => sum + s.availableBikes);
+
+  int get totalAvailableDocks =>
+      stations.fold<int>(0, (sum, s) => sum + s.availableDocks);
+
+  int get totalStations => stations.length;
 
   Future<void> initialize() {
     return _initialization ??= _initialize();
@@ -457,6 +469,56 @@ class RentingController extends ChangeNotifier {
   void selectPaymentMethod(RentalPaymentMethod method) {
     selectedPaymentMethod = method;
     notifyListeners();
+  }
+
+  Future<RentalPaymentMethod?> reloadPaymentMethods({String? selectId}) async {
+    final repo = paymentMethodRepository;
+    if (repo == null) return null;
+    try {
+      final prevIds = availablePaymentMethods.map((m) => m.id).toSet();
+      final paymentRecords = await repo.listOwn();
+      if (paymentRecords.isNotEmpty) {
+        final list = paymentRecords
+            .map(
+              (p) => RentalPaymentMethod(
+                id: p.id.toString(),
+                brand: p.brand,
+                lastFour: p.lastFour,
+              ),
+            )
+            .toList();
+        if (!list.any((p) => p.id == 'paypal')) {
+          list.insert(0, paypalPaymentMethod);
+        }
+        availablePaymentMethods = List.unmodifiable(list);
+
+        RentalPaymentMethod? newlySelected;
+        if (selectId != null) {
+          newlySelected = list.where((m) => m.id == selectId).firstOrNull;
+        } else {
+          newlySelected = list
+              .where((m) => !prevIds.contains(m.id) && m.id != 'paypal')
+              .lastOrNull;
+        }
+
+        if (newlySelected != null) {
+          selectedPaymentMethod = newlySelected;
+        } else if (selectedPaymentMethod != null) {
+          selectedPaymentMethod = list
+                  .where((m) => m.id == selectedPaymentMethod!.id)
+                  .firstOrNull ??
+              selectedPaymentMethod;
+        }
+        notifyListeners();
+        return newlySelected;
+      } else {
+        availablePaymentMethods = paymentMethods;
+        notifyListeners();
+        return null;
+      }
+    } catch (_) {
+      return null;
+    }
   }
 
   void reviewAuthorization() {
@@ -1086,19 +1148,36 @@ class RentingController extends ChangeNotifier {
     }
   }
 
-  ReturnStation _stationFromDatabase(StationAvailabilityRecord station) {
-    return ReturnStation(
-      backendId: station.id,
-      id: station.code,
-      name: station.name,
-      distanceMeters: switch (station.code) {
+  ReturnStation _stationFromDatabase(
+    StationAvailabilityRecord station, [
+    RiderPosition? userPosition,
+  ]) {
+    final int distanceMeters;
+    if (userPosition != null) {
+      distanceMeters = Geolocator.distanceBetween(
+        userPosition.latitude,
+        userPosition.longitude,
+        station.latitude,
+        station.longitude,
+      ).round();
+    } else {
+      distanceMeters = switch (station.code) {
         'central' => 120,
         'riverside' => 260,
         'market' => 430,
         'university' => 610,
         _ => _calculateDistanceMeters(station.latitude, station.longitude),
-      },
+      };
+    }
+
+    return ReturnStation(
+      backendId: station.id,
+      id: station.code,
+      name: station.name,
+      distanceMeters: distanceMeters,
       availableDocks: station.availableDocks,
+      availableBikes: station.availableBikes,
+      capacity: station.capacity,
       qrToken: station.qrToken,
       latitude: station.latitude,
       longitude: station.longitude,
@@ -1334,7 +1413,11 @@ class RentingController extends ChangeNotifier {
 
   void _startBikeReadyTimer() {
     _stopBikeReadyTimer();
-    _bikeReadyExpiresAt = _now().add(bikeReadyTimeout);
+    final serverExpiresAt = _session?.rental.reservationExpiresAt;
+    _bikeReadyExpiresAt =
+        (serverExpiresAt != null && serverExpiresAt.isAfter(_now()))
+            ? serverExpiresAt
+            : _now().add(bikeReadyTimeout);
     if (!enableClock) return;
     _bikeReadyTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _tickBikeReady();
@@ -1381,6 +1464,7 @@ class RentingController extends ChangeNotifier {
       if (stage != RentalStage.scan) {
         _resetLocal();
       }
+      _timeoutController.add(null);
     }
   }
 
@@ -1445,6 +1529,7 @@ class RentingController extends ChangeNotifier {
     _stopClock();
     _stopLocationTracking();
     _stopBikeReadyTimer();
+    _timeoutController.close();
     if (_ownsPayPalGateway) _paypalGateway.close();
     super.dispose();
   }

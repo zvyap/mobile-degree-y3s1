@@ -1,18 +1,25 @@
+import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class StationPreview extends StatelessWidget {
-  const StationPreview({super.key, required this.onViewAll});
+  const StationPreview({
+    super.key,
+    required this.onViewAll,
+    this.stations = const [],
+    this.isLoading = false,
+  });
 
   final VoidCallback onViewAll;
+  final List<ReturnStation> stations;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final previewStations = stations.take(2).toList();
 
-    // TODO: Load nearby stations from the station service using the rider's
-    // current location.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -34,21 +41,52 @@ class StationPreview extends StatelessWidget {
           ],
         ),
         Divider(height: 1, color: scheme.outline.withValues(alpha: 0.76)),
-        StationRow(
-          name: context.l10n.libraryStation,
-          distance: context.l10n.stationDistance(240),
-          bikes: context.l10n.bikeCount(18),
-          docks: context.l10n.dockCount(7),
-          availability: 0.72,
-        ),
-        Divider(height: 1, color: scheme.outline.withValues(alpha: 0.58)),
-        StationRow(
-          name: context.l10n.mainGate,
-          distance: context.l10n.stationDistance(410),
-          bikes: context.l10n.bikeCount(9),
-          docks: context.l10n.dockCount(12),
-          availability: 0.45,
-        ),
+        if (isLoading && stations.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: scheme.primary,
+                ),
+              ),
+            ),
+          )
+        else if (stations.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Text(
+              context.l10n.returnStationUnavailable,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.62),
+              ),
+            ),
+          )
+        else
+          ...previewStations.asMap().entries.map((entry) {
+            final index = entry.key;
+            final station = entry.value;
+            final availability = station.capacity > 0
+                ? (station.availableBikes / station.capacity).clamp(0.0, 1.0)
+                : 0.0;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (index > 0)
+                  Divider(height: 1, color: scheme.outline.withValues(alpha: 0.58)),
+                StationRow(
+                  name: station.name,
+                  distance: context.l10n.stationDistance(station.distanceMeters),
+                  bikes: context.l10n.bikeCount(station.availableBikes),
+                  docks: context.l10n.dockCount(station.availableDocks),
+                  availability: availability,
+                ),
+              ],
+            );
+          }),
       ],
     );
   }

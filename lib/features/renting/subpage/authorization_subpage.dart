@@ -103,6 +103,7 @@ Future<void> _handleAuthorize(
             builder: (context) => PayPalCheckoutPage(
               approvalUrl: approvalUrl,
               initialLocale: clientLocale,
+              controller: controller,
             ),
           ),
         );
@@ -110,6 +111,9 @@ Future<void> _handleAuthorize(
 
     if (result == PayPalCheckoutResult.approved) {
       await controller.authorizePayPalOrder();
+    } else if (result == PayPalCheckoutResult.timedOut) {
+      // User was kicked out due to rent timeout. Controller already reset.
+      return;
     } else {
       controller.cancelPayPalCheckout();
     }

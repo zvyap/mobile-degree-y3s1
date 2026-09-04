@@ -140,9 +140,12 @@ class RideConditionsPanel extends StatefulWidget {
 class RideConditionsPanelState extends State<RideConditionsPanel> {
   late final WeatherApiService _weatherService;
   late final UserLocationService _locationService;
+  late final bool _isTest;
 
   WeatherSnapshot? _snapshot;
   bool _isLoading = false;
+  String? _errorMessage;
+  bool _isRateLimit = false;
 
   /// Trigger a live refresh of weather conditions.
   Future<void> refresh({bool forceRefresh = true}) =>
@@ -153,23 +156,34 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
     super.initState();
     _weatherService = widget.weatherService ?? WeatherApiService();
     _locationService = widget.locationService ?? UserLocationService();
+    _isTest = Platform.environment.containsKey('FLUTTER_TEST');
 
-    final isTest = Platform.environment.containsKey('FLUTTER_TEST');
-    final shouldAutoFetch = widget.autoFetch ?? !isTest;
+    final shouldAutoFetch = widget.autoFetch ?? !_isTest;
 
     if (widget.initialSnapshot != null) {
       _snapshot = widget.initialSnapshot;
     } else {
-      _snapshot = WeatherSnapshot.fallback();
+      _snapshot = null;
       if (shouldAutoFetch) {
-        _loadWeather();
+        _isLoading = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _loadWeather();
+          }
+        });
       }
     }
   }
 
   Future<void> _loadWeather({bool forceRefresh = false}) async {
-    if (_isLoading) return;
-    setState(() => _isLoading = true);
+    if (_isLoading && _snapshot != null) return;
+    if (!_isLoading) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+        _isRateLimit = false;
+      });
+    }
 
     try {
       final userLocation = await _locationService.getCurrentUserLocation();
@@ -180,10 +194,25 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
       if (mounted) {
         setState(() {
           _snapshot = snapshot;
+          _errorMessage = null;
+          _isRateLimit = false;
         });
       }
     } catch (e) {
       debugPrint('RideConditionsPanel load error: $e');
+      if (mounted) {
+        final isRateLimit = (e is WeatherApiException && e.isRateLimit) ||
+            e.toString().toLowerCase().contains('429') ||
+            e.toString().toLowerCase().contains('rate limit');
+        final errorText = e is WeatherApiException
+            ? e.message
+            : e.toString().replaceFirst('Exception: ', '');
+        setState(() {
+          _snapshot = null;
+          _errorMessage = errorText;
+          _isRateLimit = isRateLimit;
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -198,7 +227,117 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
     final isDark = theme.brightness == Brightness.dark;
     final palette = WeatherColorPalette(isDark);
 
-    final snapshot = _snapshot ?? WeatherSnapshot.fallback();
+    final snapshot = _snapshot;
+    if (snapshot == null) {
+      if (_errorMessage != null && !_isLoading) {
+        return Semantics(
+          container: true,
+          label: _isRateLimit
+              ? 'Ride conditions. Rate limit reached.'
+              : 'Ride conditions. Error: $_errorMessage.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.rideConditions,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.symmetric(
+                    horizontal: BorderSide(
+                      color: scheme.outline.withValues(alpha: 0.76),
+                    ),
+                  ),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _isRateLimit ? Icons.hourglass_top_rounded : Icons.cloud_off_rounded,
+                          color: _isRateLimit ? scheme.error : scheme.onSurfaceVariant,
+                          size: 32,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _isRateLimit
+                              ? 'Rate limit reached'
+                              : 'Weather unavailable',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: _isRateLimit ? scheme.error : scheme.onSurface,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _errorMessage!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.75),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          key: const ValueKey<String>('weather-retry-button'),
+                          onPressed: () => refresh(forceRefresh: true),
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return Semantics(
+        container: true,
+        label: context.l10n.rideConditions,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.rideConditions,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.symmetric(
+                  horizontal: BorderSide(
+                    color: scheme.outline.withValues(alpha: 0.76),
+                  ),
+                ),
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 160,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    key: const ValueKey<String>('ride-conditions-loader'),
+                    value: _isTest ? 0.0 : null,
+                    color: scheme.primary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     final location = snapshot.locationName;
     final currentCondition = snapshot.currentCondition.label;
     final currentTemperature = snapshot.temperatureFormatted;

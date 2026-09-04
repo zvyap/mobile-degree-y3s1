@@ -13,12 +13,19 @@ import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/data/paypal/paypal_locale.dart';
 import 'package:bike_renting_app/features/renting/paypal_checkout_page.dart';
+import 'package:bike_renting_app/data/app_repositories.dart';
+import 'package:bike_renting_app/features/legal/privacy_policy_page.dart';
+import 'package:bike_renting_app/features/legal/terms_of_service_page.dart';
+import 'package:bike_renting_app/features/payment_methods/controllers/payment_methods_controller.dart';
+import 'package:bike_renting_app/features/payment_methods/pages/add_edit_card_page.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 part 'subpage/journey_header.dart';
 part 'subpage/scan_subpage.dart';
@@ -56,6 +63,8 @@ class _RentingFlowPageState extends State<RentingFlowPage>
     with WidgetsBindingObserver {
   late RentingController _controller;
   bool _lastLockState = false;
+  StreamSubscription<void>? _timeoutSubscription;
+  bool _isTimeoutAlertShowing = false;
 
   @override
   void initState() {
@@ -102,6 +111,53 @@ class _RentingFlowPageState extends State<RentingFlowPage>
     _controller = providedController;
     _lastLockState = _controller.isFlowLocked;
     _controller.addListener(_handleControllerChange);
+    _timeoutSubscription?.cancel();
+    _timeoutSubscription = _controller.onRentalTimeout.listen((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showTimeoutAlert();
+      });
+    });
+  }
+
+  Future<void> _showTimeoutAlert() async {
+    if (!mounted || _isTimeoutAlertShowing) return;
+    _isTimeoutAlertShowing = true;
+    try {
+      await showDialog<void>(
+        context: context,
+        useRootNavigator: true,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          final theme = Theme.of(dialogContext);
+          return AlertDialog(
+            icon: Icon(
+              Icons.timer_off_rounded,
+              size: 44,
+              color: theme.colorScheme.error,
+            ),
+            title: const Text(
+              'Rental Timed Out',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text(
+              'Your bike reservation has timed out because the 10-minute limit was reached. The bike has been released.',
+              textAlign: TextAlign.center,
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              FilledButton(
+                key: const ValueKey('rent-timeout-modal-ok'),
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      _isTimeoutAlertShowing = false;
+    }
   }
 
   void _handleControllerChange() {
@@ -117,8 +173,13 @@ class _RentingFlowPageState extends State<RentingFlowPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _timeoutSubscription?.cancel();
     _controller.removeListener(_handleControllerChange);
     _controller.pauseTracking();
+    if (_controller.stage == RentalStage.bikeCheck ||
+        _controller.stage == RentalStage.authorizing) {
+      unawaited(_controller.cancelReservation());
+    }
     super.dispose();
   }
 
@@ -130,6 +191,10 @@ class _RentingFlowPageState extends State<RentingFlowPage>
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && !_controller.goBack()) {
+          if (_controller.stage == RentalStage.bikeCheck ||
+              _controller.stage == RentalStage.authorizing) {
+            unawaited(_controller.cancelReservation());
+          }
           widget.onRequestExit?.call();
         }
       },

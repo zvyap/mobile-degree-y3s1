@@ -2,14 +2,28 @@ import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class NetworkSummary extends StatelessWidget {
-  const NetworkSummary({super.key});
+  const NetworkSummary({
+    super.key,
+    this.bikesCount,
+    this.openDocksCount,
+    this.stationsCount,
+    this.isLoading = false,
+  });
+
+  final int? bikesCount;
+  final int? openDocksCount;
+  final int? stationsCount;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    // TODO: Load live bike, dock, and station totals from their services.
+    final bikesText = bikesCount != null ? '$bikesCount' : (isLoading ? '--' : '0');
+    final docksText = openDocksCount != null ? '$openDocksCount' : (isLoading ? '--' : '0');
+    final stationsText = stationsCount != null ? '$stationsCount' : (isLoading ? '--' : '0');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -33,23 +47,23 @@ class NetworkSummary extends StatelessWidget {
               children: [
                 Expanded(
                   child: _NetworkMetric(
-                    value: '128',
+                    value: bikesText,
                     label: context.l10n.bikes,
                     icon: Icons.directions_bike_rounded,
                   ),
                 ),
-                VerticalDivider(width: 1),
+                const VerticalDivider(width: 1),
                 Expanded(
                   child: _NetworkMetric(
-                    value: '73',
+                    value: docksText,
                     label: context.l10n.openDocks,
                     icon: Icons.local_parking_rounded,
                   ),
                 ),
-                VerticalDivider(width: 1),
+                const VerticalDivider(width: 1),
                 Expanded(
                   child: _NetworkMetric(
-                    value: '9',
+                    value: stationsText,
                     label: context.l10n.stations,
                     icon: Icons.map_rounded,
                   ),

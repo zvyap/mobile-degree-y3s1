@@ -20,6 +20,22 @@ class _CachedWeather {
   }
 }
 
+/// Exception thrown when weather forecast retrieval fails.
+class WeatherApiException implements Exception {
+  const WeatherApiException(
+    this.message, {
+    this.statusCode,
+    this.isRateLimit = false,
+  });
+
+  final String message;
+  final int? statusCode;
+  final bool isRateLimit;
+
+  @override
+  String toString() => message;
+}
+
 /// Service that fetches Malaysian weather forecasts from api.data.gov.my,
 /// converts raw responses into typed models, and caches snapshots.
 class WeatherApiService {
@@ -43,13 +59,19 @@ class WeatherApiService {
     final query = Uri.encodeComponent(locationName);
     final url = Uri.parse('$baseUrl?contains=$query@location__location_name');
 
+    final http.Response response;
     try {
-      final response = await _client.get(
+      response = await _client.get(
         url,
         headers: {'Accept': 'application/json'},
       );
+    } catch (e) {
+      debugPrint('Weather API fetch failed: $e');
+      throw WeatherApiException('Network error: $e');
+    }
 
-      if (response.statusCode == 200) {
+    if (response.statusCode == 200) {
+      try {
         final dynamic decoded = jsonDecode(response.body);
         if (decoded is List) {
           return decoded
@@ -57,14 +79,25 @@ class WeatherApiService {
               .map(DailyWeatherForecast.fromJson)
               .toList();
         }
-      } else {
-        debugPrint('Weather API error ${response.statusCode}: ${response.body}');
+      } catch (e) {
+        debugPrint('Weather API decode error: $e');
+        throw WeatherApiException('Failed to parse weather data: $e');
       }
-    } catch (e) {
-      debugPrint('Weather API fetch failed: $e');
+      return const [];
+    } else if (response.statusCode == 429) {
+      debugPrint('Weather API rate limit (429): ${response.body}');
+      throw const WeatherApiException(
+        'Rate limit reached (HTTP 429). Too many requests.',
+        statusCode: 429,
+        isRateLimit: true,
+      );
+    } else {
+      debugPrint('Weather API error ${response.statusCode}: ${response.body}');
+      throw WeatherApiException(
+        'Weather service error (HTTP ${response.statusCode})',
+        statusCode: response.statusCode,
+      );
     }
-
-    return const [];
   }
 
   /// Get live ride conditions snapshot for the given user location.
@@ -83,14 +116,34 @@ class WeatherApiService {
       }
     }
 
-    final forecasts = await fetchDailyForecasts(location.forecastLocationName);
+    var forecasts = await fetchDailyForecasts(location.forecastLocationName);
+    var resolvedDisplayName = location.displayName;
 
-    final snapshot = forecasts.isNotEmpty
-        ? _buildSnapshotFromForecasts(location, forecasts, now)
-        : WeatherSnapshot.fallback(
-            locationName: location.displayName,
-            now: now,
-          );
+    if (forecasts.isEmpty && location.fallbackCandidates.isNotEmpty) {
+      for (final candidate in location.fallbackCandidates) {
+        try {
+          final candidateForecasts = await fetchDailyForecasts(candidate);
+          if (candidateForecasts.isNotEmpty) {
+            forecasts = candidateForecasts;
+            resolvedDisplayName = '$candidate, ${location.stateName}';
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (forecasts.isEmpty) {
+      throw WeatherApiException(
+        'No weather forecast available for ${location.displayName}',
+      );
+    }
+
+    final snapshot = _buildSnapshotFromForecasts(
+      location,
+      forecasts,
+      now,
+      displayNameOverride: resolvedDisplayName,
+    );
 
     _cache[cacheKey] = _CachedWeather(
       snapshot: snapshot,
@@ -104,8 +157,9 @@ class WeatherApiService {
   WeatherSnapshot _buildSnapshotFromForecasts(
     UserWeatherLocation location,
     List<DailyWeatherForecast> forecasts,
-    DateTime now,
-  ) {
+    DateTime now, {
+    String? displayNameOverride,
+  }) {
     // Find today's forecast or take the first available
     final todayForecast = forecasts.firstWhere(
       (f) =>
@@ -143,7 +197,7 @@ class WeatherApiService {
     const windDirection = 'SW';
 
     return WeatherSnapshot(
-      locationName: location.displayName,
+      locationName: displayNameOverride ?? location.displayName,
       currentCondition: currentCondition,
       currentTemperature: currentTemp,
       feelsLikeTemperature: feelsLike,

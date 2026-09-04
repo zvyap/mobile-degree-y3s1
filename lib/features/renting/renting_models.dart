@@ -79,6 +79,8 @@ class ReturnStation {
     required this.name,
     required this.distanceMeters,
     required this.availableDocks,
+    this.availableBikes = 0,
+    this.capacity = 0,
     this.qrToken = '',
     this.latitude = 0,
     this.longitude = 0,
@@ -89,6 +91,8 @@ class ReturnStation {
   final String name;
   final int distanceMeters;
   final int availableDocks;
+  final int availableBikes;
+  final int capacity;
   final String qrToken;
   final double latitude;
   final double longitude;

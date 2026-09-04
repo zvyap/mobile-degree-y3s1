@@ -50,7 +50,13 @@ abstract class BaseStationMapView extends StatefulWidget {
 }
 
 abstract class BaseStationMapViewState<T extends BaseStationMapView> extends State<T> {
-  final SupabaseClient supabase = Supabase.instance.client;
+  SupabaseClient? get supabase {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
   final TextEditingController searchController = TextEditingController();
   final FocusNode searchFocusNode = FocusNode();
 
@@ -166,7 +172,13 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
       final userPos = await getUserLocation();
       if (mounted) setState(() => userLocation = userPos);
 
-      final response = await supabase
+      final client = supabase;
+      if (client == null) {
+        if (mounted) setState(() => isLoading = false);
+        return;
+      }
+
+      final response = await client
           .from('stations')
           .select()
           .eq('is_active', true);
