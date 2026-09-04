@@ -46,6 +46,11 @@ class WeatherApiService {
   })  : _client = client ?? http.Client(),
         _clock = clock ?? DateTime.now;
 
+  static WeatherApiService? _shared;
+  static WeatherApiService get shared => _shared ??= WeatherApiService();
+  @visibleForTesting
+  static set shared(WeatherApiService service) => _shared = service;
+
   static const String baseUrl = 'https://api.data.gov.my/weather/forecast/';
 
   final http.Client _client;

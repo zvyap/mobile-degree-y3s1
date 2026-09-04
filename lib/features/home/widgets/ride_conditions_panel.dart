@@ -15,8 +15,8 @@ class WeatherColorPalette {
   Color getConditionColor(WeatherCondition condition) {
     if (isDark) {
       return switch (condition) {
-        WeatherCondition.noRain => const Color(0xFFFBBF24), // warm sun gold
-        WeatherCondition.haze => const Color(0xFFFB923C), // atmospheric orange
+        WeatherCondition.noRain => const Color(0xFF4ADE80), // clear emerald green
+        WeatherCondition.haze => const Color(0xFFFACC15), // haze yellow
         WeatherCondition.rain ||
         WeatherCondition.isolatedRain ||
         WeatherCondition.coastalRain ||
@@ -33,8 +33,8 @@ class WeatherColorPalette {
       };
     } else {
       return switch (condition) {
-        WeatherCondition.noRain => const Color(0xFFB45309), // dark amber
-        WeatherCondition.haze => const Color(0xFFC2410C), // burnt orange
+        WeatherCondition.noRain => const Color(0xFF16A34A), // clear green
+        WeatherCondition.haze => const Color(0xFFCA8A04), // haze yellow
         WeatherCondition.rain ||
         WeatherCondition.isolatedRain ||
         WeatherCondition.coastalRain ||
@@ -60,7 +60,7 @@ class WeatherColorPalette {
       return const Color(0xFF38BDF8); // cool cyan
     } else {
       if (temp >= 33) return const Color(0xFFE11D48); // hot rose
-      if (temp >= 28) return const Color(0xFFD97706); // warm amber
+      if (temp >= 28) return const Color(0xFFEA580C); // warm orange
       if (temp >= 23) return const Color(0xFF059669); // comfortable emerald
       return const Color(0xFF0284C7); // cool cyan
     }
@@ -70,18 +70,18 @@ class WeatherColorPalette {
     if (isDark) {
       if (humidity > 75) return const Color(0xFF38BDF8); // humid blue
       if (humidity >= 45) return const Color(0xFF2DD4BF); // comfortable teal
-      return const Color(0xFFFBBF24); // dry amber
+      return const Color(0xFFFACC15); // dry yellow
     } else {
       if (humidity > 75) return const Color(0xFF0284C7); // humid blue
       if (humidity >= 45) return const Color(0xFF0D9488); // comfortable teal
-      return const Color(0xFFB45309); // dry amber
+      return const Color(0xFFCA8A04); // dry yellow
     }
   }
 
   Color getAqiColor(int aqi) {
     if (isDark) {
       if (aqi <= 50) return const Color(0xFF4ADE80); // good green
-      if (aqi <= 100) return const Color(0xFFFBBF24); // moderate yellow
+      if (aqi <= 100) return const Color(0xFFFACC15); // moderate yellow
       if (aqi <= 200) return const Color(0xFFF87171); // unhealthy orange-red
       if (aqi <= 300) return const Color(0xFFC084FC); // very unhealthy purple
       return const Color(0xFFFDA4AF); // hazardous maroon
@@ -100,7 +100,7 @@ class WeatherColorPalette {
       if (speedKmh >= 10) return const Color(0xFF60A5FA); // moderate blue
       return const Color(0xFF2DD4BF); // gentle breeze teal
     } else {
-      if (speedKmh >= 25) return const Color(0xFFD97706); // strong wind orange
+      if (speedKmh >= 25) return const Color(0xFFEA580C); // strong wind orange
       if (speedKmh >= 10) return const Color(0xFF2563EB); // moderate blue
       return const Color(0xFF0D9488); // gentle breeze teal
     }
@@ -133,6 +133,15 @@ class RideConditionsPanel extends StatefulWidget {
   final WeatherSnapshot? initialSnapshot;
   final bool? autoFetch;
 
+  /// Cached snapshot across widget instances to prevent auto-refreshing when
+  /// navigating away and back to the Home page.
+  static WeatherSnapshot? cachedSnapshot;
+
+  /// Clears the cached snapshot (useful in testing or full session reset).
+  static void resetCache() {
+    cachedSnapshot = null;
+  }
+
   @override
   State<RideConditionsPanel> createState() => RideConditionsPanelState();
 }
@@ -154,7 +163,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
   @override
   void initState() {
     super.initState();
-    _weatherService = widget.weatherService ?? WeatherApiService();
+    _weatherService = widget.weatherService ?? WeatherApiService.shared;
     _locationService = widget.locationService ?? UserLocationService();
     _isTest = Platform.environment.containsKey('FLUTTER_TEST');
 
@@ -162,6 +171,10 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
 
     if (widget.initialSnapshot != null) {
       _snapshot = widget.initialSnapshot;
+      RideConditionsPanel.cachedSnapshot = widget.initialSnapshot;
+    } else if (RideConditionsPanel.cachedSnapshot != null) {
+      _snapshot = RideConditionsPanel.cachedSnapshot;
+      _isLoading = false;
     } else {
       _snapshot = null;
       if (shouldAutoFetch) {
@@ -191,6 +204,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
         userLocation,
         forceRefresh: forceRefresh,
       );
+      RideConditionsPanel.cachedSnapshot = snapshot;
       if (mounted) {
         setState(() {
           _snapshot = snapshot;
@@ -410,7 +424,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                           color: conditionColor.withValues(alpha: isDark ? 0.20 : 0.12),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: conditionColor.withValues(alpha: 0.35),
+                            color: conditionColor.withValues(alpha: isDark ? 0.35 : 0.28),
                           ),
                         ),
                         child: Icon(
@@ -427,7 +441,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                             Text(
                               context.l10n.currentWeather,
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.62),
+                                color: scheme.onSurface.withValues(alpha: isDark ? 0.62 : 0.70),
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -445,7 +459,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                               feelsLike,
                               softWrap: true,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.64),
+                                color: scheme.onSurface.withValues(alpha: isDark ? 0.64 : 0.70),
                               ),
                             ),
                           ],
@@ -474,7 +488,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                             iconColor: humidityColor,
                             valueColor: humidityColor,
                             backgroundColor: humidityColor.withValues(
-                              alpha: isDark ? 0.12 : 0.07,
+                              alpha: isDark ? 0.12 : 0.08,
                             ),
                           ),
                         ),
@@ -487,7 +501,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                             iconColor: aqiColor,
                             valueColor: aqiColor,
                             backgroundColor: aqiColor.withValues(
-                              alpha: isDark ? 0.14 : 0.08,
+                              alpha: isDark ? 0.14 : 0.09,
                             ),
                           ),
                         ),
@@ -500,7 +514,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                             iconColor: windColor,
                             valueColor: windColor,
                             backgroundColor: windColor.withValues(
-                              alpha: isDark ? 0.12 : 0.07,
+                              alpha: isDark ? 0.12 : 0.08,
                             ),
                           ),
                         ),
@@ -528,7 +542,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                               TextSpan(
                                 text: 'Next hour · ',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurface.withValues(alpha: 0.75),
+                                  color: scheme.onSurface.withValues(alpha: isDark ? 0.75 : 0.80),
                                   fontWeight: FontWeight.w600,
                                 ),
                                 children: [
@@ -555,7 +569,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                                   TextSpan(
                                     text: ' · ',
                                     style: TextStyle(
-                                      color: scheme.onSurface.withValues(alpha: 0.5),
+                                      color: scheme.onSurface.withValues(alpha: isDark ? 0.50 : 0.58),
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -604,7 +618,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                     ),
                     softWrap: true,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.58),
+                      color: scheme.onSurface.withValues(alpha: isDark ? 0.58 : 0.68),
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -639,14 +653,18 @@ class _ConditionMetric extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final borderColor = (iconColor ?? scheme.primary).withValues(
+      alpha: isDark ? 0.22 : 0.18,
+    );
 
     return Container(
-      decoration: backgroundColor != null
-          ? BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(10),
-            )
-          : null,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       child: Column(
         children: [
@@ -668,7 +686,7 @@ class _ConditionMetric extends StatelessWidget {
             textAlign: TextAlign.center,
             softWrap: true,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.62),
+              color: scheme.onSurface.withValues(alpha: isDark ? 0.62 : 0.72),
               fontWeight: FontWeight.w700,
               height: 1.15,
             ),
