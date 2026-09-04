@@ -63,7 +63,7 @@ class _TransferBikePageState extends State<TransferBikePage> {
       if (!mounted) return;
 
       final availableDestinations = stations.where((station) {
-        return station.id != bike.currentStationId;
+        return station.id.toString() != bike.currentStationId;
       }).toList();
 
       setState(() {
@@ -178,18 +178,6 @@ class _TransferBikePageState extends State<TransferBikePage> {
   // ===========================================================================
   // HELPERS
   // ===========================================================================
-
-  StationAvailability? _getCurrentStation() {
-    final bike = _bike;
-
-    if (bike?.currentStationId == null) {
-      return null;
-    }
-
-    // Current station was excluded from destination list,
-    // so we cannot search _stations for it.
-    return null;
-  }
 
   StationAvailability? _getDestinationStation() {
     if (_destinationStationId == null) {
