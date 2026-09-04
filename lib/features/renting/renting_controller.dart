@@ -555,6 +555,31 @@ class RentingController extends ChangeNotifier {
 
     _scannedBikeCode = await _resolveBikeCode(qrToken ?? token);
 
+    try {
+      final bikeRecord = await repository.findBikeByQrToken(token);
+      if (bikeRecord != null) {
+        _scannedBikeCode = bikeRecord.code;
+        if (bikeRecord.status == BikeDatabaseStatus.maintenance) {
+          error = RentalError.bikeMaintenance;
+          notifyListeners();
+          return;
+        }
+        if (bikeRecord.status == BikeDatabaseStatus.unavailable ||
+            bikeRecord.status == BikeDatabaseStatus.retired ||
+            bikeRecord.status == BikeDatabaseStatus.lost ||
+            bikeRecord.status == BikeDatabaseStatus.inUse) {
+          error = RentalError.bikeUnavailable;
+          notifyListeners();
+          return;
+        }
+        if (bikeRecord.status == BikeDatabaseStatus.reserved) {
+          error = RentalError.bikeReserved;
+          notifyListeners();
+          return;
+        }
+      }
+    } catch (_) {}
+
     await _run(() async {
       final snapshot = await repository.reserveSession(token);
       _applySnapshot(snapshot);
@@ -658,6 +683,25 @@ class RentingController extends ChangeNotifier {
     }
   }
 
+  Future<RentalError?> verifyCurrentBikeRentable() async {
+    final bikeId = _session?.rental.bikeId;
+    if (bikeId == null) return null;
+    try {
+      final record = await repository.getBike(bikeId);
+      if (record == null) return null;
+      if (record.status == BikeDatabaseStatus.maintenance) {
+        return RentalError.bikeMaintenance;
+      }
+      if (record.status == BikeDatabaseStatus.unavailable ||
+          record.status == BikeDatabaseStatus.retired ||
+          record.status == BikeDatabaseStatus.lost ||
+          record.status == BikeDatabaseStatus.inUse) {
+        return RentalError.bikeUnavailable;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   void reviewAuthorization() {
     if (_session?.rental.status != RentalDatabaseStatus.reserved) return;
     _clearError();
@@ -678,6 +722,11 @@ class RentingController extends ChangeNotifier {
     }
     _beginBusy();
     try {
+      final bikeError = await verifyCurrentBikeRentable();
+      if (bikeError != null) {
+        error = bikeError;
+        return;
+      }
       await paymentSimulator.authorize(holdAmount);
       authorization = PaymentAuthorization(
         amount: holdAmount,
@@ -688,6 +737,8 @@ class RentingController extends ChangeNotifier {
       stage = RentalStage.unlocking;
     } on RentalPaymentSimulationException {
       error = RentalError.holdDeclined;
+    } catch (caught) {
+      error = _mapError(caught);
     } finally {
       isBusy = false;
       notifyListeners();
@@ -696,6 +747,12 @@ class RentingController extends ChangeNotifier {
 
   Future<Uri?> createPayPalOrder({String? locale}) async {
     if (isBusy || _session?.rental.status != RentalDatabaseStatus.reserved) {
+      return null;
+    }
+    final bikeError = await verifyCurrentBikeRentable();
+    if (bikeError != null) {
+      error = bikeError;
+      notifyListeners();
       return null;
     }
     if (_paypalOrder != null && _paypalOrderLocale == locale) {
@@ -738,6 +795,11 @@ class RentingController extends ChangeNotifier {
     if (isBusy || order == null) return;
     _beginBusy();
     try {
+      final bikeError = await verifyCurrentBikeRentable();
+      if (bikeError != null) {
+        error = bikeError;
+        return;
+      }
       final result = await _paypalGateway.authorizeOrder(order.orderId);
       _paypalAuthorizationId = result.authorizationId;
     } on PayPalException {
@@ -747,13 +809,15 @@ class RentingController extends ChangeNotifier {
     } finally {
       _paypalOrder = null;
       _paypalOrderLocale = null;
-      _stopBikeReadyTimer();
-      authorization = PaymentAuthorization(
-        amount: holdAmount,
-        status: PaymentStatus.authorized,
-      );
-      stage = RentalStage.unlocking;
-      _clearError();
+      if (error == null) {
+        _stopBikeReadyTimer();
+        authorization = PaymentAuthorization(
+          amount: holdAmount,
+          status: PaymentStatus.authorized,
+        );
+        stage = RentalStage.unlocking;
+        _clearError();
+      }
       isBusy = false;
       notifyListeners();
     }
@@ -1358,7 +1422,9 @@ class RentingController extends ChangeNotifier {
       DatabaseErrorCode.notAuthenticated => RentalError.authenticationFailed,
       DatabaseErrorCode.accountUnavailable => RentalError.accountSuspended,
       DatabaseErrorCode.activeRentalExists => RentalError.activeRentalExists,
-      DatabaseErrorCode.bikeUnavailable => RentalError.bikeReserved,
+      DatabaseErrorCode.bikeMaintenance => RentalError.bikeMaintenance,
+      DatabaseErrorCode.bikeUnavailable => RentalError.bikeUnavailable,
+      DatabaseErrorCode.bikeReserved => RentalError.bikeReserved,
       DatabaseErrorCode.notFound => RentalError.invalidQr,
       DatabaseErrorCode.stationFull => RentalError.stationFull,
       DatabaseErrorCode.stationQrMismatch => RentalError.stationQrMismatch,

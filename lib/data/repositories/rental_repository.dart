@@ -34,6 +34,10 @@ abstract interface class RentalSessionRepository {
   Future<void> sweepDeadlines();
 
   Future<RentalSessionSnapshot> extendRental(int rentalId);
+
+  Future<BikeDatabaseRecord?> getBike(int bikeId);
+
+  Future<BikeDatabaseRecord?> findBikeByQrToken(String qrToken);
 }
 
 /// Debug-only escape hatch for the camera-less debug scan stage. Remove
@@ -211,6 +215,13 @@ class RentalRepository
 
   @override
   Future<List<BikeDatabaseRecord>> listAllBikes() => _bikes.listBikes();
+
+  @override
+  Future<BikeDatabaseRecord?> getBike(int bikeId) => _bikes.findById(bikeId);
+
+  @override
+  Future<BikeDatabaseRecord?> findBikeByQrToken(String qrToken) =>
+      _bikes.findByQrToken(qrToken);
 
   Future<RentalDatabaseRecord?> getActive() async {
     final userId = _requireUserId();

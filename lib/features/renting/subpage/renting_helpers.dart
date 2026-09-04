@@ -24,6 +24,10 @@ String _rentalError(BuildContext context, RentingController controller) {
   return switch (controller.error!) {
     RentalError.invalidQr => l10n.errorInvalidQr,
     RentalError.bikeReserved => l10n.errorBikeReserved(controller.bikeCode),
+    RentalError.bikeMaintenance =>
+      l10n.errorBikeMaintenance(controller.bikeCode),
+    RentalError.bikeUnavailable =>
+      l10n.errorBikeUnavailable(controller.bikeCode),
     RentalError.holdDeclined => l10n.errorHoldDeclined(
       context.formats.currency(controller.holdAmount),
     ),

@@ -133,6 +133,9 @@ class _ScanStageState extends State<ScanStage> with WidgetsBindingObserver {
         setState(() => _isProcessing = false);
         if (widget.controller.error == RentalError.invalidQr) {
           _showInvalidQrDialog();
+        } else if (widget.controller.error == RentalError.bikeMaintenance ||
+            widget.controller.error == RentalError.bikeUnavailable) {
+          _showBikeCannotRentDialog();
         }
       });
       break;
@@ -143,6 +146,18 @@ class _ScanStageState extends State<ScanStage> with WidgetsBindingObserver {
     if (!mounted || _isShowingErrorDialog) return;
     setState(() => _isShowingErrorDialog = true);
     await showInvalidQrDialog(context, controller: widget.controller);
+    if (mounted) {
+      setState(() {
+        _isShowingErrorDialog = false;
+        _lastScanTime = DateTime.now();
+      });
+    }
+  }
+
+  Future<void> _showBikeCannotRentDialog() async {
+    if (!mounted || _isShowingErrorDialog) return;
+    setState(() => _isShowingErrorDialog = true);
+    await showBikeCannotRentDialog(context, controller: widget.controller);
     if (mounted) {
       setState(() {
         _isShowingErrorDialog = false;
@@ -659,6 +674,46 @@ Future<void> showInvalidQrDialog(
   controller?.clearError();
 }
 
+Future<void> showBikeCannotRentDialog(
+  BuildContext context, {
+  required RentingController controller,
+}) async {
+  final message = _rentalError(context, controller);
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    builder: (dialogContext) {
+      final theme = Theme.of(dialogContext);
+      final scheme = theme.colorScheme;
+      return AlertDialog(
+        icon: Icon(
+          controller.error == RentalError.bikeMaintenance
+              ? Icons.build_circle_outlined
+              : Icons.block_rounded,
+          size: 36,
+          color: scheme.error,
+        ),
+        title: Text(dialogContext.l10n.bikeCannotBeRentedTitle),
+        content: Text(
+          message,
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          FilledButton(
+            key: const ValueKey<String>('rent-bike-status-ok-button'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(120, 48),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 Future<void> _handleCameraTap(
   BuildContext context,
   RentingController controller, {
@@ -677,6 +732,11 @@ Future<void> _handleCameraTap(
       await onInvalidQr();
     } else if (context.mounted) {
       await showInvalidQrDialog(context, controller: controller);
+    }
+  } else if (controller.error == RentalError.bikeMaintenance ||
+      controller.error == RentalError.bikeUnavailable) {
+    if (context.mounted) {
+      await showBikeCannotRentDialog(context, controller: controller);
     }
   }
 }
@@ -901,4 +961,5 @@ String _debugBikeStatusLabel(BikeDatabaseStatus status) => switch (status) {
   BikeDatabaseStatus.maintenance => 'maintenance',
   BikeDatabaseStatus.retired => 'retired',
   BikeDatabaseStatus.lost => 'lost',
+  BikeDatabaseStatus.unavailable => 'unavailable',
 };

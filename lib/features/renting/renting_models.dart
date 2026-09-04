@@ -22,6 +22,8 @@ enum RentalError {
   invalidTransition,
   invalidQr,
   bikeReserved,
+  bikeMaintenance,
+  bikeUnavailable,
   holdDeclined,
   paymentConfiguration,
   paymentNetwork,

@@ -102,6 +102,10 @@ class _BikeCheckStage extends StatelessWidget {
               _FareCalculationPanel(controller: controller),
               const SizedBox(height: 12),
               _DepositSummaryTile(controller: controller),
+              if (controller.error != null) ...[
+                const SizedBox(height: 14),
+                _ErrorPanel(message: _rentalError(context, controller)),
+              ],
               const SizedBox(height: 14),
               const _TermsAndPrivacyNotice(),
               const SizedBox(height: 14),

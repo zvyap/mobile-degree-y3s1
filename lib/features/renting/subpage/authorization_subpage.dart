@@ -95,7 +95,13 @@ Future<void> _handleAuthorize(
     final approvalUrl = await controller.createPayPalOrder(
       locale: clientLocale.bcp47,
     );
-    if (!context.mounted || approvalUrl == null) return;
+    if (!context.mounted) return;
+    if (controller.error == RentalError.bikeMaintenance ||
+        controller.error == RentalError.bikeUnavailable) {
+      await showBikeCannotRentDialog(context, controller: controller);
+      return;
+    }
+    if (approvalUrl == null) return;
 
     final result = await Navigator.of(context, rootNavigator: true)
         .push<PayPalCheckoutResult>(
@@ -111,6 +117,11 @@ Future<void> _handleAuthorize(
 
     if (result == PayPalCheckoutResult.approved) {
       await controller.authorizePayPalOrder();
+      if (context.mounted &&
+          (controller.error == RentalError.bikeMaintenance ||
+              controller.error == RentalError.bikeUnavailable)) {
+        await showBikeCannotRentDialog(context, controller: controller);
+      }
     } else if (result == PayPalCheckoutResult.timedOut) {
       // User was kicked out due to rent timeout. Controller already reset.
       return;
@@ -119,5 +130,10 @@ Future<void> _handleAuthorize(
     }
   } else {
     await controller.authorizePayment();
+    if (context.mounted &&
+        (controller.error == RentalError.bikeMaintenance ||
+            controller.error == RentalError.bikeUnavailable)) {
+      await showBikeCannotRentDialog(context, controller: controller);
+    }
   }
 }
