@@ -118,7 +118,7 @@ class _RideSessionMap extends BaseStationMapView {
           showHeader: false,
           showRecenterButton: true,
           initialStations: stations
-              .map((s) => {
+              .map<Map<String, dynamic>>((s) => <String, dynamic>{
                     'id': s.id,
                     'backendId': s.backendId,
                     'name': s.name,

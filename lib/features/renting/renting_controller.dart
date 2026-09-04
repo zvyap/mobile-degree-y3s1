@@ -861,7 +861,8 @@ class RentingController extends ChangeNotifier {
 
       // TODO(notifications): Notify the rider from a future server-side event
       // worker after the completed rental event is committed.
-    } catch (caught) {
+    } catch (caught, stack) {
+      debugPrint('confirmDock caught error: $caught\n$stack');
       error = _mapError(caught);
     } finally {
       isBusy = false;
@@ -1285,7 +1286,6 @@ class RentingController extends ChangeNotifier {
     _rideTimer?.cancel();
     _rideTimer = null;
     _positionSubscription?.pause();
-    notifyListeners();
   }
 
   /// Resume tracking and timer when app is resumed and page is visible
@@ -1306,7 +1306,6 @@ class RentingController extends ChangeNotifier {
         _startLocationTracking();
       }
     }
-    notifyListeners();
   }
 
   void _startBikeReadyTimer() {
@@ -1406,8 +1405,18 @@ class RentingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     _stopClock();
     _stopLocationTracking();
     _stopBikeReadyTimer();

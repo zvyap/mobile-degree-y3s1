@@ -116,8 +116,8 @@ class _RentingFlowPageState extends State<RentingFlowPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _controller.pauseTracking();
     _controller.removeListener(_handleControllerChange);
+    _controller.pauseTracking();
     super.dispose();
   }
 

@@ -159,6 +159,21 @@ class _ReturnStationMap extends BaseStationMapView {
               : null,
           showHeader: false,
           showRecenterButton: true,
+          initialStations: stations
+              .map<Map<String, dynamic>>((s) => <String, dynamic>{
+                    'id': s.id,
+                    'backendId': s.backendId,
+                    'name': s.name,
+                    'latitude': s.latitude,
+                    'longitude': s.longitude,
+                    'status': s.availableDocks > 0
+                        ? 'Normal'
+                        : 'Under Maintenance',
+                    'available_bikes': 0,
+                    'capacity': s.availableDocks,
+                    'distance_meters': s.distanceMeters,
+                  })
+              .toList(growable: false),
         );
 
   final List<ReturnStation> stations;
@@ -191,7 +206,7 @@ class _ReturnStationMapState
   void _syncReturnStations() {
     setState(() {
       stations = widget.stations
-          .map((s) => {
+          .map<Map<String, dynamic>>((s) => <String, dynamic>{
                 'id': s.id,
                 'backendId': s.backendId,
                 'name': s.name,
@@ -204,20 +219,18 @@ class _ReturnStationMapState
               })
           .toList(growable: false);
       selectedStation = widget.selectedStation != null
-          ? stations.firstWhere(
-              (s) => s['id'] == widget.selectedStation!.id,
-              orElse: () => {},
-            )
+          ? stations
+              .where((s) => s['id'] == widget.selectedStation!.id)
+              .firstOrNull
           : null;
     });
   }
 
   @override
   void handleStationTap(String stationId) {
-    final matched = widget.stations.cast<ReturnStation?>().firstWhere(
-          (s) => s?.id == stationId,
-          orElse: () => null,
-        );
+    final matched = widget.stations
+        .where((s) => s.id == stationId)
+        .firstOrNull;
     if (matched != null) {
       widget.onSelectStation(matched);
     }

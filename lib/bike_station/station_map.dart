@@ -78,11 +78,10 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
 
   @override
   void handleStationTap(String stationId) {
-    final station = stations.firstWhere(
-      (s) => s['id']?.toString() == stationId,
-      orElse: () => {},
-    );
-    if (station.isNotEmpty) {
+    final station = stations
+        .where((s) => s['id']?.toString() == stationId)
+        .firstOrNull;
+    if (station != null) {
       _openStationDetail(station);
     }
   }

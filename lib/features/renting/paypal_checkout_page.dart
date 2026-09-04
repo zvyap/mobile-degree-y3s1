@@ -1,5 +1,6 @@
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/constants.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -98,6 +99,15 @@ class _PayPalCheckoutPageState extends State<PayPalCheckoutPage> {
             icon: const Icon(Icons.close_rounded),
           ),
           title: Text(context.l10n.paypalCheckoutTitle),
+          actions: [
+            if (kDebugMode)
+              TextButton.icon(
+                key: const ValueKey('debug-paypal-approve-button'),
+                onPressed: () => _finish(PayPalCheckoutResult.approved),
+                icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+                label: const Text('Approve', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              ),
+          ],
           bottom: _progress < 100
               ? PreferredSize(
                   preferredSize: const Size.fromHeight(3),
