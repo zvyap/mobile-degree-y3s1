@@ -196,4 +196,41 @@ class BikeReportRepository {
     })
         .eq('id', reportId);
   }
+
+  Future<List<BikeReport>> getReportsForBike(
+      int bikeId,
+      ) async {
+    final response = await _supabase
+        .from('bike_reports')
+        .select('''
+        id,
+        bike_id,
+        reporter_id,
+        category,
+        description,
+        status,
+        review_note,
+        reviewed_by,
+        reviewed_at,
+        created_at,
+        updated_at,
+        bikes (
+          code,
+          stations (
+            name
+          )
+        )
+      ''')
+        .eq('bike_id', bikeId)
+        .order(
+      'created_at',
+      ascending: false,
+    );
+
+    return response
+        .map<BikeReport>(
+          (json) => BikeReport.fromJson(json),
+    )
+        .toList();
+  }
 }

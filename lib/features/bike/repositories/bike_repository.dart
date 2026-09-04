@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../models/bike_performance.dart';
 import '../models/bike.dart';
 
 class BikeRepository {
@@ -132,6 +132,31 @@ class BikeRepository {
       'status': 'retired',
     })
         .eq('id', bikeId);
+  }
+
+  Future<BikePerformance> getBikePerformance(
+      int bikeId,
+      ) async {
+    final response = await _supabase
+        .from('rentals')
+        .select('id, distance_km')
+        .eq('bike_id', bikeId)
+        .eq('status', 'completed');
+
+    double totalDistance = 0;
+
+    for (final rental in response) {
+      final distance = rental['distance_km'];
+
+      if (distance != null) {
+        totalDistance += (distance as num).toDouble();
+      }
+    }
+
+    return BikePerformance(
+      rentalCount: response.length,
+      totalDistanceKm: totalDistance,
+    );
   }
 
 }
