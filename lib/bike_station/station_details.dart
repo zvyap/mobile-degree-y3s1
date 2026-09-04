@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:bike_renting_app/bike_station/docking.dart';
+import 'package:bike_renting_app/bike_station/supabase_storage_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -27,6 +28,7 @@ class StationDetailScreen extends StatefulWidget {
 class _StationDetailScreenState extends State<StationDetailScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
   final ImagePicker _picker = ImagePicker();
+  final SupabaseStorageService _storageService = SupabaseStorageService();
 
   String stationName = "";
   String stationAddress = "";
@@ -84,7 +86,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 80,
+        imageQuality: 85,
       );
 
       if (pickedFile != null) {
@@ -97,23 +99,37 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     }
   }
 
+  // 🟢 Upload new WebP image and delete previous image from storage bucket
   Future<String?> _uploadImageToSupabase() async {
     if (selectedImageFile == null) return imageUrl;
 
     try {
-      final bytes = await selectedImageFile!.readAsBytes();
-      final fileExt = selectedImageFile!.name.split('.').last.toLowerCase();
-      final fileName = 'station_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-      final filePath = 'stations/$fileName';
+      final String? oldImageUrl = imageUrl; // Capture previous image URL
 
-      await supabase.storage.from('station-photos').uploadBinary(
-        filePath,
-        bytes,
-        fileOptions: FileOptions(contentType: 'image/$fileExt'),
+      final dynamic input = kIsWeb
+          ? await selectedImageFile!.readAsBytes()
+          : File(selectedImageFile!.path);
+
+      final String? publicUrl = await _storageService.uploadWebpImage(
+        imageInput: input,
+        bucketName: 'app-uploads',
+        folderPath: 'stations',
+        quality: 80,
       );
 
-      final String publicUrl = supabase.storage.from('station-photos').getPublicUrl(filePath);
-      return publicUrl;
+      // 🟢 Delete old image if new upload succeeded
+      if (publicUrl != null && oldImageUrl != null && oldImageUrl.isNotEmpty) {
+        try {
+          await _storageService.deleteImage(
+            bucketName: 'app-uploads',
+            pathOrUrl: oldImageUrl,
+          );
+        } catch (deleteError) {
+          debugPrint("Old image deletion error: $deleteError");
+        }
+      }
+
+      return publicUrl ?? imageUrl;
     } catch (e) {
       debugPrint("Storage Upload Error: $e");
       _showSnackBar("Image upload failed: $e");
@@ -158,7 +174,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         'longitude': longitude,
         'capacity': maxBikes,
         'status': operatingStatus,
-        'is_active': true, // 🟢 Always true when created or edited
+        'is_active': true,
         'image_url': finalImageUrl,
         'updated_at': DateTime.now().toIso8601String(),
       };
