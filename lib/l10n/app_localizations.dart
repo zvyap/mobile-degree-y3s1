@@ -714,6 +714,30 @@ abstract class AppLocalizations {
   /// **'Camera ready'**
   String get cameraReady;
 
+  /// No description provided for @cameraNoPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'No Permission'**
+  String get cameraNoPermission;
+
+  /// No description provided for @cameraPermissionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission is required to scan the bike QR code. Tap below to allow access.'**
+  String get cameraPermissionDescription;
+
+  /// No description provided for @grantPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Grant Permission'**
+  String get grantPermission;
+
+  /// No description provided for @cameraPermissionSettingsPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission is required. Enable camera in device settings.'**
+  String get cameraPermissionSettingsPrompt;
+
   /// No description provided for @pointCamera.
   ///
   /// In en, this message translates to:
@@ -1373,6 +1397,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bike {bikeId} is already reserved. Choose another bike and scan again.'**
   String errorBikeReserved(String bikeId);
+
+  /// No description provided for @errorBikeMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike {bikeId} is currently under maintenance and cannot be rented. Choose another bike and scan again.'**
+  String errorBikeMaintenance(String bikeId);
+
+  /// No description provided for @errorBikeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike {bikeId} is currently unavailable and cannot be rented. Choose another bike and scan again.'**
+  String errorBikeUnavailable(String bikeId);
+
+  /// No description provided for @bikeCannotBeRentedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike Cannot Be Rented'**
+  String get bikeCannotBeRentedTitle;
 
   /// No description provided for @errorHoldDeclined.
   ///
