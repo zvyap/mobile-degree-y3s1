@@ -241,37 +241,13 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  context.l10n.rideConditions,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              IconButton(
-                iconSize: 18,
-                padding: const EdgeInsets.all(8),
-                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-                icon: _isLoading
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: scheme.primary,
-                        ),
-                      )
-                    : Icon(Icons.refresh_rounded, color: scheme.primary),
-                tooltip: 'Refresh ride weather conditions',
-                onPressed: _isLoading ? null : () => _loadWeather(forceRefresh: true),
-              ),
-            ],
+          Text(
+            context.l10n.rideConditions,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           DecoratedBox(
             decoration: BoxDecoration(
               border: Border.symmetric(
