@@ -71,6 +71,12 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    // Standard lifecycle disposal for state-level resources
+    super.dispose();
+  }
+
   String _generateStationCode(String name) {
     final String prefix = name.trim().length >= 2
         ? name.trim().substring(0, 2).toUpperCase()
@@ -434,13 +440,13 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     );
   }
 
-  void _showSingleInputDialog(String title, String initialValue, Function(String) onSave) {
-    TextEditingController controller = TextEditingController(text: initialValue);
+  void _showSingleInputDialog(String title, String initialValue, Function(String) onSave) async {
+    final TextEditingController controller = TextEditingController(text: initialValue);
     final colorScheme = Theme.of(context).colorScheme;
     const errorColor = Color(0xFFDC2626);
     String? localError;
 
-    showDialog(
+    await showDialog(
       context: context,
       useRootNavigator: true,
       builder: (dialogContext) => StatefulBuilder(
@@ -509,14 +515,17 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         },
       ),
     );
+
+
+    controller.dispose();
   }
 
-  void _showDetailsDialog() {
+  void _showDetailsDialog() async {
     final colorScheme = Theme.of(context).colorScheme;
     String tempStatus = operatingStatus;
     int tempMax = maxBikes;
 
-    TextEditingController maxCtrl = TextEditingController(text: tempMax.toString());
+    final TextEditingController maxCtrl = TextEditingController(text: tempMax.toString());
 
     void updateTextField(TextEditingController ctrl, int val) {
       ctrl.value = TextEditingValue(
@@ -525,7 +534,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       );
     }
 
-    showDialog(
+    await showDialog(
       context: context,
       useRootNavigator: true,
       builder: (dialogContext) => StatefulBuilder(
@@ -627,6 +636,9 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         },
       ),
     );
+
+
+    maxCtrl.dispose();
   }
 
   Widget _statusChip(String label, Color color, String currentStatus, VoidCallback onTap) {

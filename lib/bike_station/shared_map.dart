@@ -177,6 +177,7 @@ class SharedBikeMap extends StatelessWidget {
   final String? selectedStationId;
   final LatLng? riderLocation;
   final double? geofenceRadiusMeters;
+  final List<LatLng>? routePoints;
 
   const SharedBikeMap({
     super.key,
@@ -189,6 +190,7 @@ class SharedBikeMap extends StatelessWidget {
     this.selectedStationId,
     this.riderLocation,
     this.geofenceRadiusMeters,
+    this.routePoints,
   });
 
   LatLng _computeInitialCenter() {
@@ -257,6 +259,17 @@ class SharedBikeMap extends StatelessWidget {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.zvyap.edu.mobile.bike_renting_app',
         ),
+
+        if (routePoints != null && routePoints!.isNotEmpty)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: routePoints!,
+                strokeWidth: 5.0,
+                color: const Color(0xFF10B981), // Vibrant Green Polyline
+              ),
+            ],
+          ),
 
         // Optional geofence radius circle around selected station
         if (selectedLatLng != null && geofenceRadiusMeters != null)
