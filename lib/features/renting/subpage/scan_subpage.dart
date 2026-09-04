@@ -35,6 +35,7 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
       formats: const [BarcodeFormat.qrCode],
       autoZoom: true,
       returnImage: false,
+      facing: CameraFacing.back,
     );
   }
 
@@ -118,14 +119,6 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
       if (mounted) {
         setState(() => _torchOn = !_torchOn);
       }
-    } catch (_) {}
-  }
-
-  Future<void> _switchCamera() async {
-    final controller = _scannerController;
-    if (controller == null || !controller.value.isRunning) return;
-    try {
-      await controller.switchCamera();
     } catch (_) {}
   }
 
@@ -227,47 +220,26 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
           ),
         ),
 
-        // Controls top right (Torch & Camera Switch)
+        // Control top right (Torch)
         Positioned(
           top: 10,
           right: 10,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    _torchOn
-                        ? Icons.flash_on_rounded
-                        : Icons.flash_off_rounded,
-                    color: _torchOn ? Colors.amber : Colors.white,
-                    size: 20,
-                  ),
-                  tooltip: 'Flashlight',
-                  onPressed: _toggleTorch,
-                ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.55),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(
+                _torchOn
+                    ? Icons.flash_on_rounded
+                    : Icons.flash_off_rounded,
+                color: _torchOn ? Colors.amber : Colors.white,
+                size: 20,
               ),
-              const SizedBox(width: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.cameraswitch_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  tooltip: 'Switch camera',
-                  onPressed: _switchCamera,
-                ),
-              ),
-            ],
+              tooltip: 'Flashlight',
+              onPressed: _toggleTorch,
+            ),
           ),
         ),
 
