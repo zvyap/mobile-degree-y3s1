@@ -160,10 +160,10 @@ class AppNavigator extends StatelessWidget {
         bikeId: arguments as String,
       ),
       AppPage.transferBike => TransferBikePage(
-        bikeId: arguments as String,
+        bikeId: arguments as int,
       ),
       AppPage.editBike => EditBikePage(
-        bikeId: arguments as String,
+        bikeId: arguments as int,
       ),
       AppPage.bikeReport => BikeReportPage(
         onOpenReportDetail: (reportId) {

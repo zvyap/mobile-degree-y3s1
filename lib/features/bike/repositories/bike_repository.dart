@@ -72,4 +72,33 @@ class BikeRepository {
     });
   }
 
+  Future<void> updateBike({
+    required int bikeId,
+    required String code,
+    required int batteryPercent,
+    required String status,
+  }) async {
+    await _supabase
+        .from('bikes')
+        .update({
+      'code': code,
+      'battery_percent': batteryPercent,
+      'status': status,
+    })
+        .eq('id', bikeId);
+  }
+
+  Future<void> transferBike({
+    required int bikeId,
+    required int stationId,
+  }) async {
+    await _supabase
+        .from('bikes')
+        .update({
+      'current_station_id': stationId,
+    })
+        .eq('id', bikeId);
+  }
+
+
 }
