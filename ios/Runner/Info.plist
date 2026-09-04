@@ -66,5 +66,10 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+    <string>This app requires access to your photo library to select bike station images.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>This app requires access to your camera to take bike station images.</string>
+
 </dict>
 </plist>
