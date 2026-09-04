@@ -12,6 +12,8 @@ import 'package:bike_renting_app/features/renting/rental_payment_simulator.dart'
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/features/renting/rider_location.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RentingController extends ChangeNotifier {
@@ -113,6 +115,12 @@ class RentingController extends ChangeNotifier {
   String? stationQrToken;
   int? stationDistanceMeters;
   RiderPosition? _arrivalPosition;
+
+  LatLng? riderLatLng;
+  final List<LatLng> rideRoutePoints = [];
+  bool isTrackingPaused = false;
+  StreamSubscription<Position>? _positionSubscription;
+  Position? _lastGpsPosition;
 
   int? get rentalId => _session?.rental.id;
 
@@ -616,16 +624,18 @@ class RentingController extends ChangeNotifier {
       RentalStage.returning => true,
       _ => false,
     };
-    if (!rentalStillActive || !gpsAvailable) return;
+    if (!rentalStillActive || !gpsAvailable || isTrackingPaused) return;
 
-    // TODO(gps): Replace simulated distance with validated Android location
-    // samples and checkpoint progress for crash-safe distance recovery.
+    // When real GPS has provided positions, distance is computed directly
+    // from physical movement. Fall back to simulation only when GPS is unseeded.
+    final bool useSimulatedDistance = riderLatLng == null;
+
     metrics = metrics.copyWith(
       elapsedSeconds: math.max(
         metrics.elapsedSeconds + seconds,
         _elapsedFromServerStart(),
       ),
-      distanceKm: metrics.distanceKm + distanceKm,
+      distanceKm: metrics.distanceKm + (useSimulatedDistance ? distanceKm : 0),
     );
     notifyListeners();
   }
@@ -1166,13 +1176,137 @@ class RentingController extends ChangeNotifier {
 
   void _startClock() {
     _stopClock();
-    if (!enableClock) return;
+    if (!enableClock || isTrackingPaused) return;
     _rideTimer = Timer.periodic(const Duration(seconds: 1), (_) => tickRide());
+    _startLocationTracking();
   }
 
   void _stopClock() {
     _rideTimer?.cancel();
     _rideTimer = null;
+    _stopLocationTracking();
+  }
+
+  void _startLocationTracking() {
+    _stopLocationTracking();
+    if (!enableClock || isTrackingPaused) return;
+
+    try {
+      const settings = LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 2,
+      );
+      _positionSubscription = Geolocator.getPositionStream(
+        locationSettings: settings,
+      ).listen(
+        _onPositionUpdate,
+        onError: (err) {
+          debugPrint('GPS location stream error: $err');
+          gpsAvailable = false;
+          error = RentalError.gpsLost;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      debugPrint('Error starting GPS tracking: $e');
+    }
+  }
+
+  void _stopLocationTracking() {
+    _positionSubscription?.cancel();
+    _positionSubscription = null;
+    _lastGpsPosition = null;
+  }
+
+  void _onPositionUpdate(Position position) {
+    if (isTrackingPaused) return;
+
+    final rentalStillActive = switch (stage) {
+      RentalStage.riding ||
+      RentalStage.selectingReturn ||
+      RentalStage.returning => true,
+      _ => false,
+    };
+    if (!rentalStillActive) {
+      _stopLocationTracking();
+      return;
+    }
+
+    gpsAvailable = true;
+    if (error == RentalError.gpsLost) {
+      _clearError();
+    }
+
+    final newLatLng = LatLng(position.latitude, position.longitude);
+    riderLatLng = newLatLng;
+
+    // Accumulate distance moved during active riding
+    if (_lastGpsPosition != null && stage == RentalStage.riding) {
+      final distanceMeters = Geolocator.distanceBetween(
+        _lastGpsPosition!.latitude,
+        _lastGpsPosition!.longitude,
+        position.latitude,
+        position.longitude,
+      );
+      // Filter out noise/jitter: must move at least 2 meters and accuracy must be reliable
+      if (distanceMeters >= 2.0 && position.accuracy <= 35.0) {
+        metrics = metrics.copyWith(
+          distanceKm: metrics.distanceKm + (distanceMeters / 1000.0),
+        );
+        rideRoutePoints.add(newLatLng);
+      }
+    } else {
+      if (rideRoutePoints.isEmpty) {
+        rideRoutePoints.add(newLatLng);
+      }
+    }
+    _lastGpsPosition = position;
+
+    // Update distance to selected station if selecting return
+    if (selectedStation != null) {
+      stationDistanceMeters = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        selectedStation!.latitude,
+        selectedStation!.longitude,
+      ).round();
+      if (stationDistanceMeters! <= 250) {
+        isAtStation = true;
+      }
+    }
+
+    notifyListeners();
+  }
+
+  /// Pause tracking and timer when app is paused or page is not being viewed
+  void pauseTracking() {
+    if (isTrackingPaused) return;
+    isTrackingPaused = true;
+    _rideTimer?.cancel();
+    _rideTimer = null;
+    _positionSubscription?.pause();
+    notifyListeners();
+  }
+
+  /// Resume tracking and timer when app is resumed and page is visible
+  void resumeTracking() {
+    if (!isTrackingPaused) return;
+    isTrackingPaused = false;
+    final rentalStillActive = switch (stage) {
+      RentalStage.riding ||
+      RentalStage.selectingReturn ||
+      RentalStage.returning => true,
+      _ => false,
+    };
+    if (rentalStillActive) {
+      _startClock();
+      if (_positionSubscription?.isPaused ?? false) {
+        _positionSubscription?.resume();
+      } else if (_positionSubscription == null) {
+        _startLocationTracking();
+      }
+    }
+    notifyListeners();
   }
 
   void _startBikeReadyTimer() {
@@ -1240,6 +1374,7 @@ class RentingController extends ChangeNotifier {
 
   void _resetLocal() {
     _stopClock();
+    _stopLocationTracking();
     _stopBikeReadyTimer();
     _session = null;
     _completedSession = null;
@@ -1264,12 +1399,17 @@ class RentingController extends ChangeNotifier {
     _paypalOrder = null;
     _paypalAuthorizationId = null;
     _scannedBikeCode = null;
+    riderLatLng = null;
+    rideRoutePoints.clear();
+    _lastGpsPosition = null;
+    isTrackingPaused = false;
     notifyListeners();
   }
 
   @override
   void dispose() {
     _stopClock();
+    _stopLocationTracking();
     _stopBikeReadyTimer();
     if (_ownsPayPalGateway) _paypalGateway.close();
     super.dispose();

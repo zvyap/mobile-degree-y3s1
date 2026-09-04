@@ -49,6 +49,13 @@ class _ReturnStage extends StatelessWidget {
               controller.selectedStation!.availableDocks,
             ),
           ),
+          const SizedBox(height: 14),
+          _ReturnStationMap(
+            stations: controller.stations,
+            selectedStation: controller.selectedStation,
+            onSelectStation: controller.selectStation,
+            isAtStation: controller.isAtStation,
+          ),
           if (controller.error != null) ...[
             const SizedBox(height: 18),
             _ErrorPanel(message: _rentalError(context, controller)),
