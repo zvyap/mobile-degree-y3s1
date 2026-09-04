@@ -1,30 +1,102 @@
+import 'dart:io' show Platform;
+import 'package:bike_renting_app/features/weather/user_location_service.dart';
+import 'package:bike_renting_app/features/weather/weather_api_service.dart';
+import 'package:bike_renting_app/features/weather/weather_models.dart';
 import 'package:bike_renting_app/l10n/app_formats.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
-class RideConditionsPanel extends StatelessWidget {
-  const RideConditionsPanel({super.key});
+class RideConditionsPanel extends StatefulWidget {
+  const RideConditionsPanel({
+    super.key,
+    this.weatherService,
+    this.locationService,
+    this.initialSnapshot,
+    this.autoFetch,
+  });
+
+  final WeatherApiService? weatherService;
+  final UserLocationService? locationService;
+  final WeatherSnapshot? initialSnapshot;
+  final bool? autoFetch;
+
+  @override
+  State<RideConditionsPanel> createState() => RideConditionsPanelState();
+}
+
+class RideConditionsPanelState extends State<RideConditionsPanel> {
+  late final WeatherApiService _weatherService;
+  late final UserLocationService _locationService;
+
+  WeatherSnapshot? _snapshot;
+  bool _isLoading = false;
+
+  /// Trigger a live refresh of weather conditions.
+  Future<void> refresh({bool forceRefresh = true}) =>
+      _loadWeather(forceRefresh: forceRefresh);
+
+  @override
+  void initState() {
+    super.initState();
+    _weatherService = widget.weatherService ?? WeatherApiService();
+    _locationService = widget.locationService ?? UserLocationService();
+
+    final isTest = Platform.environment.containsKey('FLUTTER_TEST');
+    final shouldAutoFetch = widget.autoFetch ?? !isTest;
+
+    if (widget.initialSnapshot != null) {
+      _snapshot = widget.initialSnapshot;
+    } else {
+      _snapshot = WeatherSnapshot.fallback();
+      if (shouldAutoFetch) {
+        _loadWeather();
+      }
+    }
+  }
+
+  Future<void> _loadWeather({bool forceRefresh = false}) async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final userLocation = await _locationService.getCurrentUserLocation();
+      final snapshot = await _weatherService.getRideConditions(
+        userLocation,
+        forceRefresh: forceRefresh,
+      );
+      if (mounted) {
+        setState(() {
+          _snapshot = snapshot;
+        });
+      }
+    } catch (e) {
+      debugPrint('RideConditionsPanel load error: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final date = DateTime.now();
-    final updatedAt = DateTime(date.year, date.month, date.day, 10, 30);
 
-    // TODO: Replace these values with cached api.met.gov.my weather data and
-    // resolve the authenticated rider's coordinates into a location label.
-    const location = 'Jalan Sultan Ismail, Bukit Bintang, Kuala Lumpur';
-    final currentCondition = context.l10n.partlyCloudy;
-    const currentTemperature = '30°C';
-    final feelsLike = context.l10n.feelsLike('34°C');
-    final nextHourCondition = context.l10n.scatteredThunderstorms;
-    const nextHourTemperature = '29°C';
-    final nextHourRainChance = context.l10n.rainChance(65);
-    const humidity = '78%';
-    const airQualityIndex = '42';
-    final airQualityLabel = context.l10n.good;
-    const wind = '9 km/h SW';
+    final snapshot = _snapshot ?? WeatherSnapshot.fallback();
+    final location = snapshot.locationName;
+    final currentCondition = snapshot.currentCondition.label;
+    final currentTemperature = snapshot.temperatureFormatted;
+    final feelsLike = context.l10n.feelsLike('${snapshot.feelsLikeTemperature}°C');
+    final nextHourCondition = snapshot.nextHourCondition.label;
+    final nextHourTemperature = snapshot.nextHourTemperatureFormatted;
+    final nextHourRainChance = context.l10n.rainChance(snapshot.nextHourRainChance);
+    final humidity = snapshot.humidityFormatted;
+    final airQualityIndex = '${snapshot.airQualityIndex}';
+    final airQualityLabel = snapshot.airQualityLabel;
+    final wind = snapshot.windFormatted;
+    final updatedAt = snapshot.updatedAt;
+    final date = snapshot.updatedAt;
 
     return Semantics(
       container: true,
@@ -44,13 +116,37 @@ class RideConditionsPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            context.l10n.rideConditions,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  context.l10n.rideConditions,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              IconButton(
+                iconSize: 18,
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                icon: _isLoading
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: scheme.primary,
+                        ),
+                      )
+                    : Icon(Icons.refresh_rounded, color: scheme.primary),
+                tooltip: 'Refresh ride weather conditions',
+                onPressed: _isLoading ? null : () => _loadWeather(forceRefresh: true),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           DecoratedBox(
             decoration: BoxDecoration(
               border: Border.symmetric(
@@ -75,7 +171,7 @@ class RideConditionsPanel extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          Icons.wb_cloudy_rounded,
+                          snapshot.currentCondition.iconData,
                           color: scheme.tertiary,
                           size: 22,
                         ),
