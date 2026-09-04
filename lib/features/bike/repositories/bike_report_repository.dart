@@ -9,7 +9,42 @@ class BikeReportRepository {
     SupabaseClient? supabase,
   }) : _supabase = supabase ?? Supabase.instance.client;
 
+  Future<String?> getReportPhotoUrl({
+    required int reportId,
+    required String? reporterId,
+  }) async {
+    if (reporterId == null ||
+        reporterId.trim().isEmpty) {
+      return null;
+    }
 
+    final folderPath =
+        '$reporterId/$reportId';
+
+    final files = await _supabase.storage
+        .from('bike-report-photos')
+        .list(
+      path: folderPath,
+    );
+
+    final hasPhoto = files.any(
+          (file) => file.name == 'report.webp',
+    );
+
+    if (!hasPhoto) {
+      return null;
+    }
+
+    final filePath =
+        '$folderPath/report.webp';
+
+    return await _supabase.storage
+        .from('bike-report-photos')
+        .createSignedUrl(
+      filePath,
+      3600,
+    );
+  }
 
   // ===========================================================================
   // CREATE REPORT
