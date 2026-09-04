@@ -143,13 +143,23 @@ class _StationTile extends StatelessWidget {
   }
 }
 
-class _ReturnStationMap extends StatelessWidget {
-  const _ReturnStationMap({
+class _ReturnStationMap extends BaseStationMapView {
+  _ReturnStationMap({
     required this.stations,
     required this.selectedStation,
     required this.onSelectStation,
     required this.isAtStation,
-  });
+  }) : super(
+          isEmbedded: true,
+          height: 200,
+          selectedStationId: selectedStation?.id,
+          geofenceRadiusMeters: 250,
+          initialCenter: selectedStation != null
+              ? LatLng(selectedStation.latitude, selectedStation.longitude)
+              : null,
+          showHeader: false,
+          showRecenterButton: true,
+        );
 
   final List<ReturnStation> stations;
   final ReturnStation? selectedStation;
@@ -157,43 +167,81 @@ class _ReturnStationMap extends StatelessWidget {
   final bool isAtStation;
 
   @override
+  BaseStationMapViewState<_ReturnStationMap> createState() =>
+      _ReturnStationMapState();
+}
+
+class _ReturnStationMapState
+    extends BaseStationMapViewState<_ReturnStationMap> {
+  @override
+  void initState() {
+    super.initState();
+    _syncReturnStations();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReturnStationMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.stations != oldWidget.stations ||
+        widget.selectedStation != oldWidget.selectedStation) {
+      _syncReturnStations();
+    }
+  }
+
+  void _syncReturnStations() {
+    setState(() {
+      stations = widget.stations
+          .map((s) => {
+                'id': s.id,
+                'backendId': s.backendId,
+                'name': s.name,
+                'latitude': s.latitude,
+                'longitude': s.longitude,
+                'status': s.availableDocks > 0 ? 'Normal' : 'Under Maintenance',
+                'available_bikes': 0,
+                'capacity': s.availableDocks,
+                'distance_meters': s.distanceMeters,
+              })
+          .toList(growable: false);
+      selectedStation = widget.selectedStation != null
+          ? stations.firstWhere(
+              (s) => s['id'] == widget.selectedStation!.id,
+              orElse: () => {},
+            )
+          : null;
+    });
+  }
+
+  @override
+  void handleStationTap(String stationId) {
+    final matched = widget.stations.cast<ReturnStation?>().firstWhere(
+          (s) => s?.id == stationId,
+          orElse: () => null,
+        );
+    if (matched != null) {
+      widget.onSelectStation(matched);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final stationMaps = stations
-        .map((s) => {
-              'id': s.id,
-              'backendId': s.backendId,
-              'name': s.name,
-              'latitude': s.latitude,
-              'longitude': s.longitude,
-              'status': s.availableDocks > 0 ? 'Normal' : 'Under Maintenance',
-            })
-        .toList(growable: false);
-
-    final selectedLatLng = selectedStation != null
-        ? LatLng(selectedStation!.latitude, selectedStation!.longitude)
-        : null;
-
     return Semantics(
       label: context.l10n.cityMapSemantics,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: SizedBox(
           width: double.infinity,
-          height: 200,
-          child: SharedBikeMap(
-            stations: stationMaps,
-            selectedStationId: selectedStation?.id,
-            geofenceRadiusMeters: 250,
-            initialCenter: selectedLatLng,
-            onStationTap: (stationId) {
-              final matched = stations.cast<ReturnStation?>().firstWhere(
-                    (s) => s?.id == stationId,
-                    orElse: () => null,
-                  );
-              if (matched != null) {
-                onSelectStation(matched);
-              }
-            },
+          height: widget.height ?? 200,
+          child: Stack(
+            children: [
+              Positioned.fill(child: buildMapLayer(context)),
+              if (widget.showRecenterButton)
+                Positioned(
+                  right: 10,
+                  bottom: 10,
+                  child: buildRecenterButton(context),
+                ),
+            ],
           ),
         ),
       ),
