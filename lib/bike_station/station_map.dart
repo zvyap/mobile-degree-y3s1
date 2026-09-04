@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:bike_renting_app/bike_station/shared_map.dart';
+import 'package:bike_renting_app/bike_station/base_station_map.dart';
 import 'package:bike_renting_app/bike_station/station_details.dart';
 
-class RefinedUserBikeView extends StatefulWidget {
+export 'package:bike_renting_app/bike_station/base_station_map.dart';
+
+class RefinedUserBikeView extends BaseStationMapView {
   final bool isAdminDeleteMode;
   final Function(Map<String, dynamic> station)? onRemoveStation;
 
@@ -14,150 +13,16 @@ class RefinedUserBikeView extends StatefulWidget {
     super.key,
     this.isAdminDeleteMode = false,
     this.onRemoveStation,
-  });
+  }) : super(
+         isAdminMode: isAdminDeleteMode,
+         isEmbedded: false,
+       );
 
   @override
   State<RefinedUserBikeView> createState() => _RefinedUserBikeViewState();
 }
 
-class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
-  final SupabaseClient supabase = Supabase.instance.client;
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
-
-  Map<String, dynamic>? selectedStation;
-  List<Map<String, dynamic>> stations = [];
-  List<Map<String, dynamic>> filteredStations = [];
-  LatLng? userLocation;
-  bool isLoading = true;
-  bool isSearching = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchStations();
-
-    _searchFocusNode.addListener(() {
-      setState(() {
-        isSearching = _searchFocusNode.hasFocus || _searchController.text.trim().isNotEmpty;
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _searchFocusNode.dispose();
-    super.dispose();
-  }
-
-  static double? _toDouble(dynamic val) {
-    if (val == null) return null;
-    if (val is num) return val.toDouble();
-    return double.tryParse(val.toString());
-  }
-
-  // Request GPS permission and fetch user location
-  Future<LatLng?> _getUserLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return null;
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return null;
-      }
-      if (permission == LocationPermission.deniedForever) return null;
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-      return LatLng(position.latitude, position.longitude);
-    } catch (e) {
-      debugPrint("Location retrieval error: $e");
-      return null;
-    }
-  }
-
-  // Fetch stations and sort them by distance from user location
-  Future<void> _fetchStations() async {
-    setState(() => isLoading = true);
-    try {
-      final userPos = await _getUserLocation();
-      setState(() => userLocation = userPos);
-
-      final response = await supabase
-          .from('stations')
-          .select()
-          .eq('is_active', true);
-
-      List<Map<String, dynamic>> fetched = List<Map<String, dynamic>>.from(response);
-
-      // Compute distances if GPS location is available
-      if (userPos != null) {
-        for (var s in fetched) {
-          final double? lat = _toDouble(s['latitude'] ?? s['lat']);
-          final double? lng = _toDouble(s['longitude'] ?? s['lng']);
-          if (lat != null && lng != null) {
-            s['distance_meters'] = Geolocator.distanceBetween(
-              userPos.latitude,
-              userPos.longitude,
-              lat,
-              lng,
-            );
-          }
-        }
-
-        // Sort ascending by distance (Nearest first)
-        fetched.sort((a, b) {
-          final aDist = (a['distance_meters'] as num?) ?? double.infinity;
-          final bDist = (b['distance_meters'] as num?) ?? double.infinity;
-          return aDist.compareTo(bDist);
-        });
-      }
-
-      setState(() {
-        stations = fetched;
-        filteredStations = fetched;
-        isLoading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() => isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading stations: $e')),
-        );
-      }
-    }
-  }
-
-  void _filterStations(String query) {
-    final trimmed = query.trim().toLowerCase();
-    setState(() {
-      if (trimmed.isEmpty) {
-        filteredStations = stations;
-      } else {
-        filteredStations = stations.where((s) {
-          final name = (s['name'] ?? '').toString().toLowerCase();
-          final address = (s['address'] ?? '').toString().toLowerCase();
-          return name.contains(trimmed) || address.contains(trimmed);
-        }).toList();
-      }
-      isSearching = true;
-    });
-  }
-
-  String _formatDistance(dynamic distanceMeters) {
-    if (distanceMeters == null) return '';
-    final double meters = (distanceMeters as num).toDouble();
-    if (meters < 1000) {
-      return '${meters.round()} m';
-    } else {
-      return '${(meters / 1000).toStringAsFixed(1)} km';
-    }
-  }
-
+class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeView> {
   Future<void> _deleteStation(Map<String, dynamic> station) async {
     try {
       final stationId = station['id'];
@@ -192,7 +57,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
   }
 
   void _openStationDetail(Map<String, dynamic> station) {
-    _searchFocusNode.unfocus();
+    searchFocusNode.unfocus();
     setState(() => isSearching = false);
 
     if (widget.isAdminDeleteMode) {
@@ -212,6 +77,17 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
   }
 
   @override
+  void handleStationTap(String stationId) {
+    final station = stations.firstWhere(
+      (s) => s['id']?.toString() == stationId,
+      orElse: () => {},
+    );
+    if (station.isNotEmpty) {
+      _openStationDetail(station);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -221,28 +97,14 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: GestureDetector(
         onTap: () {
-          _searchFocusNode.unfocus();
+          searchFocusNode.unfocus();
           setState(() => isSearching = false);
         },
         child: Stack(
           children: [
-            // 1. MAP LAYER
+            // 1. MAP LAYER (Inherited from BaseStationMapViewState)
             Positioned.fill(
-              child: SharedBikeMap(
-                stations: stations,
-                riderLocation: userLocation,
-                selectedStationId: selectedStation?['id']?.toString(),
-                isAdminMode: widget.isAdminDeleteMode,
-                onStationTap: (stationId) {
-                  final station = stations.firstWhere(
-                        (s) => s['id']?.toString() == stationId,
-                    orElse: () => {},
-                  );
-                  if (station.isNotEmpty) {
-                    _openStationDetail(station);
-                  }
-                },
-              ),
+              child: buildMapLayer(context),
             ),
 
             // 2. SEARCH BAR HEADER
@@ -260,10 +122,10 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
                     child: IconButton(
                       icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
                       onPressed: () {
-                        if (isSearching || _searchController.text.isNotEmpty) {
-                          _searchController.clear();
-                          _filterStations('');
-                          _searchFocusNode.unfocus();
+                        if (isSearching || searchController.text.isNotEmpty) {
+                          searchController.clear();
+                          filterStations('');
+                          searchFocusNode.unfocus();
                           setState(() => isSearching = false);
                         } else if (selectedStation != null) {
                           setState(() => selectedStation = null);
@@ -286,20 +148,20 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
                         ],
                       ),
                       child: TextField(
-                        controller: _searchController,
-                        focusNode: _searchFocusNode,
-                        onChanged: _filterStations,
+                        controller: searchController,
+                        focusNode: searchFocusNode,
+                        onChanged: filterStations,
                         style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
                         decoration: InputDecoration(
                           hintText: widget.isAdminDeleteMode ? 'Search station to remove...' : 'Search station name or address...',
                           hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13),
                           prefixIcon: Icon(Icons.search, color: colorScheme.primary, size: 20),
-                          suffixIcon: _searchController.text.isNotEmpty
+                          suffixIcon: searchController.text.isNotEmpty
                               ? IconButton(
                             icon: Icon(Icons.clear, color: colorScheme.onSurface.withValues(alpha: 0.5), size: 18),
                             onPressed: () {
-                              _searchController.clear();
-                              _filterStations('');
+                              searchController.clear();
+                              filterStations('');
                             },
                           )
                               : null,
@@ -314,7 +176,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
             ),
 
             // 3. SEARCH RESULTS LIST OVERLAY WITH DISTANCES
-            if (isSearching && _searchController.text.trim().isNotEmpty)
+            if (isSearching && searchController.text.trim().isNotEmpty)
               Positioned(
                 top: 110.0,
                 left: 16.0,
@@ -346,7 +208,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
                       separatorBuilder: (context, index) => Divider(color: colorScheme.outline.withValues(alpha: 0.2), height: 1),
                       itemBuilder: (context, index) {
                         final station = filteredStations[index];
-                        final dist = _formatDistance(station['distance_meters']);
+                        final dist = formatDistance(station['distance_meters']);
 
                         return ListTile(
                           leading: Icon(Icons.location_on, color: colorScheme.primary),
@@ -369,23 +231,11 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
                 ),
               ),
 
-            // RECENTER GPS BUTTON
+            // RECENTER GPS BUTTON (Inherited from BaseStationMapViewState)
             Positioned(
               right: 16.0,
               bottom: MediaQuery.of(context).size.height * 0.55 + 16.0,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))
-                  ],
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.my_location, color: colorScheme.onSurface),
-                  onPressed: _fetchStations,
-                ),
-              ),
+              child: buildRecenterButton(context),
             ),
 
             // DYNAMIC BOTTOM SHEET
@@ -471,7 +321,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
 
     final topStation = stations.first; // Nearest station after sorting
     final availableBikes = topStation['available_bikes'] ?? 0;
-    final distStr = _formatDistance(topStation['distance_meters']);
+    final distStr = formatDistance(topStation['distance_meters']);
     final distDisplay = distStr.isNotEmpty ? " • $distStr away" : "";
 
     return InkWell(
@@ -530,7 +380,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
       itemCount: filteredStations.length,
       itemBuilder: (context, index) {
         final station = filteredStations[index];
-        final distStr = _formatDistance(station['distance_meters']);
+        final distStr = formatDistance(station['distance_meters']);
 
         return InkWell(
           onTap: () => _openStationDetail(station),

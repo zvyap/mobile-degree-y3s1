@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StationBikesScreen extends StatefulWidget {
   final Map<String, dynamic>? stationData;
@@ -9,55 +10,92 @@ class StationBikesScreen extends StatefulWidget {
 }
 
 class _StationBikesScreenState extends State<StationBikesScreen> {
+  final SupabaseClient supabase = Supabase.instance.client;
   final TextEditingController _searchController = TextEditingController();
 
-  List<Map<String, String>> allBikes = [
-    {"id": "BR-1028", "status": "Available", "battery": "85%"},
-    {"id": "BR-1029", "status": "Available", "battery": "92%"},
-    {"id": "BR-1030", "status": "Maintenance", "battery": "15%"},
-    {"id": "BR-1031", "status": "Available", "battery": "60%"},
-  ];
-
-  List<Map<String, String>> filteredBikes = [];
+  List<Map<String, dynamic>> allBikes = [];
+  List<Map<String, dynamic>> filteredBikes = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    filteredBikes = allBikes;
+    _fetchBikes();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // Fetch bikes assigned to this station from Supabase
+  Future<void> _fetchBikes() async {
+    final stationId = widget.stationData?['id'];
+
+    if (stationId == null) {
+      setState(() => isLoading = false);
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final response = await supabase
+          .from('bikes')
+          .select()
+          .eq('current_station_id', stationId)
+          .order('code', ascending: true);
+
+      final fetchedBikes = List<Map<String, dynamic>>.from(response);
+
+      setState(() {
+        allBikes = fetchedBikes;
+        filteredBikes = fetchedBikes;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load bikes: $e')),
+        );
+      }
+    }
   }
 
   void _filterBikes(String query) {
+    final trimmedQuery = query.trim().toLowerCase();
     setState(() {
-      if (query.isEmpty) {
+      if (trimmedQuery.isEmpty) {
         filteredBikes = allBikes;
       } else {
-        filteredBikes = allBikes
-            .where((bike) => bike["id"]!.toLowerCase().contains(query.toLowerCase()))
-            .toList();
+        filteredBikes = allBikes.where((bike) {
+          final code = (bike['code'] ?? '').toString().toLowerCase();
+          final id = (bike['id'] ?? '').toString().toLowerCase();
+          return code.contains(trimmedQuery) || id.contains(trimmedQuery);
+        }).toList();
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // 1. ACCESS GLOBAL THEME VARIABLES FROM app_theme.dart
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      // Uses AppTheme's scaffoldBackgroundColor (Dark: #0B1117 / Light: #F8FAFC)
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 2. TOP HEADER SECTION
+            // 1. TOP HEADER SECTION
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Circular Back Button using surfaceContainerHighest background
                   Container(
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHighest,
@@ -70,7 +108,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    widget.stationData?['name']?.toString() ?? "Jalan Sungai Kelian Station",
+                    widget.stationData?['name']?.toString() ?? "Station Bikes",
                     style: theme.textTheme.headlineSmall?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
@@ -84,7 +122,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          widget.stationData?['address']?.toString() ?? "Tanjung Bungah, Penang",
+                          widget.stationData?['address']?.toString() ?? "Location coordinates not provided",
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
@@ -101,7 +139,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
               child: Divider(color: colorScheme.outline, height: 24),
             ),
 
-            // 3. SEARCH BAR
+            // 2. SEARCH BAR
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Container(
@@ -118,7 +156,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: InputDecoration(
                     icon: Icon(Icons.search, color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                    hintText: "Search bikes",
+                    hintText: "Search bikes by code or ID",
                     hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
                     border: InputBorder.none,
                   ),
@@ -128,91 +166,135 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
 
             const SizedBox(height: 20),
 
-            // 4. BICYCLE CARDS LIST
+            // 3. MAIN CONTENT BODY
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                itemCount: filteredBikes.length,
-                itemBuilder: (context, index) {
-                  final bike = filteredBikes[index];
-                  final bool isAvailable = bike["status"] == "Available";
+              child: Builder(
+                builder: (context) {
+                  if (isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12.0),
-                    padding: const EdgeInsets.all(16.0),
-                    decoration: BoxDecoration(
-                      // Uses surfaceContainerHighest (Dark: #1F2937 / Light: #E8ECF1)
-                      color: colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(16),
-                      // Uses AppTheme outline (Dark: #334155 / Light: #E2E8F0)
-                      border: Border.all(color: colorScheme.outline),
-                    ),
-                    child: Row(
-                      children: [
-                        // Bike Icon Container using surface background
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surface,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
+                  // 🟢 DISPLAY MESSAGE WHEN NO BIKES ARE DOCKED AT THE STATION
+                  if (allBikes.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
                             Icons.directions_bike,
-                            color: colorScheme.primary, // #0369A1
-                            size: 28,
+                            size: 64,
+                            color: colorScheme.onSurface.withValues(alpha: 0.3),
                           ),
-                        ),
-                        const SizedBox(width: 16),
-
-                        // Bike ID & Status
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                bike["id"]!,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: colorScheme.onSurface,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Status: ${bike["status"]}",
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  // Uses AppTheme secondary (#0E9F6E Green) or tertiary (#F59E0B Amber)
-                                  color: isAvailable
-                                      ? colorScheme.secondary
-                                      : colorScheme.tertiary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 16),
+                          Text(
+                            "there is no bikes in this station yet",
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurface.withValues(alpha: 0.6),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
+                        ],
+                      ),
+                    );
+                  }
 
-                        // Action Buttons
-                        Row(
+                  // DISPLAY WHEN NO BIKES MATCH SEARCH QUERY
+                  if (filteredBikes.isEmpty) {
+                    return Center(
+                      child: Text(
+                        "No bikes match your search.",
+                        style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
+                      ),
+                    );
+                  }
+
+                  // LIST OF BICYCLES
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    itemCount: filteredBikes.length,
+                    itemBuilder: (context, index) {
+                      final bike = filteredBikes[index];
+                      final String bikeCode = bike["code"] ?? "BR-${bike["id"]}";
+                      final String status = bike["status"] ?? "Unknown";
+                      final int battery = (bike["battery_percent"] as num?)?.toInt() ?? 0;
+                      final bool isAvailable = status.toLowerCase() == "available";
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12.0),
+                        padding: const EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: colorScheme.outline),
+                        ),
+                        child: Row(
                           children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surface,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.directions_bike,
+                                color: colorScheme.primary,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    bikeCode,
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      color: colorScheme.onSurface,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        "Status: $status",
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: isAvailable
+                                              ? colorScheme.secondary
+                                              : colorScheme.tertiary,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Icon(
+                                        Icons.battery_charging_full,
+                                        size: 14,
+                                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        "$battery%",
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: colorScheme.onSurface.withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+
                             IconButton(
                               icon: Icon(Icons.visibility_outlined, color: colorScheme.onSurface),
                               onPressed: () {
-                                // TODO: View details
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.close, color: colorScheme.onSurface.withValues(alpha: 0.5)),
-                              onPressed: () {
-                                setState(() {
-                                  allBikes.removeWhere((item) => item["id"] == bike["id"]);
-                                  _filterBikes(_searchController.text);
-                                });
+                                // Action to view bike specifics
                               },
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   );
                 },
               ),
