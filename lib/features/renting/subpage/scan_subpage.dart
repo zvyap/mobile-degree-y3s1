@@ -40,18 +40,29 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_isTest || _scannerController == null) return;
-    if (state == AppLifecycleState.resumed) {
-      unawaited(_scannerController?.start());
-    } else if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused) {
-      unawaited(_scannerController?.stop());
+    final controller = _scannerController!;
+    if (!controller.value.hasCameraPermission) return;
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        if (!controller.value.isRunning && !controller.value.isStarting) {
+          unawaited(controller.start().catchError((_) {}));
+        }
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+        if (controller.value.isRunning) {
+          unawaited(controller.stop().catchError((_) {}));
+        }
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        break;
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _scannerController?.dispose();
+    unawaited(_scannerController?.dispose());
     super.dispose();
   }
 
@@ -83,17 +94,21 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
   }
 
   Future<void> _toggleTorch() async {
-    if (_scannerController == null) return;
+    final controller = _scannerController;
+    if (controller == null || !controller.value.isRunning) return;
     try {
-      await _scannerController!.toggleTorch();
-      setState(() => _torchOn = !_torchOn);
+      await controller.toggleTorch();
+      if (mounted) {
+        setState(() => _torchOn = !_torchOn);
+      }
     } catch (_) {}
   }
 
   Future<void> _switchCamera() async {
-    if (_scannerController == null) return;
+    final controller = _scannerController;
+    if (controller == null || !controller.value.isRunning) return;
     try {
-      await _scannerController!.switchCamera();
+      await controller.switchCamera();
     } catch (_) {}
   }
 
