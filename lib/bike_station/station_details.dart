@@ -1,13 +1,16 @@
+import 'dart:io';
 import 'package:bike_renting_app/bike_station/docking.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StationDetailScreen extends StatefulWidget {
-  final Map<String, dynamic>? stationData; // For Edit Mode or User View Mode
-  final double? initialLat;                // For Admin Add Mode (from map long-press)
-  final double? initialLng;                // For Admin Add Mode (from map long-press)
-  final bool isViewOnly;                   // true = User View, false = Admin Add/Edit Mode
+  final Map<String, dynamic>? stationData;
+  final double? initialLat;
+  final double? initialLng;
+  final bool isViewOnly;
 
   const StationDetailScreen({
     super.key,
@@ -23,18 +26,21 @@ class StationDetailScreen extends StatefulWidget {
 
 class _StationDetailScreenState extends State<StationDetailScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
+  final ImagePicker _picker = ImagePicker();
 
-  // --- Form State Variables ---
   String stationName = "";
   String stationAddress = "";
   String latLngDesc = "";
   String operatingStatus = "Normal";
 
-  int currentBikes = 0; // Strictly Read-Only
+  int currentBikes = 0;
   int maxBikes = 20;
 
   double? latitude;
   double? longitude;
+
+  String? imageUrl;
+  XFile? selectedImageFile;
 
   bool isSaving = false;
   bool showValidationErrors = false;
@@ -50,6 +56,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       stationName = station['name'] ?? "";
       stationAddress = station['address'] ?? "";
       operatingStatus = station['status'] ?? "Normal";
+      imageUrl = station['image_url'] ?? station['photo_url'];
 
       currentBikes = (station['available_bikes'] as num?)?.toInt() ??
           (station['currentBikes'] as num?)?.toInt() ?? 0;
@@ -58,7 +65,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       latitude = (station['latitude'] as num?)?.toDouble() ?? (station['lat'] as num?)?.toDouble();
       longitude = (station['longitude'] as num?)?.toDouble() ?? (station['lng'] as num?)?.toDouble();
     } else {
-      currentBikes = 0; // New stations start with 0 bikes
+      currentBikes = 0;
       maxBikes = 20;
       latitude = widget.initialLat;
       longitude = widget.initialLng;
@@ -71,10 +78,47 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    // Standard lifecycle disposal for state-level resources
-    super.dispose();
+  Future<void> _pickImage() async {
+    if (widget.isViewOnly) return;
+
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          selectedImageFile = pickedFile;
+        });
+      }
+    } catch (e) {
+      _showSnackBar("Failed to select image: $e");
+    }
+  }
+
+  Future<String?> _uploadImageToSupabase() async {
+    if (selectedImageFile == null) return imageUrl;
+
+    try {
+      final bytes = await selectedImageFile!.readAsBytes();
+      final fileExt = selectedImageFile!.name.split('.').last.toLowerCase();
+      final fileName = 'station_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      final filePath = 'stations/$fileName';
+
+      await supabase.storage.from('station-photos').uploadBinary(
+        filePath,
+        bytes,
+        fileOptions: FileOptions(contentType: 'image/$fileExt'),
+      );
+
+      final String publicUrl = supabase.storage.from('station-photos').getPublicUrl(filePath);
+      return publicUrl;
+    } catch (e) {
+      debugPrint("Storage Upload Error: $e");
+      _showSnackBar("Image upload failed: $e");
+      return imageUrl;
+    }
   }
 
   String _generateStationCode(String name) {
@@ -105,6 +149,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     setState(() => isSaving = true);
 
     try {
+      final String? finalImageUrl = await _uploadImageToSupabase();
+
       final payload = {
         'name': stationName.trim(),
         'address': stationAddress.trim(),
@@ -112,7 +158,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         'longitude': longitude,
         'capacity': maxBikes,
         'status': operatingStatus,
-        'is_active': operatingStatus != "Terminated",
+        'is_active': true, // 🟢 Always true when created or edited
+        'image_url': finalImageUrl,
         'updated_at': DateTime.now().toIso8601String(),
       };
 
@@ -127,7 +174,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       }
 
       if (mounted) {
-        Navigator.of(context).pop(true); // Safely pop screen
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       _showSnackBar("Failed to save station: $e");
@@ -154,35 +201,80 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Photo Header
-            Container(
-              height: 180,
-              width: double.infinity,
-              color: colorScheme.surfaceContainerHighest,
-              child: Stack(
-                children: [
-                  Center(
-                    child: Text(
-                      widget.isViewOnly ? "Station Photo" : "Click here to upload a photo",
-                      style: TextStyle(
-                        color: colorScheme.onSurface.withValues(alpha: 0.5),
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
+            GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                height: 180,
+                width: double.infinity,
+                color: colorScheme.surfaceContainerHighest,
+                child: Stack(
+                  children: [
+                    if (selectedImageFile != null)
+                      Positioned.fill(
+                        child: kIsWeb
+                            ? Image.network(selectedImageFile!.path, fit: BoxFit.cover)
+                            : Image.file(File(selectedImageFile!.path), fit: BoxFit.cover),
+                      )
+                    else if (imageUrl != null && imageUrl!.isNotEmpty)
+                      Positioned.fill(
+                        child: Image.network(
+                          imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Center(
+                            child: Icon(Icons.broken_image, color: colorScheme.onSurface.withValues(alpha: 0.5)),
+                          ),
+                        ),
+                      )
+                    else
+                      Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_a_photo, color: colorScheme.onSurface.withValues(alpha: 0.5), size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              widget.isViewOnly ? "No Station Photo" : "Click here to upload a photo",
+                              style: TextStyle(
+                                color: colorScheme.onSurface.withValues(alpha: 0.5),
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      child: CircleAvatar(
+                        backgroundColor: colorScheme.surface.withValues(alpha: 0.8),
+                        child: IconButton(
+                          icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    child: CircleAvatar(
-                      backgroundColor: colorScheme.surface,
-                      child: IconButton(
-                        icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
-                        onPressed: () => Navigator.of(context).pop(),
+                    if (!widget.isViewOnly && (selectedImageFile != null || (imageUrl != null && imageUrl!.isNotEmpty)))
+                      Positioned(
+                        bottom: 12,
+                        right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.edit, color: Colors.white, size: 14),
+                              SizedBox(width: 4),
+                              Text("Change Photo", style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -192,7 +284,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Station Name Row
                     Container(
                       padding: nameHasError ? const EdgeInsets.all(12) : EdgeInsets.zero,
                       decoration: nameHasError
@@ -246,7 +337,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Address Row
                     Container(
                       padding: addressHasError ? const EdgeInsets.all(12) : EdgeInsets.zero,
                       decoration: addressHasError
@@ -298,7 +388,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Details Card
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -338,7 +427,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                           ),
                           const SizedBox(height: 20),
 
-                          // Read-Only Available Bikes
                           Row(
                             children: [
                               Text("Current bike available", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13)),
@@ -363,7 +451,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                           ),
                           const SizedBox(height: 20),
 
-                          // Max Capacity
                           Text("Max bike per station", style: TextStyle(color: colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
                           Row(
@@ -378,7 +465,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     ),
                     const SizedBox(height: 40),
 
-                    // Main Save Button / User Action Button
                     if (widget.isViewOnly)
                       SizedBox(
                         width: double.infinity,
@@ -456,68 +542,67 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
-                      child: Icon(Icons.close, color: colorScheme.onSurface),
-                    ),
-                  ),
-                  Text("Edit $title", style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: controller,
-                    maxLength: title == "Station name" ? 100 : 200,
-                    style: TextStyle(color: colorScheme.onSurface),
-                    decoration: InputDecoration(
-                      hintText: "Enter $title",
-                      hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
-                      errorText: localError,
-                      errorStyle: const TextStyle(color: errorColor, fontWeight: FontWeight.w600),
-                      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: localError != null ? errorColor : colorScheme.outline)),
-                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: localError != null ? errorColor : colorScheme.primary)),
-                    ),
-                    onChanged: (val) {
-                      if (localError != null && val.trim().isNotEmpty) {
-                        setDialogState(() => localError = null);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 45,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
+                        child: Icon(Icons.close, color: colorScheme.onSurface),
                       ),
-                      onPressed: () {
-                        final String trimmedValue = controller.text.trim();
-                        if (trimmedValue.isEmpty) {
-                          setDialogState(() => localError = "$title cannot be empty.");
-                          return;
-                        }
-                        onSave(trimmedValue);
-                        Navigator.of(dialogContext, rootNavigator: true).pop();
-                      },
-                      child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
-                  )
-                ],
+                    Text("Edit $title", style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: controller,
+                      maxLength: title == "Station name" ? 100 : 200,
+                      style: TextStyle(color: colorScheme.onSurface),
+                      decoration: InputDecoration(
+                        hintText: "Enter $title",
+                        hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
+                        errorText: localError,
+                        errorStyle: const TextStyle(color: errorColor, fontWeight: FontWeight.w600),
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: localError != null ? errorColor : colorScheme.outline)),
+                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: localError != null ? errorColor : colorScheme.primary)),
+                      ),
+                      onChanged: (val) {
+                        if (localError != null && val.trim().isNotEmpty) {
+                          setDialogState(() => localError = null);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 45,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                        ),
+                        onPressed: () {
+                          final String trimmedValue = controller.text.trim();
+                          if (trimmedValue.isEmpty) {
+                            setDialogState(() => localError = "$title cannot be empty.");
+                            return;
+                          }
+                          onSave(trimmedValue);
+                          Navigator.of(dialogContext, rootNavigator: true).pop();
+                        },
+                        child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    )
+                  ],
+                ),
               ),
             ),
           );
         },
       ),
     );
-
-
-    controller.dispose();
   }
 
   void _showDetailsDialog() async {
@@ -554,91 +639,88 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.all(20.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
-                      child: Icon(Icons.close, color: colorScheme.onSurface),
-                    ),
-                  ),
-                  Text("Operating status", style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _statusChip("Normal", colorScheme.secondary, tempStatus, () => setDialogState(() => tempStatus = "Normal")),
-                      _statusChip("Under Maintenance", colorScheme.tertiary, tempStatus, () => setDialogState(() => tempStatus = "Under Maintenance")),
-                      _statusChip("Terminated", const Color(0xFFDC2626), tempStatus, () => setDialogState(() => tempStatus = "Terminated")),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Strictly Read-Only Display
-                  Text("Current bike available", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13)),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(Icons.directions_bike, color: colorScheme.onSurface.withValues(alpha: 0.5)),
-                      const SizedBox(width: 8),
-                      Text("$currentBikes", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 20, fontWeight: FontWeight.bold)),
-                      const SizedBox(width: 8),
-                      Text("(Read-Only)", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 11, fontStyle: FontStyle.italic)),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Editable Max Capacity Stepper
-                  Text("Max bike per station", style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 2),
-                  Text(
-                    currentBikes > 0
-                        ? "Cannot be lower than available bikes ($currentBikes)"
-                        : "Minimum capacity is 1",
-                    style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 11),
-                  ),
-                  const SizedBox(height: 8),
-                  _bikeStepper(
-                    controller: maxCtrl,
-                    colorScheme: colorScheme,
-                    onIncrement: () => updateMax(tempMax + 1),
-                    onDecrement: () => updateMax(tempMax - 1),
-                    onChanged: (val) => updateMax(int.tryParse(val) ?? minCapacity),
-                  ),
-
-                  const SizedBox(height: 30),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 45,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
+                        child: Icon(Icons.close, color: colorScheme.onSurface),
                       ),
-                      onPressed: () {
-                        setState(() {
-                          operatingStatus = tempStatus;
-                          maxBikes = tempMax;
-                        });
-                        Navigator.of(dialogContext, rootNavigator: true).pop();
-                      },
-                      child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
-                  )
-                ],
+                    Text("Operating status", style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _statusChip("Normal", colorScheme.secondary, tempStatus, () => setDialogState(() => tempStatus = "Normal")),
+                        _statusChip("Under Maintenance", colorScheme.tertiary, tempStatus, () => setDialogState(() => tempStatus = "Under Maintenance")),
+                        _statusChip("Terminated", const Color(0xFFDC2626), tempStatus, () => setDialogState(() => tempStatus = "Terminated")),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    Text("Current bike available", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.directions_bike, color: colorScheme.onSurface.withValues(alpha: 0.5)),
+                        const SizedBox(width: 8),
+                        Text("$currentBikes", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 20, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 8),
+                        Text("(Read-Only)", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 11, fontStyle: FontStyle.italic)),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    Text("Max bike per station", style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 2),
+                    Text(
+                      currentBikes > 0
+                          ? "Cannot be lower than available bikes ($currentBikes)"
+                          : "Minimum capacity is 1",
+                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 11),
+                    ),
+                    const SizedBox(height: 8),
+                    _bikeStepper(
+                      controller: maxCtrl,
+                      colorScheme: colorScheme,
+                      onIncrement: () => updateMax(tempMax + 1),
+                      onDecrement: () => updateMax(tempMax - 1),
+                      onChanged: (val) => updateMax(int.tryParse(val) ?? minCapacity),
+                    ),
+
+                    const SizedBox(height: 30),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 45,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            operatingStatus = tempStatus;
+                            maxBikes = tempMax;
+                          });
+                          Navigator.of(dialogContext, rootNavigator: true).pop();
+                        },
+                        child: const Text("Save", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    )
+                  ],
+                ),
               ),
             ),
           );
         },
       ),
     );
-
-
-    maxCtrl.dispose();
   }
 
   Widget _statusChip(String label, Color color, String currentStatus, VoidCallback onTap) {

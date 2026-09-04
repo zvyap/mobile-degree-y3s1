@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// 🟢 IMPORT YOUR STANDALONE STATION DETAILS FILE (Source 4)
+// Import your standalone station details file
 import 'package:bike_renting_app/bike_station/station_details.dart';
 
 // ============================================================================
@@ -18,6 +19,8 @@ class AdminStationMapScreen extends StatefulWidget {
 
 class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
+  final GlobalKey<_SharedBikeMapState> _mapTileKey = GlobalKey<_SharedBikeMapState>();
+
   List<Map<String, dynamic>> stations = [];
   bool isLoading = true;
 
@@ -63,6 +66,7 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
           // 1. Shared Map Layer
           Positioned.fill(
             child: SharedBikeMap(
+              key: _mapTileKey,
               stations: stations,
               isAdminMode: true,
               // LONG PRESS TO ADD NEW STATION
@@ -136,20 +140,23 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
             ),
           ),
 
-          // 3. Refresh Floating Action Button
+          // 3. Current Location Floating Action Button
           Positioned(
             right: 16.0,
             bottom: 30.0,
             child: FloatingActionButton(
               backgroundColor: colorScheme.surfaceContainerHighest,
-              onPressed: _fetchStations,
+              onPressed: () {
+                _fetchStations();
+                _mapTileKey.currentState?.recenterToGps();
+              },
               child: isLoading
                   ? const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-                  : Icon(Icons.refresh, color: colorScheme.onSurface),
+                  : Icon(Icons.my_location, color: colorScheme.onSurface),
             ),
           ),
         ],
@@ -161,13 +168,7 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
 // ============================================================================
 // 2. MAP COMPONENT: SharedBikeMap
 // ============================================================================
-// ============================================================================
-// MAP COMPONENT: SharedBikeMap
-// ============================================================================
-// ============================================================================
-// MAP COMPONENT: SharedBikeMap
-// ============================================================================
-class SharedBikeMap extends StatelessWidget {
+class SharedBikeMap extends StatefulWidget {
   final List<Map<String, dynamic>> stations;
   final bool isAdminMode;
   final Function(String stationId)? onStationTap;
@@ -193,12 +194,59 @@ class SharedBikeMap extends StatelessWidget {
     this.routePoints,
   });
 
-  LatLng _computeInitialCenter() {
-    if (initialCenter != null) return initialCenter!;
+  @override
+  State<SharedBikeMap> createState() => _SharedBikeMapState();
+}
 
-    if (selectedStationId != null) {
-      for (final s in stations) {
-        if (s['id']?.toString() == selectedStationId) {
+class _SharedBikeMapState extends State<SharedBikeMap> {
+  final MapController _mapController = MapController();
+  LatLng? _currentGpsLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialCenter == null) {
+      recenterToGps();
+    }
+  }
+
+  // 🟢 Public method called by FAB to center on user location
+  Future<void> recenterToGps() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+
+    if (permission == LocationPermission.deniedForever) return;
+
+    try {
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+
+      final userLatLng = LatLng(position.latitude, position.longitude);
+
+      if (mounted) {
+        setState(() {
+          _currentGpsLocation = userLatLng;
+        });
+        _mapController.move(userLatLng, widget.initialZoom);
+      }
+    } catch (e) {
+      debugPrint("GPS location fetch error: $e");
+    }
+  }
+
+  LatLng _computeInitialCenter() {
+    if (widget.initialCenter != null) return widget.initialCenter!;
+
+    if (widget.selectedStationId != null) {
+      for (final s in widget.stations) {
+        if (s['id']?.toString() == widget.selectedStationId) {
           final lat = _toDouble(s['latitude'] ?? s['lat']);
           final lng = _toDouble(s['longitude'] ?? s['lng']);
           if (lat != null && lng != null) return LatLng(lat, lng);
@@ -206,15 +254,16 @@ class SharedBikeMap extends StatelessWidget {
       }
     }
 
-    if (riderLocation != null) return riderLocation!;
+    if (widget.riderLocation != null) return widget.riderLocation!;
+    if (_currentGpsLocation != null) return _currentGpsLocation!;
 
-    for (final s in stations) {
+    for (final s in widget.stations) {
       final lat = _toDouble(s['latitude'] ?? s['lat']);
       final lng = _toDouble(s['longitude'] ?? s['lng']);
       if (lat != null && lng != null) return LatLng(lat, lng);
     }
 
-    return const LatLng(5.4643, 100.2841); // Tanjung Bungah default
+    return const LatLng(5.4643, 100.2841); // Default fallback (Tanjung Bungah)
   }
 
   static double? _toDouble(dynamic val) {
@@ -229,11 +278,10 @@ class SharedBikeMap extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final center = _computeInitialCenter();
 
-    // Find selected station coordinates for geofence circle
     LatLng? selectedLatLng;
-    if (selectedStationId != null && geofenceRadiusMeters != null) {
-      for (final s in stations) {
-        if (s['id']?.toString() == selectedStationId) {
+    if (widget.selectedStationId != null && widget.geofenceRadiusMeters != null) {
+      for (final s in widget.stations) {
+        if (s['id']?.toString() == widget.selectedStationId) {
           final lat = _toDouble(s['latitude'] ?? s['lat']);
           final lng = _toDouble(s['longitude'] ?? s['lng']);
           if (lat != null && lng != null) {
@@ -244,13 +292,16 @@ class SharedBikeMap extends StatelessWidget {
       }
     }
 
+    final LatLng? effectiveRiderLocation = widget.riderLocation ?? _currentGpsLocation;
+
     return FlutterMap(
+      mapController: _mapController,
       options: MapOptions(
         initialCenter: center,
-        initialZoom: initialZoom,
+        initialZoom: widget.initialZoom,
         onLongPress: (tapPosition, point) {
-          if (isAdminMode && onMapLongPress != null) {
-            onMapLongPress!(point);
+          if (widget.isAdminMode && widget.onMapLongPress != null) {
+            widget.onMapLongPress!(point);
           }
         },
       ),
@@ -260,24 +311,23 @@ class SharedBikeMap extends StatelessWidget {
           userAgentPackageName: 'com.zvyap.edu.mobile.bike_renting_app',
         ),
 
-        if (routePoints != null && routePoints!.isNotEmpty)
+        if (widget.routePoints != null && widget.routePoints!.isNotEmpty)
           PolylineLayer(
             polylines: [
               Polyline(
-                points: routePoints!,
+                points: widget.routePoints!,
                 strokeWidth: 5.0,
-                color: const Color(0xFF10B981), // Vibrant Green Polyline
+                color: const Color(0xFF10B981),
               ),
             ],
           ),
 
-        // Optional geofence radius circle around selected station
-        if (selectedLatLng != null && geofenceRadiusMeters != null)
+        if (selectedLatLng != null && widget.geofenceRadiusMeters != null)
           CircleLayer(
             circles: [
               CircleMarker(
                 point: selectedLatLng,
-                radius: geofenceRadiusMeters!,
+                radius: widget.geofenceRadiusMeters!,
                 useRadiusInMeter: true,
                 color: colorScheme.secondary.withValues(alpha: 0.18),
                 borderColor: colorScheme.secondary,
@@ -286,14 +336,13 @@ class SharedBikeMap extends StatelessWidget {
             ],
           ),
 
-        // Dynamic markers for stations and rider
         Builder(
           builder: (context) {
             final zoom = MapCamera.of(context).zoom;
             final double dynamicMarkerSize = (zoom * 4.5).clamp(44.0, 68.0);
 
             return MarkerLayer(
-              markers: _buildMarkers(context, dynamicMarkerSize),
+              markers: _buildMarkers(context, dynamicMarkerSize, effectiveRiderLocation),
             );
           },
         ),
@@ -301,15 +350,14 @@ class SharedBikeMap extends StatelessWidget {
     );
   }
 
-  List<Marker> _buildMarkers(BuildContext context, double markerSize) {
+  List<Marker> _buildMarkers(BuildContext context, double markerSize, LatLng? activeRiderLocation) {
     final colorScheme = Theme.of(context).colorScheme;
     final List<Marker> markers = [];
 
-    // Rider position marker
-    if (riderLocation != null) {
+    if (activeRiderLocation != null) {
       markers.add(
         Marker(
-          point: riderLocation!,
+          point: activeRiderLocation,
           width: 44,
           height: 44,
           alignment: Alignment.center,
@@ -328,23 +376,23 @@ class SharedBikeMap extends StatelessWidget {
       );
     }
 
-    for (final station in stations) {
+    for (final station in widget.stations) {
       final double? lat = _toDouble(station['latitude'] ?? station['lat']);
       final double? lng = _toDouble(station['longitude'] ?? station['lng']);
       if (lat == null || lng == null) continue;
 
       final String stationId = station['id']?.toString() ?? '';
       final String status = station['status']?.toString() ?? 'Normal';
-      final bool isSelected = selectedStationId != null &&
-          (stationId == selectedStationId ||
-              station['code']?.toString() == selectedStationId);
+      final bool isSelected = widget.selectedStationId != null &&
+          (stationId == widget.selectedStationId ||
+              station['code']?.toString() == widget.selectedStationId);
 
       Color markerColor = colorScheme.primary;
       if (isSelected) {
         markerColor = colorScheme.secondary;
       } else if (status == 'Under Maintenance') {
         markerColor = colorScheme.tertiary;
-      } else if (status == 'Terminated' || (isAdminMode && status != 'Normal')) {
+      } else if (status == 'Terminated' || (widget.isAdminMode && status != 'Normal')) {
         markerColor = const Color(0xFFDC2626);
       }
 
@@ -359,8 +407,8 @@ class SharedBikeMap extends StatelessWidget {
           alignment: Alignment.topCenter,
           child: GestureDetector(
             onTap: () {
-              if (onStationTap != null && stationId.isNotEmpty) {
-                onStationTap!(stationId);
+              if (widget.onStationTap != null && stationId.isNotEmpty) {
+                widget.onStationTap!(stationId);
               }
             },
             child: Stack(
