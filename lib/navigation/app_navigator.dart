@@ -177,7 +177,7 @@ class AppNavigator extends StatelessWidget {
             AppPage.pendingBikeReports.routeName,
           );
         },
-        onAddReport: () {
+        onAddReport: (bikeId) {
           navigatorKey.currentState?.pushNamed(
             AppPage.reportForm.routeName,
             arguments: arguments,
@@ -185,7 +185,7 @@ class AppNavigator extends StatelessWidget {
         },
       ),
       AppPage.reportForm => ReportFormPage(
-        bikeId: arguments as int?,
+        bikeId: arguments is int ? arguments : null,
       ),
       AppPage.pendingBikeReports => PendingBikeReportsPage(
         onOpenReportDetail: (reportId) {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/bike_report.dart';
 import '../repositories/bike_report_repository.dart';
 
@@ -13,7 +13,7 @@ class BikeReportPage extends StatefulWidget {
 
   final ValueChanged<int> onOpenReportDetail;
   final VoidCallback onOpenPendingReports;
-  final VoidCallback onAddReport;
+  final ValueChanged<int?> onAddReport;
 
   @override
   State<BikeReportPage> createState() =>
@@ -30,16 +30,54 @@ class _BikeReportPageState extends State<BikeReportPage> {
   List<BikeReport> _reports = [];
 
   bool _isLoading = true;
+  bool _isAdmin = false;
   String? _error;
 
   String _selectedFilter = 'all';
+
+  Future<void> _loadCurrentUserRole() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        if (!mounted) return;
+
+        setState(() {
+          _isAdmin = false;
+        });
+
+        return;
+      }
+
+      final profile = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+      if (!mounted) return;
+
+      setState(() {
+        _isAdmin = profile['role'] == 'admin';
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      // Safe default:
+      // if the role cannot be determined, don't show admin controls.
+      setState(() {
+        _isAdmin = false;
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
 
     _loadReports();
-
+    _loadCurrentUserRole();
     _searchController.addListener(() {
       setState(() {});
     });
@@ -372,56 +410,49 @@ class _BikeReportPageState extends State<BikeReportPage> {
                   // -----------------------------------------------------------
                   // Pending reports
                   // -----------------------------------------------------------
-
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      FilledButton(
-                        onPressed:
-                        widget.onOpenPendingReports,
-                        child: const Text(
-                          'Pending Reports',
+                  if (_isAdmin)
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        FilledButton(
+                          onPressed: widget.onOpenPendingReports,
+                          child: const Text(
+                            'Pending Reports',
+                          ),
                         ),
-                      ),
 
-                      if (_pendingCount > 0)
-                        Positioned(
-                          right: -5,
-                          top: -8,
-                          child: Container(
-                            constraints:
-                            const BoxConstraints(
-                              minWidth: 22,
-                              minHeight: 22,
-                            ),
-                            padding:
-                            const EdgeInsets.symmetric(
-                              horizontal: 5,
-                            ),
-                            alignment:
-                            Alignment.center,
-                            decoration:
-                            BoxDecoration(
-                              color: scheme.error,
-                              shape:
-                              BoxShape.circle,
-                            ),
-                            child: Text(
-                              _pendingCount > 99
-                                  ? '99+'
-                                  : '$_pendingCount',
-                              style: TextStyle(
-                                color:
-                                scheme.onError,
-                                fontSize: 10,
-                                fontWeight:
-                                FontWeight.w700,
+                        if (_pendingCount > 0)
+                          Positioned(
+                            right: -5,
+                            top: -8,
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                minWidth: 22,
+                                minHeight: 22,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                              ),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: scheme.error,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                _pendingCount > 99
+                                    ? '99+'
+                                    : '$_pendingCount',
+                                style: TextStyle(
+                                  color: scheme.onError,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
+                      ],
+                    ),
+
                 ],
               ),
 
@@ -592,10 +623,7 @@ class _BikeReportPageState extends State<BikeReportPage> {
                       bottom: 12,
                     ),
                     child: _ReportCard(
-                      reportId:
-                      _formatReportId(
-                        report.id,
-                      ),
+                      reportId:report.id,
                       bikeId:
                       report.bikeCode ??
                           'Bike #${report.bikeId}',
@@ -637,7 +665,11 @@ class _BikeReportPageState extends State<BikeReportPage> {
           right: 22,
           bottom: 24,
           child: FloatingActionButton(
-            onPressed: widget.onAddReport,
+            onPressed: () {
+              // Opening the report form from the report list
+              // means no bike has been selected yet.
+              widget.onAddReport(null);
+            },
             child: const Icon(
               Icons.add_rounded,
               size: 34,
@@ -665,7 +697,7 @@ class _ReportCard extends StatelessWidget {
     required this.onOpenDetail,
   });
 
-  final String reportId;
+  final int reportId;
   final String bikeId;
   final String issue;
   final String description;
@@ -755,7 +787,7 @@ class _ReportCard extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            reportId,
+                            reportId.toString(),
                             style: theme
                                 .textTheme
                                 .labelMedium
