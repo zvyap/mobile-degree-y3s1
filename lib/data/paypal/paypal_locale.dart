@@ -5,131 +5,23 @@ class PayPalLocale {
   const PayPalLocale({
     required this.bcp47,
     required this.webCode,
-    required this.displayName,
-    this.nativeName = '',
-    this.flag = '',
   });
 
   final String bcp47;
   final String webCode;
-  final String displayName;
-  final String nativeName;
-  final String flag;
 
   static const defaultLocale = PayPalLocale(
     bcp47: 'en-MY',
     webCode: 'en_US',
-    displayName: 'English (Malaysia)',
-    nativeName: 'English (MY)',
-    flag: '🇲🇾',
   );
 
   static const supportedLocales = <PayPalLocale>[
-    PayPalLocale(
-      bcp47: 'en-US',
-      webCode: 'en_US',
-      displayName: 'English (US)',
-      nativeName: 'English (US)',
-      flag: '🇺🇸',
-    ),
-    PayPalLocale(
-      bcp47: 'en-MY',
-      webCode: 'en_US',
-      displayName: 'English (Malaysia)',
-      nativeName: 'English (MY)',
-      flag: '🇲🇾',
-    ),
-    PayPalLocale(
-      bcp47: 'ms-MY',
-      webCode: 'ms_MY',
-      displayName: 'Bahasa Melayu',
-      nativeName: 'Bahasa Melayu',
-      flag: '🇲🇾',
-    ),
-    PayPalLocale(
-      bcp47: 'zh-CN',
-      webCode: 'zh_CN',
-      displayName: 'Simplified Chinese',
-      nativeName: '简体中文',
-      flag: '🇨🇳',
-    ),
-    PayPalLocale(
-      bcp47: 'zh-HK',
-      webCode: 'zh_HK',
-      displayName: 'Traditional Chinese (HK)',
-      nativeName: '繁體中文 (香港)',
-      flag: '🇭🇰',
-    ),
-    PayPalLocale(
-      bcp47: 'zh-TW',
-      webCode: 'zh_TW',
-      displayName: 'Traditional Chinese (TW)',
-      nativeName: '繁體中文 (台灣)',
-      flag: '🇹🇼',
-    ),
-    PayPalLocale(
-      bcp47: 'ja-JP',
-      webCode: 'ja_JP',
-      displayName: 'Japanese',
-      nativeName: '日本語',
-      flag: '🇯🇵',
-    ),
-    PayPalLocale(
-      bcp47: 'ko-KR',
-      webCode: 'ko_KR',
-      displayName: 'Korean',
-      nativeName: '한국어',
-      flag: '🇰🇷',
-    ),
-    PayPalLocale(
-      bcp47: 'id-ID',
-      webCode: 'id_ID',
-      displayName: 'Bahasa Indonesia',
-      nativeName: 'Bahasa Indonesia',
-      flag: '🇮🇩',
-    ),
-    PayPalLocale(
-      bcp47: 'th-TH',
-      webCode: 'th_TH',
-      displayName: 'Thai',
-      nativeName: 'ไทย',
-      flag: '🇹🇭',
-    ),
-    PayPalLocale(
-      bcp47: 'vi-VN',
-      webCode: 'vi_VN',
-      displayName: 'Vietnamese',
-      nativeName: 'Tiếng Việt',
-      flag: '🇻🇳',
-    ),
-    PayPalLocale(
-      bcp47: 'es-ES',
-      webCode: 'es_ES',
-      displayName: 'Spanish',
-      nativeName: 'Español',
-      flag: '🇪🇸',
-    ),
-    PayPalLocale(
-      bcp47: 'fr-FR',
-      webCode: 'fr_FR',
-      displayName: 'French',
-      nativeName: 'Français',
-      flag: '🇫🇷',
-    ),
-    PayPalLocale(
-      bcp47: 'de-DE',
-      webCode: 'de_DE',
-      displayName: 'German',
-      nativeName: 'Deutsch',
-      flag: '🇩🇪',
-    ),
-    PayPalLocale(
-      bcp47: 'ar-SA',
-      webCode: 'ar_EG',
-      displayName: 'Arabic',
-      nativeName: 'العربية',
-      flag: '🇸🇦',
-    ),
+    PayPalLocale(bcp47: 'en-MY', webCode: 'en_US'),
+    PayPalLocale(bcp47: 'en-US', webCode: 'en_US'),
+    PayPalLocale(bcp47: 'ms-MY', webCode: 'ms_MY'),
+    PayPalLocale(bcp47: 'zh-CN', webCode: 'zh_CN'),
+    PayPalLocale(bcp47: 'zh-HK', webCode: 'zh_HK'),
+    PayPalLocale(bcp47: 'zh-TW', webCode: 'zh_TW'),
   ];
 
   static PayPalLocale fromLocale(Locale? locale) {
@@ -138,48 +30,30 @@ class PayPalLocale {
     final country = locale.countryCode?.toUpperCase();
     final script = locale.scriptCode?.toLowerCase();
 
-    // Explicit Chinese handling (Simplified vs Traditional)
+    // Chinese (Simplified and Traditional)
     if (lang == 'zh') {
       if (script == 'hant' || country == 'HK') {
-        return const PayPalLocale(
-          bcp47: 'zh-HK',
-          webCode: 'zh_HK',
-          displayName: 'Traditional Chinese (HK)',
-          nativeName: '繁體中文 (香港)',
-          flag: '🇭🇰',
-        );
+        return const PayPalLocale(bcp47: 'zh-HK', webCode: 'zh_HK');
       }
       if (country == 'TW') {
-        return const PayPalLocale(
-          bcp47: 'zh-TW',
-          webCode: 'zh_TW',
-          displayName: 'Traditional Chinese (TW)',
-          nativeName: '繁體中文 (台灣)',
-          flag: '🇹🇼',
-        );
+        return const PayPalLocale(bcp47: 'zh-TW', webCode: 'zh_TW');
       }
-      // Default Simplified Chinese (CN, MY, SG, Hans, general zh)
-      return const PayPalLocale(
-        bcp47: 'zh-CN',
-        webCode: 'zh_CN',
-        displayName: 'Simplified Chinese',
-        nativeName: '简体中文',
-        flag: '🇨🇳',
-      );
+      return const PayPalLocale(bcp47: 'zh-CN', webCode: 'zh_CN');
     }
 
-    if (country != null) {
-      for (final opt in supportedLocales) {
-        if (opt.bcp47.toLowerCase() == '$lang-$country'.toLowerCase()) {
-          return opt;
-        }
-      }
+    // Bahasa Melayu
+    if (lang == 'ms') {
+      return const PayPalLocale(bcp47: 'ms-MY', webCode: 'ms_MY');
     }
-    for (final opt in supportedLocales) {
-      if (opt.bcp47.split('-').first.toLowerCase() == lang) {
-        return opt;
+
+    // English
+    if (lang == 'en') {
+      if (country == 'MY') {
+        return defaultLocale;
       }
+      return const PayPalLocale(bcp47: 'en-US', webCode: 'en_US');
     }
+
     return defaultLocale;
   }
 
@@ -187,41 +61,23 @@ class PayPalLocale {
     if (code == null || code.isEmpty) return defaultLocale;
     final cleaned = code.trim().replaceAll('_', '-').toLowerCase();
 
-    // Chinese shorthand
     if (cleaned == 'zh' || cleaned.startsWith('zh-cn') || cleaned.startsWith('zh-hans')) {
-      return const PayPalLocale(
-        bcp47: 'zh-CN',
-        webCode: 'zh_CN',
-        displayName: 'Simplified Chinese',
-        nativeName: '简体中文',
-        flag: '🇨🇳',
-      );
+      return const PayPalLocale(bcp47: 'zh-CN', webCode: 'zh_CN');
     }
     if (cleaned == 'zh-hk' || cleaned == 'zh-tw' || cleaned.startsWith('zh-hant')) {
       return cleaned.contains('tw')
-          ? const PayPalLocale(
-              bcp47: 'zh-TW',
-              webCode: 'zh_TW',
-              displayName: 'Traditional Chinese (TW)',
-              nativeName: '繁體中文 (台灣)',
-              flag: '🇹🇼',
-            )
-          : const PayPalLocale(
-              bcp47: 'zh-HK',
-              webCode: 'zh_HK',
-              displayName: 'Traditional Chinese (HK)',
-              nativeName: '繁體中文 (香港)',
-              flag: '🇭🇰',
-            );
+          ? const PayPalLocale(bcp47: 'zh-TW', webCode: 'zh_TW')
+          : const PayPalLocale(bcp47: 'zh-HK', webCode: 'zh_HK');
+    }
+    if (cleaned == 'ms' || cleaned.startsWith('ms-')) {
+      return const PayPalLocale(bcp47: 'ms-MY', webCode: 'ms_MY');
+    }
+    if (cleaned == 'en' || cleaned.startsWith('en-')) {
+      return cleaned == 'en-my'
+          ? defaultLocale
+          : const PayPalLocale(bcp47: 'en-US', webCode: 'en_US');
     }
 
-    for (final opt in supportedLocales) {
-      if (opt.bcp47.toLowerCase() == cleaned ||
-          opt.webCode.replaceAll('_', '-').toLowerCase() == cleaned ||
-          opt.bcp47.split('-').first.toLowerCase() == cleaned) {
-        return opt;
-      }
-    }
     return defaultLocale;
   }
 
@@ -234,6 +90,9 @@ class PayPalLocale {
 
   @override
   int get hashCode => bcp47.hashCode;
+
+  @override
+  String toString() => 'PayPalLocale($bcp47, $webCode)';
 }
 
 class PayPalLocaleService {
