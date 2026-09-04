@@ -49,13 +49,11 @@ class _RideStage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              _CityMap(
-                routeProgress: (controller.metrics.distanceKm / 2.4).clamp(
-                  0,
-                  1,
-                ),
-                selectedStation: null,
-                atStation: false,
+              _RideSessionMap(
+                stations: controller.stations,
+                riderLocation: controller.riderLatLng,
+                routePoints: controller.rideRoutePoints,
+                nearestStation: nearestStation,
               ),
               if (controller.isOverdue ||
                   (controller.timeUntilDeadline != null &&

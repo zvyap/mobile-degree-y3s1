@@ -99,3 +99,69 @@ class _MetricValue extends StatelessWidget {
     );
   }
 }
+
+class _RideSessionMap extends BaseStationMapView {
+  _RideSessionMap({
+    required List<ReturnStation> stations,
+    super.riderLocation,
+    super.routePoints,
+    ReturnStation? nearestStation,
+  }) : super(
+          isEmbedded: true,
+          height: 200,
+          initialCenter: riderLocation ??
+              (stations.isNotEmpty
+                  ? LatLng(stations.first.latitude, stations.first.longitude)
+                  : null),
+          selectedStationId: nearestStation?.id,
+          geofenceRadiusMeters: nearestStation != null ? 250 : null,
+          showHeader: false,
+          showRecenterButton: true,
+          initialStations: stations
+              .map<Map<String, dynamic>>((s) => <String, dynamic>{
+                    'id': s.id,
+                    'backendId': s.backendId,
+                    'name': s.name,
+                    'latitude': s.latitude,
+                    'longitude': s.longitude,
+                    'status': s.availableDocks > 0
+                        ? 'Normal'
+                        : 'Under Maintenance',
+                    'available_bikes': 0,
+                    'capacity': s.availableDocks,
+                    'distance_meters': s.distanceMeters,
+                  })
+              .toList(growable: false),
+        );
+
+  @override
+  BaseStationMapViewState<_RideSessionMap> createState() =>
+      _RideSessionMapState();
+}
+
+class _RideSessionMapState extends BaseStationMapViewState<_RideSessionMap> {
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: context.l10n.cityMapSemantics,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          width: double.infinity,
+          height: widget.height ?? 200,
+          child: Stack(
+            children: [
+              Positioned.fill(child: buildMapLayer(context)),
+              if (widget.showRecenterButton)
+                Positioned(
+                  right: 10,
+                  bottom: 10,
+                  child: buildRecenterButton(context),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'dart:io' show Platform;
 
+import 'package:bike_renting_app/bike_station/base_station_map.dart';
 import 'package:bike_renting_app/bike_station/station_details.dart';
 import 'package:bike_renting_app/bike_station/station_map.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
@@ -50,18 +51,36 @@ class RentingFlowPage extends StatefulWidget {
   State<RentingFlowPage> createState() => _RentingFlowPageState();
 }
 
-class _RentingFlowPageState extends State<RentingFlowPage> {
+class _RentingFlowPageState extends State<RentingFlowPage>
+    with WidgetsBindingObserver {
   late RentingController _controller;
   bool _lastLockState = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _attachController(widget.controller);
+    _controller.resumeTracking();
     if (_controller.stage == RentalStage.receipt) {
       unawaited(_controller.reset());
     }
     unawaited(_controller.initialize());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _controller.resumeTracking();
+        break;
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        _controller.pauseTracking();
+        break;
+    }
   }
 
   @override
@@ -70,6 +89,7 @@ class _RentingFlowPageState extends State<RentingFlowPage> {
     if (oldWidget.controller != widget.controller) {
       _controller.removeListener(_handleControllerChange);
       _attachController(widget.controller);
+      _controller.resumeTracking();
       if (_controller.stage == RentalStage.receipt) {
         unawaited(_controller.reset());
       }
@@ -95,7 +115,9 @@ class _RentingFlowPageState extends State<RentingFlowPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.removeListener(_handleControllerChange);
+    _controller.pauseTracking();
     super.dispose();
   }
 
