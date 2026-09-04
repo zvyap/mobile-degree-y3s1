@@ -100,5 +100,29 @@ class BikeRepository {
         .eq('id', bikeId);
   }
 
+  Future<void> startBikeService({
+    required int bikeId,
+  }) async {
+    await _supabase
+        .from('bikes')
+        .update({
+      'status': 'maintenance',
+    })
+        .eq('id', bikeId);
+  }
+
+  Future<void> completeBikeService({
+    required int bikeId,
+  }) async {
+    await _supabase
+        .from('bikes')
+        .update({
+      'status': 'available',
+      'last_service_at':
+      DateTime.now().toUtc().toIso8601String(),
+    })
+        .eq('id', bikeId);
+  }
+
 
 }

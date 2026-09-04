@@ -157,7 +157,7 @@ class AppNavigator extends StatelessWidget {
         },
       ),
       AppPage.serviceBike => ServiceBikePage(
-        bikeId: arguments as String,
+        bikeId: arguments as int,
       ),
       AppPage.transferBike => TransferBikePage(
         bikeId: arguments as int,
