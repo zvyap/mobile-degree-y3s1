@@ -6,7 +6,7 @@ import '../widgets/bike_qr_modal.dart';
 
 enum BikeDetailMenuAction {
   makeReport,
-  deleteBike,
+  retireBike,
 }
 
 class BikeDetailsPage extends StatefulWidget {
@@ -35,6 +35,7 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
   Bike? _bike;
 
   bool _isLoading = true;
+  bool _isRetiring = false;
   String? _error;
 
   int _selectedTab = 0;
@@ -104,8 +105,8 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
         widget.onMakeReport();
         break;
 
-      case BikeDetailMenuAction.deleteBike:
-        showSnackBar('Delete bike');
+      case BikeDetailMenuAction.retireBike:
+        _confirmRetireBike();
         break;
     }
   }
@@ -191,6 +192,136 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
     final month = date.month.toString().padLeft(2, '0');
 
     return '$day/$month/${date.year}';
+  }
+
+  Future<void> _confirmRetireBike() async {
+    final bike = _bike;
+
+    if (bike == null || _isRetiring) {
+      return;
+    }
+
+    // Rental workflow controls these statuses.
+    if (bike.status == 'reserved') {
+      showSnackBar(
+        'A reserved bike cannot be retired.',
+      );
+      return;
+    }
+
+    if (bike.status == 'in_use') {
+      showSnackBar(
+        'A bike currently in use cannot be retired.',
+      );
+      return;
+    }
+
+    if (bike.status == 'retired') {
+      showSnackBar(
+        'This bike is already retired.',
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        final scheme = theme.colorScheme;
+
+        return AlertDialog(
+          icon: Icon(
+            Icons.warning_amber_rounded,
+            color: scheme.error,
+            size: 42,
+          ),
+
+          title: const Text(
+            'Retire Bike?',
+            textAlign: TextAlign.center,
+          ),
+
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Are you sure you want to retire ${bike.code}?',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium,
+              ),
+
+              const SizedBox(height: 12),
+
+              Text(
+                'The bike will no longer be available for rental.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(
+                    alpha: 0.65,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text(
+                'Cancel',
+              ),
+            ),
+
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: scheme.error,
+                foregroundColor: scheme.onError,
+              ),
+              child: const Text(
+                'Retire Bike',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      setState(() {
+        _isRetiring = true;
+      });
+
+      await _bikeRepository.retireBike(
+        bikeId: widget.bikeId,
+      );
+
+      if (!mounted) return;
+
+      showSnackBar(
+        '${bike.code} has been retired',
+      );
+
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _isRetiring = false;
+      });
+
+      showSnackBar(
+        'Failed to retire bike: $error',
+      );
+    }
   }
 
   // ===========================================================================
@@ -386,15 +517,25 @@ class _BikeDetailsPageState extends State<BikeDetailsPage> {
                                   ),
                                 ),
 
-                                PopupMenuItem<
-                                    BikeDetailMenuAction>(
-                                  value:
-                                  BikeDetailMenuAction.deleteBike,
-                                  child: Text(
-                                    'Delete Bike',
-                                    style: TextStyle(
-                                      color: scheme.error,
-                                    ),
+                                PopupMenuItem<BikeDetailMenuAction>(
+                                  value: BikeDetailMenuAction.retireBike,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.archive_outlined,
+                                        size: 20,
+                                        color: scheme.error,
+                                      ),
+
+                                      const SizedBox(width: 10),
+
+                                      Text(
+                                        'Retire Bike',
+                                        style: TextStyle(
+                                          color: scheme.error,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ];

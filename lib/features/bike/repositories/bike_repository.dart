@@ -123,6 +123,15 @@ class BikeRepository {
     })
         .eq('id', bikeId);
   }
-
+  Future<void> retireBike({
+    required int bikeId,
+  }) async {
+    await _supabase
+        .from('bikes')
+        .update({
+      'status': 'retired',
+    })
+        .eq('id', bikeId);
+  }
 
 }
