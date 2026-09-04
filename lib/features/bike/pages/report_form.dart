@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../models/bike.dart';
+import '../repositories/bike_repository.dart';
+import '../repositories/bike_report_repository.dart';
+
 class ReportFormPage extends StatefulWidget {
   const ReportFormPage({
     super.key,
     this.bikeId,
   });
 
-  final String? bikeId;
+  final int? bikeId;
 
   @override
-  State<ReportFormPage> createState() => _ReportFormPageState();
+  State<ReportFormPage> createState() =>
+      _ReportFormPageState();
 }
 
 class _ReportFormPageState extends State<ReportFormPage> {
@@ -18,25 +23,155 @@ class _ReportFormPageState extends State<ReportFormPage> {
   final TextEditingController _descriptionController =
   TextEditingController();
 
-  String? _selectedBikeId;
+  final BikeRepository _bikeRepository =
+  BikeRepository();
+
+  final BikeReportRepository _reportRepository =
+  BikeReportRepository();
+
+  List<Bike> _bikes = [];
+
+  int? _selectedBikeId;
   String? _selectedProblem;
-  String? _selectedSeverity;
+
+  bool _isLoading = true;
+  bool _isSubmitting = false;
+
+  String? _error;
 
   @override
   void initState() {
     super.initState();
 
     _selectedBikeId = widget.bikeId;
+
+    _loadBikes();
   }
 
   @override
   void dispose() {
     _descriptionController.dispose();
+
     super.dispose();
   }
 
+  // ===========================================================================
+  // LOAD BIKES
+  // ===========================================================================
+
+  Future<void> _loadBikes() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final bikes = await _bikeRepository.getBikes();
+
+      if (!mounted) return;
+
+      setState(() {
+        // Retired bikes do not need new condition reports.
+        _bikes = bikes
+            .where(
+              (bike) => bike.status != 'retired',
+        )
+            .toList();
+
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  // ===========================================================================
+  // SELECTED BIKE
+  // ===========================================================================
+
+  Bike? get _selectedBike {
+    if (_selectedBikeId == null) {
+      return null;
+    }
+
+    for (final bike in _bikes) {
+      if (bike.id == _selectedBikeId) {
+        return bike;
+      }
+    }
+
+    return null;
+  }
+
+  // ===========================================================================
+  // SUBMIT REPORT
+  // ===========================================================================
+
+  Future<void> _submitReport() async {
+    if (_isSubmitting) return;
+
+    if (_selectedBikeId == null) {
+      showSnackBar(
+        'Please select a bike',
+      );
+      return;
+    }
+
+    if (_selectedProblem == null) {
+      showSnackBar(
+        'Please select a problem',
+      );
+      return;
+    }
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    try {
+      setState(() {
+        _isSubmitting = true;
+      });
+
+      await _reportRepository.createReport(
+        bikeId: _selectedBikeId!,
+        category: _selectedProblem!,
+        description:
+        _descriptionController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      showSnackBar(
+        'Report submitted successfully',
+      );
+
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _isSubmitting = false;
+      });
+
+      showSnackBar(
+        'Failed to submit report: $error',
+      );
+    }
+  }
+
+  // ===========================================================================
+  // HELPERS
+  // ===========================================================================
+
   void showSnackBar(String message) {
-    final messenger = ScaffoldMessenger.of(context);
+    final messenger =
+    ScaffoldMessenger.of(context);
 
     messenger.clearSnackBars();
 
@@ -47,48 +182,118 @@ class _ReportFormPageState extends State<ReportFormPage> {
     );
   }
 
-  void _submitReport() {
-    if (_selectedBikeId == null) {
-      showSnackBar('Please select a bike');
-      return;
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'available':
+        return 'Available';
+
+      case 'reserved':
+        return 'Reserved';
+
+      case 'in_use':
+        return 'In use';
+
+      case 'maintenance':
+        return 'Maintenance';
+
+      case 'retired':
+        return 'Retired';
+
+      default:
+        return status;
     }
-
-    if (_selectedProblem == null) {
-      showSnackBar('Please select a problem');
-      return;
-    }
-
-    if (_selectedSeverity == null) {
-      showSnackBar('Please select a severity');
-      return;
-    }
-
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-
-    // TODO: Save report into Supabase later.
-
-    showSnackBar('Report submitted successfully');
   }
+
+  // ===========================================================================
+  // BUILD
+  // ===========================================================================
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
+    // -------------------------------------------------------------------------
+    // Loading
+    // -------------------------------------------------------------------------
+
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // Error
+    // -------------------------------------------------------------------------
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: scheme.error,
+              ),
+
+              const SizedBox(height: 12),
+
+              const Text(
+                'Unable to load bikes',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 16),
+
+              OutlinedButton.icon(
+                onPressed: _loadBikes,
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                ),
+                label: const Text(
+                  'Retry',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final selectedBike = _selectedBike;
+
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 32),
+        padding: const EdgeInsets.fromLTRB(
+          18,
+          16,
+          18,
+          32,
+        ),
         children: [
-          // =========================================================
+          // ===================================================================
           // TITLE
-          // =========================================================
+          // ===================================================================
 
           Text(
             'Report bike condition',
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style:
+            theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -98,22 +303,29 @@ class _ReportFormPageState extends State<ReportFormPage> {
           Text(
             'Help us keep every ride safe.',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.7),
+              color: scheme.onSurface.withValues(
+                alpha: 0.7,
+              ),
             ),
           ),
 
           const SizedBox(height: 18),
 
-          // =========================================================
+          // ===================================================================
           // BIKE
-          // =========================================================
+          // ===================================================================
 
-          if (_selectedBikeId != null)
+          if (widget.bikeId != null &&
+              selectedBike != null)
             _BikeSummaryCard(
-              bikeId: _selectedBikeId!,
+              bike: selectedBike,
+              statusLabel: _statusLabel(
+                selectedBike.status,
+              ),
             )
           else
             _BikeSelector(
+              bikes: _bikes,
               value: _selectedBikeId,
               onChanged: (value) {
                 setState(() {
@@ -122,15 +334,16 @@ class _ReportFormPageState extends State<ReportFormPage> {
               },
             ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-          // =========================================================
+          // ===================================================================
           // PROBLEM
-          // =========================================================
+          // ===================================================================
 
           Text(
             'What is the problem?',
-            style: theme.textTheme.titleMedium?.copyWith(
+            style:
+            theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -140,137 +353,121 @@ class _ReportFormPageState extends State<ReportFormPage> {
           GridView.count(
             crossAxisCount: 3,
             shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+            physics:
+            const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
-            childAspectRatio: 1.65,
+            childAspectRatio: 1.5,
             children: [
               _ProblemButton(
                 label: 'Brakes',
-                selected: _selectedProblem == 'Brakes',
+                icon:
+                Icons.settings_input_component_rounded,
+                selected:
+                _selectedProblem == 'brakes',
                 onPressed: () {
                   setState(() {
-                    _selectedProblem = 'Brakes';
+                    _selectedProblem = 'brakes';
                   });
                 },
               ),
+
               _ProblemButton(
                 label: 'Tyres',
-                selected: _selectedProblem == 'Tyres',
+                icon:
+                Icons.circle_outlined,
+                selected:
+                _selectedProblem == 'tyres',
                 onPressed: () {
                   setState(() {
-                    _selectedProblem = 'Tyres';
+                    _selectedProblem = 'tyres';
                   });
                 },
               ),
+
               _ProblemButton(
                 label: 'Chain',
-                selected: _selectedProblem == 'Chain',
+                icon:
+                Icons.settings_rounded,
+                selected:
+                _selectedProblem ==
+                    'chain_gears',
                 onPressed: () {
                   setState(() {
-                    _selectedProblem = 'Chain';
+                    _selectedProblem =
+                    'chain_gears';
                   });
                 },
               ),
+
               _ProblemButton(
-                label: 'Seat',
-                selected: _selectedProblem == 'Seat',
+                label: 'Seat / Frame',
+                icon:
+                Icons.directions_bike_outlined,
+                selected:
+                _selectedProblem ==
+                    'seat_frame',
                 onPressed: () {
                   setState(() {
-                    _selectedProblem = 'Seat';
+                    _selectedProblem =
+                    'seat_frame';
                   });
                 },
               ),
+
               _ProblemButton(
-                label: 'Lights',
-                selected: _selectedProblem == 'Lights',
+                label: 'Bell / Lights',
+                icon:
+                Icons.lightbulb_outline_rounded,
+                selected:
+                _selectedProblem ==
+                    'bell_lights',
                 onPressed: () {
                   setState(() {
-                    _selectedProblem = 'Lights';
+                    _selectedProblem =
+                    'bell_lights';
                   });
                 },
               ),
+
+              _ProblemButton(
+                label: 'QR / Lock',
+                icon:
+                Icons.qr_code_2_rounded,
+                selected:
+                _selectedProblem == 'qr_lock',
+                onPressed: () {
+                  setState(() {
+                    _selectedProblem = 'qr_lock';
+                  });
+                },
+              ),
+
               _ProblemButton(
                 label: 'Other',
-                selected: _selectedProblem == 'Other',
+                icon:
+                Icons.more_horiz_rounded,
+                selected:
+                _selectedProblem == 'other',
                 onPressed: () {
                   setState(() {
-                    _selectedProblem = 'Other';
+                    _selectedProblem = 'other';
                   });
                 },
               ),
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-          // =========================================================
-          // SEVERITY
-          // =========================================================
-
-          Text(
-            'Severity',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          Row(
-            children: [
-              Expanded(
-                child: _SeverityButton(
-                  label: 'Low',
-                  selected: _selectedSeverity == 'Low',
-                  onPressed: () {
-                    setState(() {
-                      _selectedSeverity = 'Low';
-                    });
-                  },
-                ),
-              ),
-
-              const SizedBox(width: 10),
-
-              Expanded(
-                child: _SeverityButton(
-                  label: 'Medium',
-                  selected: _selectedSeverity == 'Medium',
-                  onPressed: () {
-                    setState(() {
-                      _selectedSeverity = 'Medium';
-                    });
-                  },
-                ),
-              ),
-
-              const SizedBox(width: 10),
-
-              Expanded(
-                child: _SeverityButton(
-                  label: 'High',
-                  selected: _selectedSeverity == 'High',
-                  highSeverity: true,
-                  onPressed: () {
-                    setState(() {
-                      _selectedSeverity = 'High';
-                    });
-                  },
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // =========================================================
+          // ===================================================================
           // DESCRIPTION
-          // =========================================================
+          // ===================================================================
 
           Text(
             'Describe the issue',
-            style: theme.textTheme.titleSmall?.copyWith(
+            style:
+            theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -280,140 +477,116 @@ class _ReportFormPageState extends State<ReportFormPage> {
           TextFormField(
             controller: _descriptionController,
             minLines: 4,
-            maxLines: 5,
+            maxLines: 6,
             maxLength: 250,
             decoration: const InputDecoration(
-              hintText: 'Describe the problem...',
+              hintText:
+              'Describe what is wrong with the bike...',
               alignLabelWithHint: true,
               border: OutlineInputBorder(),
             ),
             validator: (value) {
-              if (value == null || value.trim().isEmpty) {
+              final description =
+                  value?.trim() ?? '';
+
+              if (description.isEmpty) {
                 return 'Please describe the problem';
+              }
+
+              if (description.length < 5) {
+                return 'Please provide more details';
               }
 
               return null;
             },
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
-          // =========================================================
-          // PHOTOS
-          // =========================================================
+          // ===================================================================
+          // INFORMATION
+          // ===================================================================
 
-          Text(
-            'Add photos',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color:
+              scheme.surfaceContainerHighest,
+              borderRadius:
+              BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  color: scheme.primary,
+                ),
+
+                const SizedBox(width: 10),
+
+                const Expanded(
+                  child: Text(
+                    'The report will be reviewed by an administrator. '
+                        'Submitting a report does not immediately change the bike status.',
+                  ),
+                ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 26),
 
-          Row(
-            children: [
-              // Temporary uploaded-photo placeholder
-              Container(
-                width: 115,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Icon(
-                        Icons.image_outlined,
-                        size: 45,
-                        color: scheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-
-                    Positioned(
-                      right: 2,
-                      top: 2,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: scheme.surface,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close_rounded,
-                          size: 19,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  // TODO: Image picker later.
-                  showSnackBar(
-                    'Photo picker will be implemented later',
-                  );
-                },
-                child: Container(
-                  width: 100,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.add_a_photo_outlined,
-                        color: scheme.onPrimaryContainer,
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      Text(
-                        'Add photo',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: scheme.onPrimaryContainer,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // =========================================================
-          // REPORT BUTTON
-          // =========================================================
+          // ===================================================================
+          // SUBMIT
+          // ===================================================================
 
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 50,
             child: FilledButton(
-              onPressed: _submitReport,
+              onPressed: _isSubmitting
+                  ? null
+                  : _submitReport,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFFFCCCC),
-                foregroundColor: const Color(0xFFF33F49),
+                backgroundColor:
+                const Color(0xFFFFCCCC),
+                foregroundColor:
+                const Color(0xFFF33F49),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius:
+                  BorderRadius.circular(10),
                 ),
               ),
-              child: const Text(
-                'Report',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
+              child: _isSubmitting
+                  ? const SizedBox(
+                width: 22,
+                height: 22,
+                child:
+                CircularProgressIndicator(
+                  strokeWidth: 2,
                 ),
+              )
+                  : const Row(
+                mainAxisAlignment:
+                MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.report_outlined,
+                  ),
+
+                  SizedBox(width: 8),
+
+                  Text(
+                    'Submit Report',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight:
+                      FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -423,16 +596,18 @@ class _ReportFormPageState extends State<ReportFormPage> {
   }
 }
 
-// ============================================================================
+// =============================================================================
 // BIKE SUMMARY
-// ============================================================================
+// =============================================================================
 
 class _BikeSummaryCard extends StatelessWidget {
   const _BikeSummaryCard({
-    required this.bikeId,
+    required this.bike,
+    required this.statusLabel,
   });
 
-  final String bikeId;
+  final Bike bike;
+  final String statusLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -455,7 +630,8 @@ class _BikeSummaryCard extends StatelessWidget {
             height: 52,
             decoration: BoxDecoration(
               color: scheme.primaryContainer,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius:
+              BorderRadius.circular(10),
             ),
             child: Icon(
               Icons.directions_bike_rounded,
@@ -468,24 +644,53 @@ class _BikeSummaryCard extends StatelessWidget {
 
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$bikeId • Standard City Bike',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+                  bike.code,
+                  style:
+                  theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight:
+                    FontWeight.w800,
                   ),
                 ),
 
                 const SizedBox(height: 5),
 
                 Text(
-                  'Folk Valley',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  bike.stationName ??
+                      'No station assigned',
+                  style:
+                  theme.textTheme.bodySmall?.copyWith(
+                    color:
+                    scheme.onSurface.withValues(
+                      alpha: 0.7,
+                    ),
                   ),
                 ),
               ],
+            ),
+          ),
+
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 5,
+            ),
+            decoration: BoxDecoration(
+              color:
+              scheme.surfaceContainerHighest,
+              borderRadius:
+              BorderRadius.circular(20),
+            ),
+            child: Text(
+              statusLabel,
+              style:
+              theme.textTheme.labelSmall?.copyWith(
+                fontWeight:
+                FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -494,74 +699,80 @@ class _BikeSummaryCard extends StatelessWidget {
   }
 }
 
-// ============================================================================
+// =============================================================================
 // BIKE SELECTOR
-// ============================================================================
+// =============================================================================
 
 class _BikeSelector extends StatelessWidget {
   const _BikeSelector({
+    required this.bikes,
     required this.value,
     required this.onChanged,
   });
 
-  final String? value;
-  final ValueChanged<String?> onChanged;
+  final List<Bike> bikes;
+  final int? value;
+  final ValueChanged<int?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
+    return DropdownButtonFormField<int>(
       initialValue: value,
-      hint: const Text('Select bike'),
+      isExpanded: true,
+      hint: const Text(
+        'Select bike',
+      ),
       decoration: const InputDecoration(
         labelText: 'Bike',
+        prefixIcon: Icon(
+          Icons.directions_bike_outlined,
+        ),
       ),
-      items: const [
-        DropdownMenuItem(
-          value: 'BR-1000',
-          child: Text('BR-1000 • Standard City Bike'),
-        ),
-        DropdownMenuItem(
-          value: 'BR-1028',
-          child: Text('BR-1028 • Standard Road Bike'),
-        ),
-        DropdownMenuItem(
-          value: 'BR-1042',
-          child: Text('BR-1042 • Standard City Bike'),
-        ),
-        DropdownMenuItem(
-          value: 'BR-1107',
-          child: Text('BR-1107 • Standard Road Bike'),
-        ),
-      ],
+      items: bikes.map((bike) {
+        return DropdownMenuItem<int>(
+          value: bike.id,
+          child: Text(
+            bike.stationName == null
+                ? bike.code
+                : '${bike.code} • ${bike.stationName}',
+            overflow: TextOverflow.ellipsis,
+          ),
+        );
+      }).toList(),
       onChanged: onChanged,
     );
   }
 }
 
-// ============================================================================
+// =============================================================================
 // PROBLEM BUTTON
-// ============================================================================
+// =============================================================================
 
 class _ProblemButton extends StatelessWidget {
   const _ProblemButton({
     required this.label,
+    required this.icon,
     required this.selected,
     required this.onPressed,
   });
 
   final String label;
+  final IconData icon;
   final bool selected;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final scheme =
+        Theme.of(context).colorScheme;
 
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         backgroundColor: selected
-            ? scheme.primary.withValues(alpha: 0.18)
+            ? scheme.primary.withValues(
+          alpha: 0.18,
+        )
             : scheme.surfaceContainer,
         foregroundColor: selected
             ? scheme.primary
@@ -573,70 +784,37 @@ class _ProblemButton extends StatelessWidget {
           width: selected ? 1.5 : 1,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius:
+          BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 6,
+          vertical: 8,
         ),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// SEVERITY BUTTON
-// ============================================================================
-
-class _SeverityButton extends StatelessWidget {
-  const _SeverityButton({
-    required this.label,
-    required this.selected,
-    required this.onPressed,
-    this.highSeverity = false,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onPressed;
-  final bool highSeverity;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    final selectedColor = highSeverity
-        ? const Color(0xFFF7464C)
-        : scheme.primary;
-
-    return SizedBox(
-      height: 42,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: selected
-              ? selectedColor
-              : scheme.surfaceContainer,
-          foregroundColor: selected
-              ? Colors.white
-              : scheme.onSurface,
-          side: BorderSide(
-            color: selected
-                ? selectedColor
-                : scheme.outline,
+      child: Column(
+        mainAxisAlignment:
+        MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 20,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(11),
+
+          const SizedBox(height: 3),
+
+          Flexible(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontWeight:
+                FontWeight.w700,
+                fontSize: 11,
+              ),
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        ],
       ),
     );
   }

@@ -16,7 +16,7 @@ import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:flutter/material.dart';
 import 'package:bike_renting_app/features/bike/pages/add_bike.dart';
-import 'package:bike_renting_app/features/bike/pages/bike_report.dart';
+import 'package:bike_renting_app/features/bike/pages/bike_report_list.dart';
 import 'package:bike_renting_app/features/bike/pages/edit_bike.dart';
 import 'package:bike_renting_app/features/bike/pages/transfer_bike.dart';
 import 'package:bike_renting_app/features/bike/pages/bike_service.dart';
@@ -185,7 +185,7 @@ class AppNavigator extends StatelessWidget {
         },
       ),
       AppPage.reportForm => ReportFormPage(
-        bikeId: arguments as String?,
+        bikeId: arguments as int?,
       ),
       AppPage.pendingBikeReports => PendingBikeReportsPage(
         onOpenReportDetail: (reportId) {
@@ -200,7 +200,7 @@ class AppNavigator extends StatelessWidget {
         reportId: arguments as String,
       ),
       AppPage.bikeReportDetail => BikeReportDetailPage(
-        reportId: arguments as String,
+        reportId: arguments as int,
       ),
       AppPage.bikeManagement => BikeManagementPage(
         onAddBike: () => onOpenPage(AppPage.addbike),
