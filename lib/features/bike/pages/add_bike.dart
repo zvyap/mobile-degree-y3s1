@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,7 +17,7 @@ class AddBike extends StatefulWidget {
 
 class _AddBikeState extends State<AddBike> {
   final _formKey = GlobalKey<FormState>();
-   Uuid _uuid = Uuid();
+  final Uuid _uuid = const Uuid();
   final BikeRepository _bikeRepository = BikeRepository();
   final StationRepository _stationRepository = StationRepository();
 

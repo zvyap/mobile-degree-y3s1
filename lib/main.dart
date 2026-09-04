@@ -9,13 +9,6 @@ Future<void> main() async {
     url: 'https://xlekizcdmynrngilkjoy.supabase.co',
     publishableKey: 'sb_publishable_JZzEqgEg8mOGEsZA8PzlNw_yhvdK-sn',
   );
-  Future<void> testBikeRetrieval() async {
-    final response = await Supabase.instance.client
-        .from('bikes')
-        .select();
 
-    print(response);
-  }
-  testBikeRetrieval();
   runApp(const BikeRentingApp());
 }
