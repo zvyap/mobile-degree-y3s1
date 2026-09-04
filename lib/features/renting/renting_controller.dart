@@ -312,7 +312,10 @@ class RentingController extends ChangeNotifier {
       return demoBikeQrToken;
     }
 
-    final source = debugSource;
+    final source = debugSource ??
+        (repository is DebugRentBikeSource
+            ? repository as DebugRentBikeSource
+            : null);
     if (source != null) {
       try {
         final bikes = await source.listAllBikes();
@@ -405,7 +408,10 @@ class RentingController extends ChangeNotifier {
     if (trimmed.isEmpty) return demoBikeCode;
     if (trimmed.toUpperCase() == demoBikeCode.toUpperCase()) return demoBikeCode;
 
-    final source = debugSource;
+    final source = debugSource ??
+        (repository is DebugRentBikeSource
+            ? repository as DebugRentBikeSource
+            : null);
     if (source != null) {
       try {
         final bikes = await source.listAllBikes();
@@ -431,7 +437,10 @@ class RentingController extends ChangeNotifier {
   /// DEBUG ONLY: every bike in the system, any status, for the camera-less
   /// debug bike picker on the scan stage.
   Future<List<BikeDatabaseRecord>> listDebugBikes() async {
-    final source = debugSource;
+    final source = debugSource ??
+        (repository is DebugRentBikeSource
+            ? repository as DebugRentBikeSource
+            : null);
     if (source == null) return const [];
     return source.listAllBikes();
   }
@@ -1155,6 +1164,11 @@ class RentingController extends ChangeNotifier {
 
   void _beginBusy() {
     isBusy = true;
+    _clearError();
+    notifyListeners();
+  }
+
+  void clearError() {
     _clearError();
     notifyListeners();
   }

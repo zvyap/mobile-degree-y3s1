@@ -12,6 +12,7 @@ class _ScanStage extends StatefulWidget {
 class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
   MobileScannerController? _scannerController;
   bool _isProcessing = false;
+  bool _isShowingErrorDialog = false;
   bool _torchOn = false;
   String? _lastScannedValue;
   DateTime? _lastScanTime;
@@ -67,7 +68,9 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
   }
 
   void _onDetect(BarcodeCapture capture) {
-    if (_isProcessing || widget.controller.isBusy) return;
+    if (_isProcessing || _isShowingErrorDialog || widget.controller.isBusy) {
+      return;
+    }
     final now = DateTime.now();
 
     for (final barcode in capture.barcodes) {
@@ -85,11 +88,25 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
       _isProcessing = true;
 
       widget.controller.scanBike(raw).whenComplete(() {
-        if (mounted) {
-          setState(() => _isProcessing = false);
+        if (!mounted) return;
+        setState(() => _isProcessing = false);
+        if (widget.controller.error == RentalError.invalidQr) {
+          _showInvalidQrDialog();
         }
       });
       break;
+    }
+  }
+
+  Future<void> _showInvalidQrDialog() async {
+    if (!mounted || _isShowingErrorDialog) return;
+    setState(() => _isShowingErrorDialog = true);
+    await showInvalidQrDialog(context, controller: widget.controller);
+    if (mounted) {
+      setState(() {
+        _isShowingErrorDialog = false;
+        _lastScanTime = DateTime.now();
+      });
     }
   }
 
@@ -142,7 +159,7 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
                   ),
           ),
         ),
-        if (widget.controller.error != null) ...[
+        if (widget.controller.error != null && !_isShowingErrorDialog) ...[
           const SizedBox(height: 10),
           _ErrorPanel(message: _rentalError(context, widget.controller)),
         ],
@@ -157,7 +174,11 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
         const SizedBox(height: 12),
         OutlinedButton.icon(
           key: const ValueKey<String>('rent-choose-bike-button'),
-          onPressed: () => _handleCameraTap(context, widget.controller),
+          onPressed: () => _handleCameraTap(
+            context,
+            widget.controller,
+            onInvalidQr: _showInvalidQrDialog,
+          ),
           icon: const Icon(Icons.touch_app_rounded),
           label: const Text('Choose Bike or Enter Code'),
           style: OutlinedButton.styleFrom(
@@ -318,7 +339,11 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
       child: GestureDetector(
         key: const ValueKey<String>('rent-camera-preview'),
         behavior: HitTestBehavior.opaque,
-        onTap: () => _handleCameraTap(context, widget.controller),
+        onTap: () => _handleCameraTap(
+          context,
+          widget.controller,
+          onInvalidQr: _showInvalidQrDialog,
+        ),
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -411,10 +436,49 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
   }
 }
 
+Future<void> showInvalidQrDialog(
+  BuildContext context, {
+  RentingController? controller,
+}) async {
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    builder: (dialogContext) {
+      final theme = Theme.of(dialogContext);
+      final scheme = theme.colorScheme;
+      return AlertDialog(
+        icon: Icon(
+          Icons.qr_code_scanner_rounded,
+          size: 32,
+          color: scheme.error,
+        ),
+        title: const Text('Invalid QR Code'),
+        content: Text(
+          dialogContext.l10n.errorInvalidQr,
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          FilledButton(
+            key: const ValueKey<String>('rent-invalid-qr-ok-button'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(120, 48),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      );
+    },
+  );
+  controller?.clearError();
+}
+
 Future<void> _handleCameraTap(
   BuildContext context,
-  RentingController controller,
-) async {
+  RentingController controller, {
+  Future<void> Function()? onInvalidQr,
+}) async {
   final token = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
@@ -423,6 +487,13 @@ Future<void> _handleCameraTap(
   );
   if (token == null || token.trim().isEmpty) return;
   await controller.scanBike(token.trim());
+  if (controller.error == RentalError.invalidQr) {
+    if (onInvalidQr != null) {
+      await onInvalidQr();
+    } else if (context.mounted) {
+      await showInvalidQrDialog(context, controller: controller);
+    }
+  }
 }
 
 class _DebugBikePickerSheet extends StatefulWidget {
