@@ -1,11 +1,14 @@
-import 'package:bike_renting_app/bike_station/shared_map.dart';
-import 'package:bike_renting_app/bike_station/station_details.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:bike_renting_app/bike_station/shared_map.dart';
+import 'package:bike_renting_app/bike_station/station_details.dart';
+
 class RefinedUserBikeView extends StatefulWidget {
-  final bool isAdminDeleteMode; // Toggle between User Mode & Admin Delete Mode
-  final Function(Map<String, dynamic> station)? onRemoveStation; // Callback when station is deleted
+  final bool isAdminDeleteMode;
+  final Function(Map<String, dynamic> station)? onRemoveStation;
 
   const RefinedUserBikeView({
     super.key,
@@ -19,29 +22,104 @@ class RefinedUserBikeView extends StatefulWidget {
 
 class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
   final SupabaseClient supabase = Supabase.instance.client;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   Map<String, dynamic>? selectedStation;
   List<Map<String, dynamic>> stations = [];
+  List<Map<String, dynamic>> filteredStations = [];
+  LatLng? userLocation;
   bool isLoading = true;
+  bool isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _fetchStations();
+
+    _searchFocusNode.addListener(() {
+      setState(() {
+        isSearching = _searchFocusNode.hasFocus || _searchController.text.trim().isNotEmpty;
+      });
+    });
   }
 
-  // 1. FETCH ONLY ACTIVE STATIONS FROM SUPABASE
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  static double? _toDouble(dynamic val) {
+    if (val == null) return null;
+    if (val is num) return val.toDouble();
+    return double.tryParse(val.toString());
+  }
+
+  // Request GPS permission and fetch user location
+  Future<LatLng?> _getUserLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return null;
+      }
+      if (permission == LocationPermission.deniedForever) return null;
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      return LatLng(position.latitude, position.longitude);
+    } catch (e) {
+      debugPrint("Location retrieval error: $e");
+      return null;
+    }
+  }
+
+  // Fetch stations and sort them by distance from user location
   Future<void> _fetchStations() async {
     setState(() => isLoading = true);
     try {
+      final userPos = await _getUserLocation();
+      setState(() => userLocation = userPos);
+
       final response = await supabase
           .from('stations')
           .select()
-          .eq('is_active', true) // Filter out soft-deleted/inactive stations
-          .order('id', ascending: true);
+          .eq('is_active', true);
+
+      List<Map<String, dynamic>> fetched = List<Map<String, dynamic>>.from(response);
+
+      // Compute distances if GPS location is available
+      if (userPos != null) {
+        for (var s in fetched) {
+          final double? lat = _toDouble(s['latitude'] ?? s['lat']);
+          final double? lng = _toDouble(s['longitude'] ?? s['lng']);
+          if (lat != null && lng != null) {
+            s['distance_meters'] = Geolocator.distanceBetween(
+              userPos.latitude,
+              userPos.longitude,
+              lat,
+              lng,
+            );
+          }
+        }
+
+        // Sort ascending by distance (Nearest first)
+        fetched.sort((a, b) {
+          final aDist = (a['distance_meters'] as num?) ?? double.infinity;
+          final bDist = (b['distance_meters'] as num?) ?? double.infinity;
+          return aDist.compareTo(bDist);
+        });
+      }
 
       setState(() {
-        stations = List<Map<String, dynamic>>.from(response);
+        stations = fetched;
+        filteredStations = fetched;
         isLoading = false;
       });
     } catch (e) {
@@ -54,12 +132,36 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
     }
   }
 
-  // 2. SOFT DELETE STATION (Set is_active = false)
+  void _filterStations(String query) {
+    final trimmed = query.trim().toLowerCase();
+    setState(() {
+      if (trimmed.isEmpty) {
+        filteredStations = stations;
+      } else {
+        filteredStations = stations.where((s) {
+          final name = (s['name'] ?? '').toString().toLowerCase();
+          final address = (s['address'] ?? '').toString().toLowerCase();
+          return name.contains(trimmed) || address.contains(trimmed);
+        }).toList();
+      }
+      isSearching = true;
+    });
+  }
+
+  String _formatDistance(dynamic distanceMeters) {
+    if (distanceMeters == null) return '';
+    final double meters = (distanceMeters as num).toDouble();
+    if (meters < 1000) {
+      return '${meters.round()} m';
+    } else {
+      return '${(meters / 1000).toStringAsFixed(1)} km';
+    }
+  }
+
   Future<void> _deleteStation(Map<String, dynamic> station) async {
     try {
       final stationId = station['id'];
 
-      // Perform update instead of hard deletion
       await supabase.from('stations').update({
         'is_active': false,
         'status': 'Terminated',
@@ -68,6 +170,7 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
 
       setState(() {
         stations.removeWhere((s) => s['id'] == stationId);
+        filteredStations.removeWhere((s) => s['id'] == stationId);
       });
 
       if (widget.onRemoveStation != null) {
@@ -88,309 +191,303 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
     }
   }
 
+  void _openStationDetail(Map<String, dynamic> station) {
+    _searchFocusNode.unfocus();
+    setState(() => isSearching = false);
+
+    if (widget.isAdminDeleteMode) {
+      _showDeleteConfirmationDialog(context, station, Theme.of(context), Theme.of(context).colorScheme, const Color(0xFFDC2626));
+    } else {
+      setState(() => selectedStation = station);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StationDetailScreen(
+            stationData: station,
+            isViewOnly: true,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final destructiveColor = const Color(0xFFDC2626);
+    const destructiveColor = Color(0xFFDC2626);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: Stack(
-        children: [
-          // BACKGROUND MAP
-          Positioned.fill(
-            child: SharedBikeMap(
-              stations: stations,
-              selectedStationId: selectedStation?['id']?.toString(),
-              isAdminMode: widget.isAdminDeleteMode,
-              onStationTap: (stationId) {
-                final station = stations.firstWhere(
-                  (s) => s['id']?.toString() == stationId,
-                  orElse: () => {},
-                );
-                if (station.isNotEmpty) {
-                  setState(() => selectedStation = station);
-                  if (!widget.isAdminDeleteMode) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => StationDetailScreen(
-                          stationData: station,
-                          isViewOnly: true,
-                        ),
-                      ),
-                    );
+      body: GestureDetector(
+        onTap: () {
+          _searchFocusNode.unfocus();
+          setState(() => isSearching = false);
+        },
+        child: Stack(
+          children: [
+            // 1. MAP LAYER
+            Positioned.fill(
+              child: SharedBikeMap(
+                stations: stations,
+                riderLocation: userLocation,
+                selectedStationId: selectedStation?['id']?.toString(),
+                isAdminMode: widget.isAdminDeleteMode,
+                onStationTap: (stationId) {
+                  final station = stations.firstWhere(
+                        (s) => s['id']?.toString() == stationId,
+                    orElse: () => {},
+                  );
+                  if (station.isNotEmpty) {
+                    _openStationDetail(station);
                   }
-                }
-              },
-            ),
-          ),
-
-          // MIDDLE LOCATION MARKER (Admin Delete Mode crosshair)
-          if (widget.isAdminDeleteMode)
-            Align(
-              alignment: Alignment.center,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 200.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black87,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        "Selected Location",
-                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Icon(
-                      Icons.location_on,
-                      color: destructiveColor,
-                      size: 42,
-                    ),
-                  ],
-                ),
+                },
               ),
             ),
 
-          // TOP SEARCH BAR
-          Positioned(
-            top: 50.0,
-            left: 16.0,
-            right: 16.0,
-            child: Row(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
-                    onPressed: () {
-                      if (selectedStation != null) {
-                        setState(() => selectedStation = null);
-                      } else {
-                        Navigator.pop(context);
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    height: 48,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+            // 2. SEARCH BAR HEADER
+            Positioned(
+              top: 50.0,
+              left: 16.0,
+              right: 16.0,
+              child: Row(
+                children: [
+                  Container(
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: colorScheme.outline.withValues(alpha: 0.5)),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4))
-                      ],
+                      shape: BoxShape.circle,
                     ),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        widget.isAdminDeleteMode ? 'Search location...' : 'Search destination...',
-                        style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // RECENTER BUTTON
-          Positioned(
-            right: 16.0,
-            bottom: MediaQuery.of(context).size.height * 0.55 + 16.0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  )
-                ],
-              ),
-              child: IconButton(
-                icon: Icon(Icons.my_location, color: colorScheme.onSurface),
-                onPressed: _fetchStations,
-              ),
-            ),
-          ),
-
-          // DYNAMIC BOTTOM SHEET
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.55,
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, -4))],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Drag Handle
-                  Center(
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 12, bottom: 16),
-                      width: 40,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: colorScheme.onSurface.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                    child: IconButton(
+                      icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
+                      onPressed: () {
+                        if (isSearching || _searchController.text.isNotEmpty) {
+                          _searchController.clear();
+                          _filterStations('');
+                          _searchFocusNode.unfocus();
+                          setState(() => isSearching = false);
+                        } else if (selectedStation != null) {
+                          setState(() => selectedStation = null);
+                        } else {
+                          Navigator.pop(context);
+                        }
+                      },
                     ),
                   ),
-
-                  // === SECTION 1: Absolute Nearest Station ===
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: Text(
-                      widget.isAdminDeleteMode ? "Target Station to Remove" : "Closest to you",
-                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: _buildFeaturedStationCard(theme, colorScheme, destructiveColor),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-                    child: Divider(color: colorScheme.outline, height: 1),
-                  ),
-
-                  // === SECTION 2: Station List ===
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: Text(
-                      widget.isAdminDeleteMode ? "All Active Stations" : "Top 3 Nearby Stations",
-                      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _buildStationList(theme, colorScheme, destructiveColor),
-                  ),
-
-                  // === SECTION 3: Admin Mode Remove Button ===
-                  if (widget.isAdminDeleteMode && stations.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: destructiveColor,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                          ),
-                          onPressed: () {
-                            _showDeleteConfirmationDialog(context, stations.first, theme, colorScheme, destructiveColor);
-                          },
-                          child: const Text("Remove Location", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.5)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 4))
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        onChanged: _filterStations,
+                        style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: widget.isAdminDeleteMode ? 'Search station to remove...' : 'Search station name or address...',
+                          hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13),
+                          prefixIcon: Icon(Icons.search, color: colorScheme.primary, size: 20),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                            icon: Icon(Icons.clear, color: colorScheme.onSurface.withValues(alpha: 0.5), size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              _filterStations('');
+                            },
+                          )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
-          ),
-        ],
+
+            // 3. SEARCH RESULTS LIST OVERLAY WITH DISTANCES
+            if (isSearching && _searchController.text.trim().isNotEmpty)
+              Positioned(
+                top: 110.0,
+                left: 16.0,
+                right: 16.0,
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 12, offset: Offset(0, 6))],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: filteredStations.isEmpty
+                        ? Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Text(
+                        "No stations found.",
+                        style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                        : ListView.separated(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      itemCount: filteredStations.length,
+                      separatorBuilder: (context, index) => Divider(color: colorScheme.outline.withValues(alpha: 0.2), height: 1),
+                      itemBuilder: (context, index) {
+                        final station = filteredStations[index];
+                        final dist = _formatDistance(station['distance_meters']);
+
+                        return ListTile(
+                          leading: Icon(Icons.location_on, color: colorScheme.primary),
+                          title: Text(station['name'] ?? 'Unnamed Station', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 14)),
+                          subtitle: Text(station['address'] ?? 'No address', style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text("${station['available_bikes'] ?? 0} bikes", style: TextStyle(color: colorScheme.secondary, fontWeight: FontWeight.bold, fontSize: 12)),
+                              if (dist.isNotEmpty)
+                                Text(dist, style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 11)),
+                            ],
+                          ),
+                          onTap: () => _openStationDetail(station),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
+            // RECENTER GPS BUTTON
+            Positioned(
+              right: 16.0,
+              bottom: MediaQuery.of(context).size.height * 0.55 + 16.0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))
+                  ],
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.my_location, color: colorScheme.onSurface),
+                  onPressed: _fetchStations,
+                ),
+              ),
+            ),
+
+            // DYNAMIC BOTTOM SHEET
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.55,
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, -4))],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 12, bottom: 16),
+                        width: 40,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: colorScheme.onSurface.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                      child: Text(
+                        widget.isAdminDeleteMode ? "Target Station to Remove" : "Closest to you",
+                        style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                      child: _buildFeaturedStationCard(theme, colorScheme, destructiveColor),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                      child: Divider(color: colorScheme.outline, height: 1),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                      child: Text(
+                        widget.isAdminDeleteMode ? "All Active Stations" : "Nearby Stations",
+                        style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: _buildStationList(theme, colorScheme, destructiveColor),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // --- FEATURED CARD WIDGET ---
+  // --- ABSOLUTE NEAREST FEATURED STATION CARD ---
   Widget _buildFeaturedStationCard(ThemeData theme, ColorScheme colorScheme, Color destructiveColor) {
     if (isLoading) {
-      return Container(
-        height: 70,
-        alignment: Alignment.center,
-        child: const CircularProgressIndicator.adaptive(),
-      );
+      return Container(height: 70, alignment: Alignment.center, child: const CircularProgressIndicator.adaptive());
     }
 
     if (stations.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colorScheme.outline),
-        ),
+        decoration: BoxDecoration(color: colorScheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: colorScheme.outline)),
         child: Row(
           children: [
             Icon(Icons.info_outline, color: colorScheme.onSurface.withValues(alpha: 0.5)),
             const SizedBox(width: 12),
-            Text(
-              "No stations available",
-              style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14),
-            ),
+            Text("No stations available", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14)),
           ],
         ),
       );
     }
 
-    final topStation = stations.first;
+    final topStation = stations.first; // Nearest station after sorting
     final availableBikes = topStation['available_bikes'] ?? 0;
+    final distStr = _formatDistance(topStation['distance_meters']);
+    final distDisplay = distStr.isNotEmpty ? " • $distStr away" : "";
 
     return InkWell(
-      onTap: () {
-        if (widget.isAdminDeleteMode) {
-          _showDeleteConfirmationDialog(context, topStation, theme, colorScheme, destructiveColor);
-        } else {
-          setState(() => selectedStation = topStation);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => StationDetailScreen(
-                stationData: topStation,
-                isViewOnly: true,
-              ),
-            ),
-          );
-        }
-      },
+      onTap: () => _openStationDetail(topStation),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: widget.isAdminDeleteMode
-              ? destructiveColor.withValues(alpha: 0.15)
-              : colorScheme.primary.withValues(alpha: 0.15),
-          border: Border.all(
-            color: widget.isAdminDeleteMode
-                ? destructiveColor.withValues(alpha: 0.5)
-                : colorScheme.primary.withValues(alpha: 0.5),
-          ),
+          color: widget.isAdminDeleteMode ? destructiveColor.withValues(alpha: 0.15) : colorScheme.primary.withValues(alpha: 0.15),
+          border: Border.all(color: widget.isAdminDeleteMode ? destructiveColor.withValues(alpha: 0.5) : colorScheme.primary.withValues(alpha: 0.5)),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: widget.isAdminDeleteMode ? destructiveColor : colorScheme.primary,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: widget.isAdminDeleteMode ? destructiveColor : colorScheme.primary, shape: BoxShape.circle),
               child: const Icon(Icons.directions_bike, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 16),
@@ -398,13 +495,10 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    topStation["name"] ?? "Unnamed Station",
-                    style: TextStyle(color: colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  Text(topStation["name"] ?? "Unnamed Station", style: TextStyle(color: colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text(
-                    "${topStation["address"] ?? "No address"} • $availableBikes Bikes available",
+                    "${topStation["address"] ?? "No address"} • $availableBikes Bikes$distDisplay",
                     style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -418,50 +512,33 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
     );
   }
 
-  // --- LIST WIDGET ---
+  // --- SORTED STATION LIST ---
   Widget _buildStationList(ThemeData theme, ColorScheme colorScheme, Color destructiveColor) {
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator.adaptive());
-    }
+    if (isLoading) return const Center(child: CircularProgressIndicator.adaptive());
 
-    if (stations.isEmpty) {
+    if (filteredStations.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
-          child: Text(
-            "No stations available in this area.",
-            style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
-          ),
+          child: Text("No matching stations found.", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14)),
         ),
       );
     }
 
     return ListView.builder(
       padding: EdgeInsets.zero,
-      itemCount: stations.length,
+      itemCount: filteredStations.length,
       itemBuilder: (context, index) {
-        final station = stations[index];
+        final station = filteredStations[index];
+        final distStr = _formatDistance(station['distance_meters']);
+
         return InkWell(
-          onTap: () {
-            if (widget.isAdminDeleteMode) {
-              _showDeleteConfirmationDialog(context, station, theme, colorScheme, destructiveColor);
-            } else {
-              setState(() => selectedStation = station);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => StationDetailScreen(
-                    stationData: station,
-                    isViewOnly: true,
-                  ),
-                ),
-              );
-            }
-          },
+          onTap: () => _openStationDetail(station),
           child: _StandardStationTile(
             name: station["name"] ?? "Unnamed Station",
             address: station["address"] ?? "",
             bikes: station["available_bikes"] ?? 0,
+            distance: distStr,
             theme: theme,
             colorScheme: colorScheme,
           ),
@@ -470,7 +547,6 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
     );
   }
 
-  // CONFIRMATION MODAL DIALOG
   void _showDeleteConfirmationDialog(
       BuildContext context, Map<String, dynamic> station, ThemeData theme, ColorScheme colorScheme, Color destructiveColor) {
     showDialog(
@@ -483,53 +559,28 @@ class _RefinedUserBikeViewState extends State<RefinedUserBikeView> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                "Are you sure to remove\n${station["name"]}?",
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text("Are you sure to remove\n${station["name"]}?", textAlign: TextAlign.center, style: theme.textTheme.titleMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              Text(
-                "This action is irreversible, are you sure to continue?",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: destructiveColor,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
+              Text("This action is irreversible, are you sure to continue?", textAlign: TextAlign.center, style: TextStyle(color: destructiveColor, fontSize: 12, fontStyle: FontStyle.italic)),
               const SizedBox(height: 24),
-
-              // Confirm Delete Button
               SizedBox(
                 width: double.infinity,
                 height: 44,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: destructiveColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: destructiveColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
                   onPressed: () {
                     Navigator.pop(context);
-                    _deleteStation(station); // Triggers soft delete in Supabase
+                    _deleteStation(station);
                   },
                   child: const Text("Remove Location", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Cancel Button
               SizedBox(
                 width: double.infinity,
                 height: 44,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.surface,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: colorScheme.surface, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
                   onPressed: () => Navigator.pop(context),
                   child: Text("Cancel", style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
                 ),
@@ -546,6 +597,7 @@ class _StandardStationTile extends StatelessWidget {
   final String name;
   final String address;
   final int bikes;
+  final String distance;
   final ThemeData theme;
   final ColorScheme colorScheme;
 
@@ -553,6 +605,7 @@ class _StandardStationTile extends StatelessWidget {
     required this.name,
     required this.address,
     required this.bikes,
+    this.distance = '',
     required this.theme,
     required this.colorScheme,
   });
@@ -572,28 +625,36 @@ class _StandardStationTile extends StatelessWidget {
               children: [
                 Text(name, style: TextStyle(color: colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
-                Text(
-                  address,
-                  style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                Text(address, style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.directions_bike, color: colorScheme.secondary, size: 14),
-                const SizedBox(width: 4),
-                Text("$bikes", style: TextStyle(color: colorScheme.secondary, fontWeight: FontWeight.bold, fontSize: 13)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(color: colorScheme.surface, borderRadius: BorderRadius.circular(12)),
+                child: Row(
+                  children: [
+                    Icon(Icons.directions_bike, color: colorScheme.secondary, size: 14),
+                    const SizedBox(width: 4),
+                    Text("$bikes", style: TextStyle(color: colorScheme.secondary, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
+              ),
+              if (distance.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  distance,
+                  style: TextStyle(
+                    color: colorScheme.onSurface.withValues(alpha: 0.6),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
-            ),
+            ],
           ),
         ],
       ),

@@ -99,12 +99,11 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     }
   }
 
-  // 🟢 Upload new WebP image and delete previous image from storage bucket
   Future<String?> _uploadImageToSupabase() async {
     if (selectedImageFile == null) return imageUrl;
 
     try {
-      final String? oldImageUrl = imageUrl; // Capture previous image URL
+      final String? oldImageUrl = imageUrl;
 
       final dynamic input = kIsWeb
           ? await selectedImageFile!.readAsBytes()
@@ -117,7 +116,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         quality: 80,
       );
 
-      // 🟢 Delete old image if new upload succeeded
       if (publicUrl != null && oldImageUrl != null && oldImageUrl.isNotEmpty) {
         try {
           await _storageService.deleteImage(
@@ -194,6 +192,106 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       }
     } catch (e) {
       _showSnackBar("Failed to save station: $e");
+    } finally {
+      if (mounted) setState(() => isSaving = false);
+    }
+  }
+
+  // 🔴 Soft-delete station: prompts confirmation dialog and sets is_active = false
+  Future<void> _removeStationFromSupabase() async {
+    if (widget.stationData == null || widget.stationData!['id'] == null) return;
+
+    final colorScheme = Theme.of(context).colorScheme;
+    const destructiveColor = Color(0xFFDC2626);
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      useRootNavigator: true,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Are you sure to remove\n${stationName.trim().isEmpty ? 'this station' : stationName}?",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "This action is irreversible, are you sure to continue?",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: destructiveColor,
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: destructiveColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                  ),
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text(
+                    "Remove Location",
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.surface,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                  ),
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => isSaving = true);
+
+    try {
+      final stationId = widget.stationData!['id'];
+
+      await supabase.from('stations').update({
+        'is_active': false,
+        'status': 'Terminated',
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', stationId);
+
+      _showSnackBar("Station removed successfully!");
+
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      _showSnackBar("Failed to remove station: $e");
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -507,7 +605,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                           },
                         ),
                       )
-                    else
+                    else ...[
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -532,6 +630,28 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                           ),
                         ),
                       ),
+                      // 🔴 Remove Station button (only visible when editing an existing station)
+                      if (isEditMode) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: errorColor,
+                              side: const BorderSide(color: errorColor, width: 1.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                            ),
+                            icon: const Icon(Icons.delete_outline, color: errorColor),
+                            label: const Text(
+                              "Remove Station",
+                              style: TextStyle(color: errorColor, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            onPressed: isSaving ? null : _removeStationFromSupabase,
+                          ),
+                        ),
+                      ],
+                    ],
                   ],
                 ),
               ),
