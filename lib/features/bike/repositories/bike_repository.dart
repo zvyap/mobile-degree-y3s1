@@ -35,7 +35,7 @@ class BikeRepository {
   }
 
 //for bikedetail page
-  Future<Bike> getBike(String bikeId) async {
+  Future<Bike> getBike(int bikeId) async {
     final response = await _supabase
         .from('bikes')
         .select('''
@@ -56,6 +56,20 @@ class BikeRepository {
     return Bike.fromJson(response);
   }
 
-
+  Future<void> addBike({
+    required String code,
+    required String qrToken,
+    required String status,
+    int? stationId,
+    int? batteryPercent,
+  }) async {
+    await _supabase.from('bikes').insert({
+      'code': code,
+      'qr_token': qrToken,
+      'current_station_id': stationId,
+      'battery_percent': batteryPercent,
+      'status': status,
+    });
+  }
 
 }

@@ -18,10 +18,10 @@ class BikeManagementPage extends StatefulWidget {
   static const Color _accentColor = Color(0xFF0E8EA8);
   static const Color _borderColor = Color(0xFFD2DCE6);
 
-  final ValueChanged<String> onOpenBikeDetails;
+  final ValueChanged<int> onOpenBikeDetails;
   final VoidCallback onOpenReportList;
   final VoidCallback onAddBike;
-  final ValueChanged<String> onMakeReport;
+  final ValueChanged<int> onMakeReport;
 
   @override
   State<BikeManagementPage> createState() =>
@@ -236,9 +236,6 @@ class _BikeManagementPageState extends State<BikeManagementPage> {
 
     return _BikeCard(
       bikeId: bike.code,
-
-      // Temporary until "model" exists in your Supabase table.
-      model: 'Standard Bike',
 
       status: bikeStatus,
 
@@ -592,7 +589,6 @@ class _StatusFilterChip extends StatelessWidget {
 class _BikeCard extends StatelessWidget {
   const _BikeCard({
     required this.bikeId,
-    required this.model,
     required this.status,
     required this.location,
     required this.description,
@@ -602,7 +598,6 @@ class _BikeCard extends StatelessWidget {
   });
 
   final String bikeId;
-  final String model;
   final BikeStatus status;
   final String location;
   final String description;
@@ -674,15 +669,6 @@ class _BikeCard extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 5),
-
-                Text(
-                  model,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
 
                 const SizedBox(height: 12),
 

@@ -1,5 +1,5 @@
 class Bike {
-  final String id;
+  final int id;
   final String code;
   final String qrToken;
   final String? currentStationId;
@@ -23,7 +23,7 @@ class Bike {
 
   factory Bike.fromJson(Map<String, dynamic> json) {
     return Bike(
-      id: json['id'].toString(),
+      id: json['id'] as int,
       code: json['code'] ?? '',
       qrToken: json['qr_token'] ?? '',
       currentStationId: json['current_station_id']?.toString(),

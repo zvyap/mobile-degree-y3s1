@@ -19,7 +19,7 @@ class BikeDetailsPage extends StatefulWidget {
     required this.onMakeReport,
   });
 
-  final String bikeId;
+  final int bikeId;
   final VoidCallback onEditBike;
   final VoidCallback onTransferBike;
   final VoidCallback onServiceBike;

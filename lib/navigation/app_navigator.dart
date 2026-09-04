@@ -130,7 +130,7 @@ class AppNavigator extends StatelessWidget {
       ),
       AppPage.addbike => const AddBike(),
       AppPage.bikeDetail => BikeDetailsPage(
-        bikeId: arguments as String,
+        bikeId: arguments as int,
         onEditBike: (){
           navigatorKey.currentState?.pushNamed(
             AppPage.editBike.routeName,

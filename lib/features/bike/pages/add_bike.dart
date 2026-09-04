@@ -1,8 +1,16 @@
+import 'dart:math';
+import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
-import '../widgets/bike_qr_modal.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../models/station.dart';
+import '../repositories/bike_repository.dart';
+import '../repositories/station_repository.dart';
 
 class AddBike extends StatefulWidget {
-  const AddBike({super.key});
+  const AddBike({
+    super.key,
+  });
 
   @override
   State<AddBike> createState() => _AddBikeState();
@@ -10,32 +18,90 @@ class AddBike extends StatefulWidget {
 
 class _AddBikeState extends State<AddBike> {
   final _formKey = GlobalKey<FormState>();
+   Uuid _uuid = Uuid();
+  final BikeRepository _bikeRepository = BikeRepository();
+  final StationRepository _stationRepository = StationRepository();
 
-  final TextEditingController _bikeIdController = TextEditingController();
-  final TextEditingController _rateController = TextEditingController();
+  final TextEditingController _bikeIdController =
+  TextEditingController();
 
-  String _selectedModel = 'Standard City Bike';
-  String _selectedBikeType = 'Standard';
-  String _selectedStation = 'University TARUMT';
-  String _selectedCondition = 'Excellent';
+  final TextEditingController _batteryController =
+  TextEditingController(
+    text: '100',
+  );
+
+  List<Station> _stations = [];
+
+  int? _selectedStationId;
+
+  String _selectedStatus = 'available';
+
+  String? _qrToken;
+
   int _currentStep = 0;
 
-  DateTime _purchaseDate = DateTime(2026, 7, 23);
+  bool _isLoadingStations = true;
+  bool _isSaving = false;
+
+  String? _stationError;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _loadStations();
+  }
 
   @override
   void dispose() {
     _bikeIdController.dispose();
-    _rateController.dispose();
+    _batteryController.dispose();
 
     super.dispose();
   }
 
-  // ---------------------------------------------------------------------------
-  // Snackbar
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
+  // LOAD STATIONS
+  // ===========================================================================
+
+  Future<void> _loadStations() async {
+    try {
+      setState(() {
+        _isLoadingStations = true;
+        _stationError = null;
+      });
+
+      final stations =
+      await _stationRepository.getStations();
+
+      if (!mounted) return;
+
+      setState(() {
+        _stations = stations;
+
+        if (stations.isNotEmpty) {
+          _selectedStationId ??= stations.first.id;
+        }
+
+        _isLoadingStations = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _stationError = error.toString();
+        _isLoadingStations = false;
+      });
+    }
+  }
+
+  // ===========================================================================
+  // SNACKBAR
+  // ===========================================================================
 
   void showSnackBar(String message) {
-    final messenger = ScaffoldMessenger.of(context);
+    final messenger =
+    ScaffoldMessenger.of(context);
 
     messenger.clearSnackBars();
 
@@ -46,50 +112,122 @@ class _AddBikeState extends State<AddBike> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Date picker
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
+  // GENERATE QR TOKEN
+  // ===========================================================================
 
-  Future<void> _selectPurchaseDate() async {
-    final selectedDate = await showDatePicker(
-      context: context,
-      initialDate: _purchaseDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
+  String _generateQrToken() {
+    return _uuid.v4();
+  }
 
-    if (selectedDate != null) {
+  // ===========================================================================
+  // NEXT STEP
+  // ===========================================================================
+
+  void _goToNextStep(int nextStep) {
+    if (nextStep == 1) {
+      if (!(_formKey.currentState?.validate() ??
+          false)) {
+        return;
+      }
+
+      if (_selectedStationId == null) {
+        showSnackBar(
+          'Please select a station',
+        );
+        return;
+      }
+
       setState(() {
-        _purchaseDate = selectedDate;
+        _qrToken = _generateQrToken();
+        _currentStep = 1;
+      });
+
+      return;
+    }
+
+    if (nextStep == 2) {
+      setState(() {
+        _currentStep = 2;
       });
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Next
-  // ---------------------------------------------------------------------------
+  // ===========================================================================
+  // ADD BIKE TO SUPABASE
+  // ===========================================================================
 
-  void _goToNextStep(int nextStep) {
+  Future<void> _addBike() async {
+    final user = Supabase.instance.client.auth.currentUser;
 
-      // Later this will move to Step 2.
-      if( nextStep == 1){
-        if (_formKey.currentState?.validate() ?? false) {
-          setState(() {
-            _currentStep = 1;
-          });
-          showSnackBar("Page 1 Completed");
-        }
+    debugPrint('Current user: ${user?.id}');
+    debugPrint('Current email: ${user?.email}');
+    if (_isSaving) return;
 
-      }else if(nextStep == 2){
+    final batteryPercent =
+    int.tryParse(
+      _batteryController.text.trim(),
+    );
 
-        setState(() {
-          _currentStep =2 ;
-        });
-        showSnackBar("Page 2 Completed");
-      }
+    if (batteryPercent == null) {
+      showSnackBar(
+        'Invalid battery percentage',
+      );
+      return;
+    }
 
+    if (_selectedStationId == null) {
+      showSnackBar(
+        'No station selected',
+      );
+      return;
+    }
 
+    if (_qrToken == null) {
+      showSnackBar(
+        'QR token has not been generated',
+      );
+      return;
+    }
+
+    try {
+      setState(() {
+        _isSaving = true;
+      });
+
+      await _bikeRepository.addBike(
+        code: _bikeIdController.text
+            .trim()
+            .toUpperCase(),
+        qrToken: _qrToken!,
+        stationId: _selectedStationId!,
+        batteryPercent: batteryPercent,
+        status: _selectedStatus,
+      );
+
+      if (!mounted) return;
+
+      showSnackBar(
+        'Bike added successfully',
+      );
+
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _isSaving = false;
+      });
+
+      showSnackBar(
+        'Failed to add bike: $error',
+      );
+    }
   }
+
+  // ===========================================================================
+  // BUILD
+  // ===========================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -99,14 +237,15 @@ class _AddBikeState extends State<AddBike> {
       2 => _buildStepThree(context),
       _ => _buildStepOne(context),
     };
-
   }
 
-  // -------------------------------------------------------------------
-  // AddBike(Step 1)
-  // -------------------------------------------------------------------
+  // ===========================================================================
+  // STEP 1
+  // ===========================================================================
 
-  Widget _buildStepOne(BuildContext context){
+  Widget _buildStepOne(
+      BuildContext context,
+      ) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
@@ -126,312 +265,299 @@ class _AddBikeState extends State<AddBike> {
 
           Text(
             'Add new bike',
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style:
+            theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
 
           const SizedBox(height: 8),
 
-          // -------------------------------------------------------------------
-          // Step indicator
-          // -------------------------------------------------------------------
-
           Text(
             'Step 1 of 3 • Basic information',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.75),
+              color: scheme.onSurface.withValues(
+                alpha: 0.75,
+              ),
             ),
           ),
 
           const SizedBox(height: 10),
 
           ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius:
+            BorderRadius.circular(20),
             child: LinearProgressIndicator(
               value: 1 / 3,
               minHeight: 6,
-              backgroundColor: scheme.surfaceContainerHighest,
+              backgroundColor:
+              scheme.surfaceContainerHighest,
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 28),
 
           // -------------------------------------------------------------------
-          // Bike photo
-          // -------------------------------------------------------------------
-
-          const _FieldLabel('Bike photo'),
-
-          const SizedBox(height: 6),
-
-          _BikePhotoUpload(
-            onChooseFile: () {
-              // Add actual image picker later.
-              showSnackBar('Bike photo picker will be added later');
-            },
-          ),
-
-          const SizedBox(height: 16),
-
-          // -------------------------------------------------------------------
-          // Bike ID + Model
-          // -------------------------------------------------------------------
-
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _FormSection(
-                  label: 'Bike ID',
-                  child: TextFormField(
-                    controller: _bikeIdController,
-                    decoration: const InputDecoration(
-                      hintText: 'BR-',
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Enter bike ID';
-                      }
-
-                      return null;
-                    },
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: _FormSection(
-                  label: 'Model',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _selectedModel,
-                    isExpanded: true,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Standard City Bike',
-                        child: Text('Standard City Bike'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Standard Road Bike',
-                        child: Text('Standard Road Bike'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Mountain Bike',
-                        child: Text('Mountain Bike'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-
-                      setState(() {
-                        _selectedModel = value;
-                      });
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          // -------------------------------------------------------------------
-          // Bike type + Rate
-          // -------------------------------------------------------------------
-
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _FormSection(
-                  label: 'Bike type',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _selectedBikeType,
-                    isExpanded: true,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Standard',
-                        child: Text('Standard'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Electric',
-                        child: Text('Electric'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Mountain',
-                        child: Text('Mountain'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-
-                      setState(() {
-                        _selectedBikeType = value;
-                      });
-                    },
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: _FormSection(
-                  label: 'Rate Per Hour',
-                  child: TextFormField(
-                    controller: _rateController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      prefixText: 'RM ',
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Enter rate';
-                      }
-
-                      final rate = double.tryParse(value);
-
-                      if (rate == null) {
-                        return 'Invalid rate';
-                      }
-
-                      if (rate <= 0) {
-                        return 'Rate must be above 0';
-                      }
-
-                      return null;
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          // -------------------------------------------------------------------
-          // Initial station
+          // Bike ID
           // -------------------------------------------------------------------
 
           _FormSection(
-            label: 'Initial station',
-            child: DropdownButtonFormField<String>(
-              initialValue: _selectedStation,
-              isExpanded: true,
-              decoration: const InputDecoration(
+            label: 'Bike Code',
+            child: TextFormField(
+              controller:
+              _bikeIdController,
+              textCapitalization:
+              TextCapitalization.characters,
+              decoration:
+              const InputDecoration(
+                hintText: 'BIKE-1000',
                 prefixIcon: Icon(
-                  Icons.location_on_outlined,
+                  Icons.directions_bike_rounded,
                 ),
               ),
+              validator: (value) {
+                final code =
+                    value?.trim() ?? '';
+
+                if (code.isEmpty) {
+                  return 'Enter bike ID';
+                }
+
+                if (code.length < 3) {
+                  return 'Bike ID is too short';
+                }
+
+                return null;
+              },
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // -------------------------------------------------------------------
+          // Station
+          // -------------------------------------------------------------------
+
+          const _FieldLabel(
+            'Initial station',
+          ),
+
+          const SizedBox(height: 6),
+
+          if (_isLoadingStations)
+            const Padding(
+              padding:
+              EdgeInsets.symmetric(
+                vertical: 20,
+              ),
+              child: Center(
+                child:
+                CircularProgressIndicator(),
+              ),
+            )
+          else if (_stationError != null)
+            Container(
+              padding:
+              const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color:
+                scheme.errorContainer,
+                borderRadius:
+                BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Unable to load stations',
+                    style: TextStyle(
+                      color: scheme
+                          .onErrorContainer,
+                      fontWeight:
+                      FontWeight.w700,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    _stationError!,
+                    style:
+                    theme.textTheme.bodySmall,
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  OutlinedButton.icon(
+                    onPressed:
+                    _loadStations,
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                    ),
+                    label: const Text(
+                      'Retry',
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (_stations.isEmpty)
+              const Text(
+                'No stations are available.',
+              )
+            else
+              DropdownButtonFormField<int>(
+                initialValue:
+                _selectedStationId,
+                isExpanded: true,
+                decoration:
+                const InputDecoration(
+                  prefixIcon: Icon(
+                    Icons
+                        .location_on_outlined,
+                  ),
+                ),
+                items: _stations.map(
+                      (station) {
+                    return DropdownMenuItem<
+                        int>(
+                      value: station.id,
+                      child: Text(
+                        station.name,
+                        overflow:
+                        TextOverflow.ellipsis,
+                      ),
+                    );
+                  },
+                ).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedStationId =
+                        value;
+                  });
+                },
+                validator: (value) {
+                  if (value == null) {
+                    return 'Select a station';
+                  }
+
+                  return null;
+                },
+              ),
+
+          const SizedBox(height: 18),
+
+          // -------------------------------------------------------------------
+          // Battery
+          // -------------------------------------------------------------------
+
+          _FormSection(
+            label: 'Battery percentage',
+            child: TextFormField(
+              controller:
+              _batteryController,
+              keyboardType:
+              TextInputType.number,
+              decoration:
+              const InputDecoration(
+                hintText: '100',
+                suffixText: '%',
+                prefixIcon: Icon(
+                  Icons.battery_full_rounded,
+                ),
+              ),
+              validator: (value) {
+                if (value == null ||
+                    value.trim().isEmpty) {
+                  return 'Enter battery percentage';
+                }
+
+                final battery =
+                int.tryParse(
+                  value.trim(),
+                );
+
+                if (battery == null) {
+                  return 'Enter a valid number';
+                }
+
+                if (battery < 0 ||
+                    battery > 100) {
+                  return 'Battery must be between 0 and 100';
+                }
+
+                return null;
+              },
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          // -------------------------------------------------------------------
+          // Status
+          // -------------------------------------------------------------------
+
+          _FormSection(
+            label: 'Initial status',
+            child:
+            DropdownButtonFormField<
+                String>(
+              initialValue:
+              _selectedStatus,
+              isExpanded: true,
               items: const [
                 DropdownMenuItem(
-                  value: 'University TARUMT',
-                  child: Text('University TARUMT'),
+                  value: 'available',
+                  child: Text(
+                    'Available',
+                  ),
                 ),
                 DropdownMenuItem(
-                  value: 'Gurney Paragon',
-                  child: Text('Gurney Paragon'),
+                  value: 'maintenance',
+                  child: Text(
+                    'Maintenance',
+                  ),
                 ),
                 DropdownMenuItem(
-                  value: 'Folk Valley',
-                  child: Text('Folk Valley'),
+                  value: 'unavailable',
+                  child: Text(
+                    'Unavailable',
+                  ),
                 ),
               ],
               onChanged: (value) {
                 if (value == null) return;
 
                 setState(() {
-                  _selectedStation = value;
+                  _selectedStatus =
+                      value;
                 });
               },
             ),
           ),
 
-          const SizedBox(height: 14),
-
-          // -------------------------------------------------------------------
-          // Purchase date + Condition
-          // -------------------------------------------------------------------
-
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _FormSection(
-                  label: 'Purchase date',
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: _selectPurchaseDate,
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(
-                          Icons.calendar_month_outlined,
-                        ),
-                      ),
-                      child: Text(
-                        _formatDate(_purchaseDate),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: _FormSection(
-                  label: 'Initial condition',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _selectedCondition,
-                    isExpanded: true,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'Excellent',
-                        child: Text('Excellent'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Good',
-                        child: Text('Good'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Fair',
-                        child: Text('Fair'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-
-                      setState(() {
-                        _selectedCondition = value;
-                      });
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-
           const SizedBox(height: 18),
 
           // -------------------------------------------------------------------
-          // QR information
+          // QR info
           // -------------------------------------------------------------------
 
           Container(
-            padding: const EdgeInsets.symmetric(
+            padding:
+            const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 11,
             ),
             decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
+              color: scheme
+                  .surfaceContainerHighest,
+              borderRadius:
+              BorderRadius.circular(12),
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
               children: [
                 Icon(
                   Icons.info_rounded,
@@ -443,21 +569,33 @@ class _AddBikeState extends State<AddBike> {
 
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                    CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'A QR code will be generated automatically.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+                        'A unique QR token will be generated automatically.',
+                        style: theme
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(
+                          fontWeight:
+                          FontWeight.w700,
                         ),
                       ),
 
-                      const SizedBox(height: 2),
+                      const SizedBox(
+                        height: 2,
+                      ),
 
                       Text(
-                        'You can print and attach it after saving.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurface.withValues(
+                        'The QR code can later contain this token for bike scanning.',
+                        style: theme
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(
+                          color: scheme
+                              .onSurface
+                              .withValues(
                             alpha: 0.60,
                           ),
                         ),
@@ -472,30 +610,40 @@ class _AddBikeState extends State<AddBike> {
           const SizedBox(height: 28),
 
           // -------------------------------------------------------------------
-          // Next button
+          // Next
           // -------------------------------------------------------------------
 
           Align(
-            alignment: Alignment.centerRight,
+            alignment:
+            Alignment.centerRight,
             child: SizedBox(
               width: 125,
               height: 48,
               child: FilledButton(
-                onPressed: () {
-                  _goToNextStep(1);
+                onPressed:
+                _isLoadingStations ||
+                    _stations.isEmpty
+                    ? null
+                    : () {
+                  _goToNextStep(
+                    1,
+                  );
                 },
                 child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment:
+                  MainAxisAlignment.center,
                   children: [
                     Text(
                       'Next',
                       style: TextStyle(
-                        fontWeight: FontWeight.w700,
+                        fontWeight:
+                        FontWeight.w700,
                       ),
                     ),
                     SizedBox(width: 8),
                     Icon(
-                      Icons.chevron_right_rounded,
+                      Icons
+                          .chevron_right_rounded,
                     ),
                   ],
                 ),
@@ -505,174 +653,171 @@ class _AddBikeState extends State<AddBike> {
         ],
       ),
     );
-
   }
 
+  // ===========================================================================
+  // STEP 2 - QR TOKEN
+  // ===========================================================================
 
-  // -------------------------------------------------------------------
-  // AddBike(Step 2)
-  // -------------------------------------------------------------------
-
-  Widget _buildStepTwo(BuildContext context) {
+  Widget _buildStepTwo(
+      BuildContext context,
+      ) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 32),
+      padding: const EdgeInsets.fromLTRB(
+        18,
+        16,
+        18,
+        32,
+      ),
       children: [
-        // -------------------------------------------------------------
-        // Title
-        // -------------------------------------------------------------
         Text(
           'Add new bike',
-          style: theme.textTheme.headlineSmall?.copyWith(
+          style:
+          theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
           ),
         ),
 
         const SizedBox(height: 8),
 
-        // -------------------------------------------------------------
-        // Step indicator
-        // -------------------------------------------------------------
         Text(
           'Step 2 of 3 • QR code',
           style: theme.textTheme.bodySmall?.copyWith(
-            color: scheme.onSurface.withValues(alpha: 0.75),
+            color: scheme.onSurface.withValues(
+              alpha: 0.75,
+            ),
           ),
         ),
 
         const SizedBox(height: 10),
 
         ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius:
+          BorderRadius.circular(20),
           child: LinearProgressIndicator(
             value: 2 / 3,
             minHeight: 6,
-            backgroundColor: scheme.surfaceContainerHighest,
+            backgroundColor:
+            scheme.surfaceContainerHighest,
           ),
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 28),
 
         Text(
           'Bike QR Code',
-          style: theme.textTheme.labelMedium?.copyWith(
-            fontWeight: FontWeight.w700,
+          style:
+          theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
           ),
         ),
 
-        const SizedBox(height: 30),
+        const SizedBox(height: 8),
 
-        // -------------------------------------------------------------
-        // QR code placeholder
-        // -------------------------------------------------------------
+        Text(
+          'The following token will identify this bike when scanned.',
+          style: theme.textTheme.bodySmall,
+        ),
+
+        const SizedBox(height: 24),
+
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: scheme.surface,
+            color:
+            scheme.surfaceContainer,
+            borderRadius:
+            BorderRadius.circular(16),
             border: Border.all(
-              color: scheme.outline.withValues(alpha: 0.3),
+              color: scheme.outline
+                  .withValues(
+                alpha: 0.5,
+              ),
             ),
           ),
           child: Column(
             children: [
-              // Bike QR identifier
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'QR: ${_bikeIdController.text.isEmpty ? 'BR-XXXX' : _bikeIdController.text}',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
+              // ---------------------------------------------------------------
+              // Bike code
+              // ---------------------------------------------------------------
 
-                  IconButton(
-                    onPressed: () {
-                      final code = _bikeIdController.text.trim();
-                      BikeQrModal.show(
-                        context,
-                        bikeCode: code.isEmpty ? 'BR-NEW' : code,
-                        qrToken: code.isEmpty ? 'BR-NEW' : code,
-                      );
-                    },
-                    icon: const Icon(
-                      Icons.open_in_full_rounded,
-                    ),
-                  ),
-                ],
+              Text(
+                _bikeIdController.text
+                    .trim()
+                    .toUpperCase(),
+                style: theme
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(
+                  fontWeight:
+                  FontWeight.w800,
+                ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              // -------------------------------------------------------
-              // QR PLACEHOLDER
-              // -------------------------------------------------------
-              AspectRatio(
-                aspectRatio: 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.qr_code_2_rounded,
-                        size: 160,
-                        color: scheme.onSurface.withValues(
-                          alpha: 0.75,
-                        ),
-                      ),
+              // ---------------------------------------------------------------
+              // QR placeholder
+              // ---------------------------------------------------------------
 
-                      const SizedBox(height: 12),
-
-                      Text(
-                        'QR Code Placeholder',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-
-                      const SizedBox(height: 4),
-
-                      Text(
-                        'QR generation will be implemented later',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurface.withValues(
-                            alpha: 0.6,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              Container(
+                width: 220,
+                height: 220,
+                alignment:
+                Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                  BorderRadius.circular(12),
                 ),
+                child: const Icon(
+                  Icons.qr_code_2_rounded,
+                  size: 190,
+                  color: Colors.black,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              Text(
+                'QR Token',
+                style: theme
+                    .textTheme
+                    .labelMedium
+                    ?.copyWith(
+                  fontWeight:
+                  FontWeight.w700,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              SelectableText(
+                _qrToken ??
+                    'Not generated',
+                textAlign:
+                TextAlign.center,
+                style:
+                theme.textTheme.bodySmall,
               ),
 
               const SizedBox(height: 12),
 
-              // -------------------------------------------------------
-              // Download
-              // -------------------------------------------------------
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  onPressed: () {
-                    final code = _bikeIdController.text.trim();
-                    BikeQrModal.show(
-                      context,
-                      bikeCode: code.isEmpty ? 'BR-NEW' : code,
-                      qrToken: code.isEmpty ? 'BR-NEW' : code,
-                    );
-                  },
-                  icon: const Icon(
-                    Icons.download_outlined,
-                    size: 30,
+              Text(
+                'The visual QR image is currently a placeholder. Later we can generate an actual QR code from this token.',
+                textAlign:
+                TextAlign.center,
+                style: theme
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(
+                  color: scheme.onSurface
+                      .withValues(
+                    alpha: 0.6,
                   ),
                 ),
               ),
@@ -680,38 +825,35 @@ class _AddBikeState extends State<AddBike> {
           ),
         ),
 
-        const SizedBox(height: 100),
+        const SizedBox(height: 60),
 
-        // -------------------------------------------------------------
-        // Back + Next
-        // -------------------------------------------------------------
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment:
+          MainAxisAlignment.spaceBetween,
           children: [
             SizedBox(
               width: 125,
               height: 48,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: scheme.error,
-                  foregroundColor: scheme.onError,
-                ),
+              child: OutlinedButton(
                 onPressed: () {
                   setState(() {
                     _currentStep = 0;
                   });
                 },
                 child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment:
+                  MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.chevron_left_rounded,
+                      Icons
+                          .chevron_left_rounded,
                     ),
                     SizedBox(width: 6),
                     Text(
                       'Back',
                       style: TextStyle(
-                        fontWeight: FontWeight.w700,
+                        fontWeight:
+                        FontWeight.w700,
                       ),
                     ),
                   ],
@@ -724,20 +866,23 @@ class _AddBikeState extends State<AddBike> {
               height: 48,
               child: FilledButton(
                 onPressed: () {
-                 _goToNextStep(2);
+                  _goToNextStep(2);
                 },
                 child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment:
+                  MainAxisAlignment.center,
                   children: [
                     Text(
                       'Next',
                       style: TextStyle(
-                        fontWeight: FontWeight.w700,
+                        fontWeight:
+                        FontWeight.w700,
                       ),
                     ),
                     SizedBox(width: 6),
                     Icon(
-                      Icons.chevron_right_rounded,
+                      Icons
+                          .chevron_right_rounded,
                     ),
                   ],
                 ),
@@ -749,222 +894,226 @@ class _AddBikeState extends State<AddBike> {
     );
   }
 
-  // -------------------------------------------------------------------
-  // AddBike(Step 3)
-  // -------------------------------------------------------------------
+  // ===========================================================================
+  // STEP 3 - REVIEW
+  // ===========================================================================
 
-  Widget _buildStepThree(BuildContext context) {
+  Widget _buildStepThree(
+      BuildContext context,
+      ) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
+    final selectedStation =
+    _getSelectedStation();
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 32),
+      padding: const EdgeInsets.fromLTRB(
+        18,
+        16,
+        18,
+        32,
+      ),
       children: [
-        // -------------------------------------------------------------
-        // Title
-        // -------------------------------------------------------------
         Text(
           'Add new bike',
-          style: theme.textTheme.headlineSmall?.copyWith(
+          style:
+          theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
           ),
         ),
 
         const SizedBox(height: 8),
 
-        // -------------------------------------------------------------
-        // Step indicator
-        // -------------------------------------------------------------
         Text(
           'Step 3 of 3 • Review information',
           style: theme.textTheme.bodySmall?.copyWith(
-            color: scheme.onSurface.withValues(alpha: 0.75),
+            color: scheme.onSurface.withValues(
+              alpha: 0.75,
+            ),
           ),
         ),
 
         const SizedBox(height: 10),
 
         ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius:
+          BorderRadius.circular(20),
           child: LinearProgressIndicator(
             value: 1,
             minHeight: 6,
-            backgroundColor: scheme.surfaceContainerHighest,
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // -------------------------------------------------------------
-        // Bike photo
-        // -------------------------------------------------------------
-        Text(
-          'Bike photo',
-          style: theme.textTheme.labelMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        // Photo placeholder
-        Container(
-          width: 125,
-          height: 110,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: scheme.outline.withValues(alpha: 0.5),
-            ),
-          ),
-          child: Icon(
-            Icons.directions_bike_rounded,
-            size: 72,
-            color: scheme.primary,
+            backgroundColor:
+            scheme.surfaceContainerHighest,
           ),
         ),
 
         const SizedBox(height: 28),
 
-        // -------------------------------------------------------------
-        // Review information card
-        // -------------------------------------------------------------
+        // ---------------------------------------------------------------------
+        // Review card
+        // ---------------------------------------------------------------------
+
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          padding:
+          const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: scheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(4),
+            color:
+            scheme.surfaceContainer,
+            borderRadius:
+            BorderRadius.circular(16),
+            border: Border.all(
+              color: scheme.outline
+                  .withValues(
+                alpha: 0.5,
+              ),
+            ),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
             children: [
-              _reviewRow(
-                context,
-                label: 'Bike ID:',
-                value: _bikeIdController.text,
-              ),
-
-              const SizedBox(height: 12),
-
-              _reviewRow(
-                context,
-                label: 'Model:',
-                value: _selectedModel,
-              ),
-
-              const SizedBox(height: 12),
-
-              _reviewRow(
-                context,
-                label: 'Bike type:',
-                value: _selectedBikeType,
-              ),
-
-              const SizedBox(height: 12),
-
-              _reviewRow(
-                context,
-                label: 'Rate Per Hour:',
-                value: 'RM ${_rateController.text}',
-              ),
-
-              const SizedBox(height: 12),
-
-              _reviewRow(
-                context,
-                label: 'Initial station:',
-                value: _selectedStation,
-              ),
-
-              const SizedBox(height: 12),
-
-              _reviewRow(
-                context,
-                label: 'Purchase date:',
-                value: _formatDate(_purchaseDate),
-              ),
-
-              const SizedBox(height: 28),
-
               Text(
-                'Generated QR Code:',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              // ---------------------------------------------------------
-              // QR placeholder
-              // ---------------------------------------------------------
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      'QR: ${_bikeIdController.text.isEmpty ? 'BR-XXXX' : _bikeIdController.text}',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    Container(
-                      width: 105,
-                      height: 105,
-                      alignment: Alignment.center,
-                      color: Colors.white,
-                      child: const Icon(
-                        Icons.qr_code_2_rounded,
-                        size: 90,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
+                'Bike information',
+                style: theme
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(
+                  fontWeight:
+                  FontWeight.w800,
                 ),
               ),
 
               const SizedBox(height: 20),
+
+              _reviewRow(
+                context,
+                label: 'Bike ID:',
+                value:
+                _bikeIdController.text
+                    .trim()
+                    .toUpperCase(),
+              ),
+
+              const SizedBox(height: 14),
+
+              _reviewRow(
+                context,
+                label: 'Initial station:',
+                value:
+                selectedStation?.name ??
+                    'Not selected',
+              ),
+
+              const SizedBox(height: 14),
+
+              _reviewRow(
+                context,
+                label: 'Battery:',
+                value:
+                '${_batteryController.text.trim()}%',
+              ),
+
+              const SizedBox(height: 14),
+
+              _reviewRow(
+                context,
+                label: 'Status:',
+                value: _statusDisplayName(
+                  _selectedStatus,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              Divider(
+                color: scheme.outline
+                    .withValues(
+                  alpha: 0.5,
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              Text(
+                'Generated QR Code',
+                style: theme
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(
+                  fontWeight:
+                  FontWeight.w800,
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              Center(
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  alignment:
+                  Alignment.center,
+                  color: Colors.white,
+                  child: const Icon(
+                    Icons.qr_code_2_rounded,
+                    size: 105,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Center(
+                child: SelectableText(
+                  _qrToken ??
+                      'Not generated',
+                  textAlign:
+                  TextAlign.center,
+                  style:
+                  theme.textTheme.bodySmall,
+                ),
+              ),
             ],
           ),
         ),
 
         const SizedBox(height: 40),
 
-        // -------------------------------------------------------------
+        // ---------------------------------------------------------------------
         // Back + Add
-        // -------------------------------------------------------------
+        // ---------------------------------------------------------------------
+
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment:
+          MainAxisAlignment.spaceBetween,
           children: [
             SizedBox(
               width: 125,
               height: 48,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: scheme.error,
-                  foregroundColor: scheme.onError,
-                ),
-                onPressed: () {
+              child: OutlinedButton(
+                onPressed: _isSaving
+                    ? null
+                    : () {
                   setState(() {
                     _currentStep = 1;
                   });
                 },
                 child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment:
+                  MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.chevron_left_rounded,
+                      Icons
+                          .chevron_left_rounded,
                     ),
                     SizedBox(width: 6),
                     Text(
                       'Back',
                       style: TextStyle(
-                        fontWeight: FontWeight.w700,
+                        fontWeight:
+                        FontWeight.w700,
                       ),
                     ),
                   ],
@@ -976,11 +1125,24 @@ class _AddBikeState extends State<AddBike> {
               width: 125,
               height: 48,
               child: FilledButton(
-                onPressed: _addBike,
-                child: const Text(
-                  'Add',
+                onPressed:
+                _isSaving
+                    ? null
+                    : _addBike,
+                child: _isSaving
+                    ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child:
+                  CircularProgressIndicator(
+                    strokeWidth: 2,
+                  ),
+                )
+                    : const Text(
+                  'Add Bike',
                   style: TextStyle(
-                    fontWeight: FontWeight.w700,
+                    fontWeight:
+                    FontWeight.w700,
                   ),
                 ),
               ),
@@ -991,26 +1153,41 @@ class _AddBikeState extends State<AddBike> {
     );
   }
 
-  void _addBike() {
-    showSnackBar('Bike added successfully');
-  }
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
+  // ===========================================================================
+  // HELPERS
+  // ===========================================================================
 
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  Station? _getSelectedStation() {
+    if (_selectedStationId == null) {
+      return null;
+    }
+
+    for (final station in _stations) {
+      if (station.id ==
+          _selectedStationId) {
+        return station;
+      }
+    }
+
+    return null;
+  }
+
+  String _statusDisplayName(
+      String status,
+      ) {
+    switch (status) {
+      case 'available':
+        return 'Available';
+
+      case 'maintenance':
+        return 'Maintenance';
+
+      case 'unavailable':
+        return 'Unavailable';
+
+      default:
+        return status;
+    }
   }
 
   Widget _reviewRow(
@@ -1021,12 +1198,20 @@ class _AddBikeState extends State<AddBike> {
     final theme = Theme.of(context);
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:
+      CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w700,
+        SizedBox(
+          width: 130,
+          child: Text(
+            label,
+            style: theme
+                .textTheme
+                .bodySmall
+                ?.copyWith(
+              fontWeight:
+              FontWeight.w700,
+            ),
           ),
         ),
 
@@ -1035,18 +1220,18 @@ class _AddBikeState extends State<AddBike> {
         Expanded(
           child: Text(
             value,
-            style: theme.textTheme.bodyMedium,
+            style:
+            theme.textTheme.bodyMedium,
           ),
         ),
       ],
     );
   }
-
 }
 
-// ============================================================================
-// Field label + field
-// ============================================================================
+// =============================================================================
+// FIELD SECTION
+// =============================================================================
 
 class _FormSection extends StatelessWidget {
   const _FormSection({
@@ -1060,7 +1245,8 @@ class _FormSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:
+      CrossAxisAlignment.start,
       children: [
         _FieldLabel(label),
         const SizedBox(height: 6),
@@ -1070,8 +1256,14 @@ class _FormSection extends StatelessWidget {
   }
 }
 
+// =============================================================================
+// FIELD LABEL
+// =============================================================================
+
 class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.text);
+  const _FieldLabel(
+      this.text,
+      );
 
   final String text;
 
@@ -1079,91 +1271,13 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-        fontWeight: FontWeight.w700,
+      style: Theme.of(context)
+          .textTheme
+          .labelMedium
+          ?.copyWith(
+        fontWeight:
+        FontWeight.w700,
       ),
     );
   }
 }
-
-// ============================================================================
-// Photo upload placeholder
-// ============================================================================
-
-
-
-class _BikePhotoUpload extends StatelessWidget {
-  const _BikePhotoUpload({
-    required this.onChooseFile,
-  });
-
-  final VoidCallback onChooseFile;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.7),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Image placeholder
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: scheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.photo_camera_outlined,
-              color: scheme.onPrimaryContainer,
-              size: 36,
-            ),
-          ),
-
-          const SizedBox(width: 16),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Upload a clear bike photo',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  'PNG or JPG • Max 5 MB',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.65),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                OutlinedButton(
-                  onPressed: onChooseFile,
-                  child: const Text('Choose file'),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
