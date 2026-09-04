@@ -23,7 +23,11 @@ import 'package:bike_renting_app/features/bike/pages/bike_service.dart';
 import 'package:bike_renting_app/features/bike/pages/bike_report_detail_page.dart';
 import 'package:bike_renting_app/features/bike/pages/pending_report_page.dart';
 import 'package:bike_renting_app/features/bike/pages/report_form.dart';
+import 'package:bike_renting_app/data/database/database_data_source.dart';
+import 'package:bike_renting_app/data/repositories/payment_method_repository.dart';
+import 'package:bike_renting_app/features/payment_methods/pages/payment_methods_page.dart';
 import 'package:bike_renting_app/features/bike/pages/pending_report_detail.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 class AppNavigator extends StatelessWidget {
   const AppNavigator({
     super.key,
@@ -225,6 +229,12 @@ class AppNavigator extends StatelessWidget {
 
 
       AppPage.settings => SettingsPage(onToggleTheme: onToggleTheme),
+      AppPage.paymentMethods => PaymentMethodsPage(
+        repository: rentingController.paymentMethodRepository ??
+            PaymentMethodRepository(
+              SupabaseDatabaseDataSource(Supabase.instance.client),
+            ),
+      ),
     };
   }
 }

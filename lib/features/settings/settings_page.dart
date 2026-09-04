@@ -4,6 +4,7 @@ import 'package:bike_renting_app/data/repositories/payment_method_repository.dar
 import 'package:bike_renting_app/features/legal/legal.dart';
 import 'package:bike_renting_app/features/payment_methods/pages/payment_methods_page.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
+import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -71,6 +72,10 @@ class SettingsPage extends StatelessWidget {
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute<void>(
+                settings: const RouteSettings(
+                  name: '/settings/payment-methods',
+                  arguments: AppPage.paymentMethods,
+                ),
                 builder: (context) => PaymentMethodsPage(
                   repository: _resolveRepository(),
                 ),

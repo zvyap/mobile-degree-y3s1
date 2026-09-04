@@ -148,3 +148,33 @@ class RentalReceipt {
     );
   }
 }
+
+enum RideWarningSeverity {
+  warning,
+  critical,
+}
+
+enum RideWarningType {
+  depositExceeded,
+  doubleDepositLegalAction,
+  suspiciousActivity,
+  suspiciousLegalAction,
+}
+
+class ActiveRideWarning {
+  const ActiveRideWarning({
+    required this.type,
+    required this.severity,
+    required this.title,
+    required this.message,
+  });
+
+  final RideWarningType type;
+  final RideWarningSeverity severity;
+  final String title;
+  final String message;
+
+  bool get isCritical => severity == RideWarningSeverity.critical;
+  bool get isWarning => severity == RideWarningSeverity.warning;
+}
+

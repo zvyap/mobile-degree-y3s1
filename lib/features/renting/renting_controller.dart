@@ -127,6 +127,12 @@ class RentingController extends ChangeNotifier {
   StreamSubscription<Position>? _positionSubscription;
   Position? _lastGpsPosition;
 
+  static const defaultSuspiciousDistanceMeters = 5000;
+  Duration? _depositDurationOverride;
+  int? _suspiciousDistanceMetersOverride;
+  bool? _isSuspiciousDistanceOverride;
+  int? _distanceFromStartStationOverride;
+
   int? get rentalId => _session?.rental.id;
 
   List<RentalIssueNote> get localIssueNotes =>
@@ -197,6 +203,137 @@ class RentingController extends ChangeNotifier {
     final deadline = rideDeadlineAt;
     if (deadline == null || !isRideActive) return null;
     return deadline.difference(_now());
+  }
+
+  Duration get depositDuration {
+    if (_depositDurationOverride != null) {
+      return _depositDurationOverride!;
+    }
+    if (perMinuteRate > 0 && holdAmount > unlockFee) {
+      final minutes = (holdAmount - unlockFee) / perMinuteRate;
+      return Duration(seconds: (minutes * 60).round());
+    }
+    final started = _session?.rental.startedAt;
+    final deadline = rideDeadlineAt;
+    if (started != null && deadline != null && deadline.isAfter(started)) {
+      return deadline.difference(started);
+    }
+    return const Duration(hours: 3, minutes: 15);
+  }
+
+  int get suspiciousDistanceMeters =>
+      _suspiciousDistanceMetersOverride ?? defaultSuspiciousDistanceMeters;
+
+  int? get distanceFromStartStationMeters {
+    if (_distanceFromStartStationOverride != null) {
+      return _distanceFromStartStationOverride;
+    }
+    final station = startStation ??
+        stations
+            .where((s) => s.backendId == _session?.rental.startStationId)
+            .firstOrNull;
+    if (station == null) return null;
+    final pos = riderLatLng;
+    if (pos == null) return null;
+    if (station.latitude == 0 && station.longitude == 0) return null;
+
+    return Geolocator.distanceBetween(
+      pos.latitude,
+      pos.longitude,
+      station.latitude,
+      station.longitude,
+    ).round();
+  }
+
+  bool get isSuspiciousDistance {
+    if (_isSuspiciousDistanceOverride != null) {
+      return _isSuspiciousDistanceOverride!;
+    }
+    final distance = distanceFromStartStationMeters;
+    if (distance != null) {
+      return distance >= suspiciousDistanceMeters;
+    }
+    if (metrics.distanceKm * 1000 >= suspiciousDistanceMeters) {
+      return true;
+    }
+    return false;
+  }
+
+  ActiveRideWarning? get activeRideWarning {
+    if (!isRideActive) return null;
+
+    final deposit = depositDuration;
+    final elapsed = Duration(seconds: metrics.elapsedSeconds);
+    final isFar = isSuspiciousDistance;
+    final isOverDeposit = elapsed >= deposit;
+    final isOverDoubleDeposit = elapsed >= deposit * 2;
+
+    if (isFar && isOverDeposit) {
+      return const ActiveRideWarning(
+        type: RideWarningType.suspiciousLegalAction,
+        severity: RideWarningSeverity.critical,
+        title: 'Suspicious Activity & Legal Action',
+        message:
+            'Suspicious activity detected far from station and deposit time exceeded. Immediate legal action will be taken if the bike is not returned.',
+      );
+    }
+
+    if (isOverDoubleDeposit) {
+      return const ActiveRideWarning(
+        type: RideWarningType.doubleDepositLegalAction,
+        severity: RideWarningSeverity.critical,
+        title: 'Legal Action Warning',
+        message:
+            'Rental duration exceeded 2x the deposit time. Immediate legal action will be initiated if the bike is not returned.',
+      );
+    }
+
+    if (isFar) {
+      return const ActiveRideWarning(
+        type: RideWarningType.suspiciousActivity,
+        severity: RideWarningSeverity.warning,
+        title: 'Suspicious Activity Detected',
+        message:
+            'Suspicious activity detected: You are unusually far from the pickup station.',
+      );
+    }
+
+    if (isOverDeposit) {
+      return const ActiveRideWarning(
+        type: RideWarningType.depositExceeded,
+        severity: RideWarningSeverity.warning,
+        title: 'Deposit Time Exceeded',
+        message:
+            'You have borrowed the bike longer than the deposit time. Additional rental charges apply.',
+      );
+    }
+
+    return null;
+  }
+
+  void setDepositDurationOverride(Duration? duration) {
+    _depositDurationOverride = duration;
+    notifyListeners();
+  }
+
+  void setSuspiciousDistanceOverride(bool? isSuspicious) {
+    _isSuspiciousDistanceOverride = isSuspicious;
+    notifyListeners();
+  }
+
+  void setSuspiciousDistanceThresholdMeters(int? meters) {
+    _suspiciousDistanceMetersOverride = meters;
+    notifyListeners();
+  }
+
+  void setDistanceFromStartStationOverride(int? meters) {
+    _distanceFromStartStationOverride = meters;
+    notifyListeners();
+  }
+
+  void setRiderLocation(LatLng location) {
+    riderLatLng = location;
+    notifyListeners();
   }
 
   int get extensionsRemaining =>
@@ -1511,6 +1648,10 @@ class RentingController extends ChangeNotifier {
     rideRoutePoints.clear();
     _lastGpsPosition = null;
     isTrackingPaused = false;
+    _depositDurationOverride = null;
+    _suspiciousDistanceMetersOverride = null;
+    _isSuspiciousDistanceOverride = null;
+    _distanceFromStartStationOverride = null;
     notifyListeners();
   }
 

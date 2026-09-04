@@ -129,6 +129,11 @@ class _BikeShellState extends State<BikeShell> {
     final navigator = _navigatorKey.currentState;
     if (navigator?.canPop() ?? false) {
       navigator!.pop();
+      return;
+    }
+
+    if (!_currentPage.isNavigationRoot) {
+      _selectRootPage(AppPage.home);
     }
   }
 
@@ -140,9 +145,17 @@ class _BikeShellState extends State<BikeShell> {
         final showRentalBack =
             _currentPage == AppPage.scan && _rentingController.canGoBack;
         final showBackButton = !_currentPage.isNavigationRoot || showRentalBack;
+        final canGoBack =
+            showBackButton || (_navigatorKey.currentState?.canPop() ?? false);
 
-        return Scaffold(
-          body: SafeArea(
+        return PopScope(
+          canPop: !canGoBack,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            _handleBack();
+          },
+          child: Scaffold(
+            body: SafeArea(
             bottom: false,
             child: Column(
               children: [
@@ -175,6 +188,7 @@ class _BikeShellState extends State<BikeShell> {
                   rideActive: _rentingController.isRideActive,
                   onSelected: _selectRootPage,
                 ),
+          ),
         );
       },
     );

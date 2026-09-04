@@ -331,5 +331,13 @@
   "errorAuthenticationFailed": "Demo rider sign-in failed. Check Supabase and retry.",
   "errorBackendConnection": "The rent service is unavailable. Check the connection and retry.",
   "errorActiveRentalExists": "This rider already has an unfinished rental. Resume or finish it first.",
-  "errorInvalidRentalTransition": "The rental state changed on the server. Retry to restore it."
+  "errorInvalidRentalTransition": "The rental state changed on the server. Retry to restore it.",
+  "rideWarningDepositExceededTitle": "Deposit Time Exceeded",
+  "rideWarningDepositExceededBody": "You have borrowed the bike longer than the deposit time. Additional rental charges apply.",
+  "rideWarningLegalActionTitle": "Legal Action Warning",
+  "rideWarningLegalActionBody": "Rental duration exceeded 2x the deposit time. Immediate legal action will be initiated if the bike is not returned.",
+  "rideWarningSuspiciousActivityTitle": "Suspicious Activity Detected",
+  "rideWarningSuspiciousActivityBody": "Suspicious activity detected: You are unusually far from the pickup station.",
+  "rideWarningSuspiciousLegalTitle": "Suspicious Activity & Legal Action",
+  "rideWarningSuspiciousLegalBody": "Suspicious activity detected far from station and deposit time exceeded. Immediate legal action will be taken if the bike is not returned."
 }

@@ -119,6 +119,7 @@ class CardValidator {
   }
 
   /// Full validation for Cardholder Name with inline error message.
+  /// Supports Malaysian naming conventions including Indian patronymics (A/L, A/P, S/O, D/O).
   static String? validateCardholderName(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Cardholder name is required';
@@ -133,11 +134,12 @@ class CardValidator {
       return 'Name cannot exceed 50 characters';
     }
 
-    if (!RegExp(r"^[a-zA-Z\s\.\'\-]+$").hasMatch(trimmed)) {
+    if (!RegExp(r"^[a-zA-Z\s\.\'/\-]+$").hasMatch(trimmed) ||
+        !RegExp(r'[a-zA-Z]').hasMatch(trimmed)) {
       return 'Only letters, spaces, hyphens, and dots allowed';
     }
 
-    if (!trimmed.contains(' ')) {
+    if (!trimmed.contains(' ') && !trimmed.contains('/')) {
       return 'Please enter first and last name';
     }
 

@@ -1493,6 +1493,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The rental state changed on the server. Retry to restore it.'**
   String get errorInvalidRentalTransition;
+
+  /// No description provided for @rideWarningDepositExceededTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit Time Exceeded'**
+  String get rideWarningDepositExceededTitle;
+
+  /// No description provided for @rideWarningDepositExceededBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You have borrowed the bike longer than the deposit time. Additional rental charges apply.'**
+  String get rideWarningDepositExceededBody;
+
+  /// No description provided for @rideWarningLegalActionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal Action Warning'**
+  String get rideWarningLegalActionTitle;
+
+  /// No description provided for @rideWarningLegalActionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental duration exceeded 2x the deposit time. Immediate legal action will be initiated if the bike is not returned.'**
+  String get rideWarningLegalActionBody;
+
+  /// No description provided for @rideWarningSuspiciousActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspicious Activity Detected'**
+  String get rideWarningSuspiciousActivityTitle;
+
+  /// No description provided for @rideWarningSuspiciousActivityBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspicious activity detected: You are unusually far from the pickup station.'**
+  String get rideWarningSuspiciousActivityBody;
+
+  /// No description provided for @rideWarningSuspiciousLegalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspicious Activity & Legal Action'**
+  String get rideWarningSuspiciousLegalTitle;
+
+  /// No description provided for @rideWarningSuspiciousLegalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspicious activity detected far from station and deposit time exceeded. Immediate legal action will be taken if the bike is not returned.'**
+  String get rideWarningSuspiciousLegalBody;
 }
 
 class _AppLocalizationsDelegate

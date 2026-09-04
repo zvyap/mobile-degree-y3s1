@@ -8,6 +8,7 @@ import 'package:bike_renting_app/bike_station/station_map.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
+import 'package:bike_renting_app/features/renting/widgets/ride_warning_banner.dart';
 import 'package:bike_renting_app/l10n/app_formats.dart';
 import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
@@ -214,6 +215,14 @@ class _RentingFlowPageState extends State<RentingFlowPage>
               96,
             ),
             children: [
+              if (_controller.isRideActive &&
+                  _controller.activeRideWarning != null) ...[
+                RideWarningBanner(
+                  key: const ValueKey<String>('ride-session-warning-banner'),
+                  warning: _controller.activeRideWarning!,
+                ),
+                const SizedBox(height: 10),
+              ],
               if (!scanning) ...[
                 _JourneyHeader(controller: _controller),
                 const SizedBox(height: 10),
