@@ -6,7 +6,7 @@ class BikeReportDetailPage extends StatelessWidget {
     required this.reportId,
   });
 
-  final String reportId;
+  final int reportId;
 
   @override
   Widget build(BuildContext context) {

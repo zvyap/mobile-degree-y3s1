@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 class PendingBikeReportsPage extends StatefulWidget {
   const PendingBikeReportsPage({
     super.key,
-    this.onOpenReportDetail,
+    required this.onOpenReportDetail,
   });
 
   // Optional for now.
   // Later you can pass the report ID to the detail page.
-  final ValueChanged<String>? onOpenReportDetail;
+  final ValueChanged<String> onOpenReportDetail;
 
   @override
   State<PendingBikeReportsPage> createState() =>
@@ -198,11 +198,7 @@ class _PendingBikeReportsPageState extends State<PendingBikeReportsPage> {
             severity: 'High',
 
             onOpenDetail: () {
-              if (widget.onOpenReportDetail != null) {
-                widget.onOpenReportDetail!('RPT-1000');
-              } else {
-                showSnackBar('Report detail: RPT-1000');
-              }
+                widget.onOpenReportDetail('RPT-1000');
             },
 
             onDecline: _declineReport,

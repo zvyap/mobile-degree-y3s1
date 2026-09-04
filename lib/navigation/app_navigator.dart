@@ -1,8 +1,8 @@
 import 'package:bike_renting_app/bike_station/shared_map.dart';
 import 'package:bike_renting_app/bike_station/station_map.dart';
 import 'package:bike_renting_app/features/admin/admin_management_page.dart';
-import 'package:bike_renting_app/features/bike/bike_details.dart';
-import 'package:bike_renting_app/features/bike/bike_management_page.dart';
+import 'package:bike_renting_app/features/bike/pages/bike_details.dart';
+import 'package:bike_renting_app/features/bike/pages/bike_management_page.dart';
 import 'package:bike_renting_app/features/home/home_page.dart';
 import 'package:bike_renting_app/features/user/profile_controller.dart';
 import 'package:bike_renting_app/features/user/profile_page.dart';
@@ -15,13 +15,15 @@ import 'package:bike_renting_app/features/settings/settings_page.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:flutter/material.dart';
-import 'package:bike_renting_app/features/bike/add_bike.dart';
-import 'package:bike_renting_app/features/bike/bike_report.dart';
-import 'package:bike_renting_app/features/bike/edit_bike.dart';
-import 'package:bike_renting_app/features/bike/transfer_bike.dart';
-import 'package:bike_renting_app/features/bike/bike_service.dart';
-import 'package:bike_renting_app/features/bike/bike_report_detail_page.dart';
-import 'package:bike_renting_app/features/bike/pending_report_page.dart';
+import 'package:bike_renting_app/features/bike/pages/add_bike.dart';
+import 'package:bike_renting_app/features/bike/pages/bike_report_list.dart';
+import 'package:bike_renting_app/features/bike/pages/edit_bike.dart';
+import 'package:bike_renting_app/features/bike/pages/transfer_bike.dart';
+import 'package:bike_renting_app/features/bike/pages/bike_service.dart';
+import 'package:bike_renting_app/features/bike/pages/bike_report_detail_page.dart';
+import 'package:bike_renting_app/features/bike/pages/pending_report_page.dart';
+import 'package:bike_renting_app/features/bike/pages/report_form.dart';
+import 'package:bike_renting_app/features/bike/pages/pending_report_detail.dart';
 class AppNavigator extends StatelessWidget {
   const AppNavigator({
     super.key,
@@ -128,7 +130,7 @@ class AppNavigator extends StatelessWidget {
       ),
       AppPage.addbike => const AddBike(),
       AppPage.bikeDetail => BikeDetailsPage(
-        bikeId: arguments as String,
+        bikeId: arguments as int,
         onEditBike: (){
           navigatorKey.currentState?.pushNamed(
             AppPage.editBike.routeName,
@@ -149,22 +151,21 @@ class AppNavigator extends StatelessWidget {
         },
         onMakeReport: () {
           navigatorKey.currentState?.pushNamed(
-            AppPage.bikeReport.routeName,
+            AppPage.reportForm.routeName,
             arguments: arguments,
           );
         },
       ),
       AppPage.serviceBike => ServiceBikePage(
-        bikeId: arguments as String,
+        bikeId: arguments as int,
       ),
       AppPage.transferBike => TransferBikePage(
-        bikeId: arguments as String,
+        bikeId: arguments as int,
       ),
       AppPage.editBike => EditBikePage(
-        bikeId: arguments as String,
+        bikeId: arguments as int,
       ),
       AppPage.bikeReport => BikeReportPage(
-        bikeId: arguments as String,
         onOpenReportDetail: (reportId) {
           navigatorKey.currentState?.pushNamed(
             AppPage.bikeReportDetail.routeName,
@@ -176,12 +177,30 @@ class AppNavigator extends StatelessWidget {
             AppPage.pendingBikeReports.routeName,
           );
         },
+        onAddReport: () {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.reportForm.routeName,
+            arguments: arguments,
+          );
+        },
       ),
-      AppPage.pendingBikeReports => const PendingBikeReportsPage(
+      AppPage.reportForm => ReportFormPage(
+        bikeId: arguments as int?,
+      ),
+      AppPage.pendingBikeReports => PendingBikeReportsPage(
+        onOpenReportDetail: (reportId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.pendingReportDetail.routeName,
+            arguments: reportId,
+          );
+        },
 
       ),
-      AppPage.bikeReportDetail => BikeReportDetailPage(
+      AppPage.pendingReportDetail => PendingReportDetail(
         reportId: arguments as String,
+      ),
+      AppPage.bikeReportDetail => BikeReportDetailPage(
+        reportId: arguments as int,
       ),
       AppPage.bikeManagement => BikeManagementPage(
         onAddBike: () => onOpenPage(AppPage.addbike),
@@ -191,15 +210,20 @@ class AppNavigator extends StatelessWidget {
             arguments: bikeId,
           );
         },
-        onOpenBikeReports: (bikeId) {
+        onOpenReportList: () {
           navigatorKey.currentState?.pushNamed(
             AppPage.bikeReport.routeName,
+          );
+        },
+        onMakeReport: (bikeId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.reportForm.routeName,
             arguments: bikeId,
           );
         },
-
-
       ),
+
+
       AppPage.settings => SettingsPage(onToggleTheme: onToggleTheme),
     };
   }

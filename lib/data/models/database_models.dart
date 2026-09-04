@@ -165,6 +165,7 @@ class PaymentMethodRecord {
     required this.isDefault,
     required this.createdAt,
     required this.updatedAt,
+    this.cardholderName,
     this.expiryMonth,
     this.expiryYear,
   });
@@ -176,6 +177,7 @@ class PaymentMethodRecord {
       provider: json['provider'] as String,
       brand: json['brand'] as String,
       lastFour: json['last_four'] as String,
+      cardholderName: json['cardholder_name'] as String?,
       expiryMonth: _asNullableInt(json['expiry_month']),
       expiryYear: _asNullableInt(json['expiry_year']),
       isDefault: json['is_default'] as bool,
@@ -189,11 +191,35 @@ class PaymentMethodRecord {
   final String provider;
   final String brand;
   final String lastFour;
+  final String? cardholderName;
   final int? expiryMonth;
   final int? expiryYear;
   final bool isDefault;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  PaymentMethodRecord copyWith({
+    String? brand,
+    String? lastFour,
+    String? cardholderName,
+    int? expiryMonth,
+    int? expiryYear,
+    bool? isDefault,
+  }) {
+    return PaymentMethodRecord(
+      id: id,
+      userId: userId,
+      provider: provider,
+      brand: brand ?? this.brand,
+      lastFour: lastFour ?? this.lastFour,
+      cardholderName: cardholderName ?? this.cardholderName,
+      expiryMonth: expiryMonth ?? this.expiryMonth,
+      expiryYear: expiryYear ?? this.expiryYear,
+      isDefault: isDefault ?? this.isDefault,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }
 
 class RentalDatabaseRecord {

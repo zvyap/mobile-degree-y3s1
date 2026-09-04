@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'dart:io' show Platform;
+
 import 'package:bike_renting_app/bike_station/shared_map.dart';
 import 'package:bike_renting_app/bike_station/station_details.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
@@ -23,7 +25,6 @@ part 'subpage/authorization_subpage.dart';
 part 'subpage/unlock_subpage.dart';
 part 'subpage/ride_subpage.dart';
 part 'subpage/station_subpage.dart';
-part 'subpage/station_qr_sheet.dart';
 part 'subpage/return_subpage.dart';
 part 'subpage/charge_subpage.dart';
 part 'subpage/receipt_subpage.dart';

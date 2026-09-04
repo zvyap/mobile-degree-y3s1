@@ -17,6 +17,7 @@ enum DatabaseErrorCode {
   invalidDistance,
   paymentAlreadyPending,
   invalidPaymentTransition,
+  paymentMethodInUse,
   conflict,
   validation,
   unknown,

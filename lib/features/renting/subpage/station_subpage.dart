@@ -93,13 +93,7 @@ class _StationStage extends StatelessWidget {
                     ),
               ),
             ],
-            const SizedBox(height: 8),
-            _ActionButton(
-              key: const ValueKey('rent-scan-station-qr'),
-              label: context.l10n.scanStationQr,
-              icon: Icons.qr_code_scanner_rounded,
-              onPressed: () => _handleStationScan(context, controller),
-            ),
+
             const SizedBox(height: 12),
             _ActionButton(
               key: const ValueKey('rent-begin-return'),

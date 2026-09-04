@@ -1,4 +1,6 @@
 const appCurrencyCode = 'MYR';
+const defaultBikeReadyTimeout = Duration(minutes: 3);
+const bikeReadyTimeout = defaultBikeReadyTimeout;
 
 abstract final class PayPalSandboxConstants {
   // Sandbox-only prototype for developer checkout demo.

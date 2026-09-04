@@ -764,10 +764,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paypalAccountSubtitle => 'PayPal Sandbox account';
 
   @override
-  String get paypalCheckoutTitle => 'PayPal Sandbox';
+  String get paypalCheckoutTitle => 'PayPal Payment';
 
   @override
-  String get paypalCheckoutSemantics => 'Secure PayPal Sandbox approval page';
+  String get paypalCheckoutSemantics => 'Secure PayPal Payment approval page';
 
   @override
   String get selected => 'Selected';

@@ -9,8 +9,6 @@ class _BikeCheckStage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final method = controller.selectedPaymentMethod!;
-
     return Column(
       children: [
         SurfacePanel(
@@ -23,6 +21,8 @@ class _BikeCheckStage extends StatelessWidget {
                 title: context.l10n.bikeReady,
                 subtitle: context.l10n.bikeReadyDescription,
               ),
+              const SizedBox(height: 12),
+              _ReservationTimerBadge(controller: controller),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -101,10 +101,7 @@ class _BikeCheckStage extends StatelessWidget {
               const SizedBox(height: 12),
               _FareCalculationPanel(controller: controller),
               const SizedBox(height: 12),
-              _PaymentMethodTile(
-                method: method,
-                onTap: () => _showPaymentMethodPicker(context, controller),
-              ),
+              _DepositSummaryTile(controller: controller),
               const SizedBox(height: 18),
               _ActionButton(
                 key: const ValueKey('rent-review-hold'),
@@ -126,12 +123,6 @@ class _BikeCheckStage extends StatelessWidget {
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          context.l10n.holdExplanation,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
     );

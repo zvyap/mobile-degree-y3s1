@@ -63,11 +63,130 @@ class _FareCalculationPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
+          _PriceRow(
+            label: context.l10n.depositHeld,
+            value: context.formats.currency(controller.holdAmount),
+            strong: true,
+          ),
+          const SizedBox(height: 8),
           Text(
             context.l10n.pricingTimerDescription,
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.72),
               height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DepositSummaryTile extends StatelessWidget {
+  const _DepositSummaryTile({required this.controller});
+
+  final RentingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.shield_outlined, color: scheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.depositHeld,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  context.l10n.holdExplanation,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.72),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            context.formats.currency(controller.holdAmount),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: scheme.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReservationTimerBadge extends StatelessWidget {
+  const _ReservationTimerBadge({required this.controller});
+
+  final RentingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final remainingSeconds = controller.bikeReadyRemainingSeconds;
+    if (remainingSeconds == null) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final minutes = remainingSeconds ~/ 60;
+    final seconds = remainingSeconds % 60;
+    final formattedTime =
+        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final isExpiringSoon = remainingSeconds <= 60;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isExpiringSoon
+            ? scheme.errorContainer.withValues(alpha: 0.35)
+            : scheme.secondaryContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isExpiringSoon
+              ? scheme.error.withValues(alpha: 0.5)
+              : scheme.secondary.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.timer_outlined,
+            size: 18,
+            color: isExpiringSoon ? scheme.error : scheme.secondary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Reservation expires in $formattedTime',
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isExpiringSoon
+                    ? scheme.onErrorContainer
+                    : scheme.onSecondaryContainer,
+              ),
             ),
           ),
         ],

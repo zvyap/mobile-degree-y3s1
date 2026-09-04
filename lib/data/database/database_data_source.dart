@@ -29,6 +29,17 @@ abstract interface class DatabaseDataSource {
     required String columns,
   });
 
+  Future<JsonMap> insertSingle({
+    required String table,
+    required JsonMap values,
+    required String columns,
+  });
+
+  Future<void> deleteSingle({
+    required String table,
+    required Map<String, Object?> equals,
+  });
+
   Future<JsonMap> rpcSingle(
     String functionName, {
     JsonMap parameters = const {},
@@ -112,6 +123,40 @@ class SupabaseDatabaseDataSource implements DatabaseDataSource {
   }
 
   @override
+  Future<JsonMap> insertSingle({
+    required String table,
+    required JsonMap values,
+    required String columns,
+  }) async {
+    try {
+      final response = await _client
+          .from(table)
+          .insert(values)
+          .select(columns)
+          .single();
+      return Map<String, dynamic>.from(response);
+    } on PostgrestException catch (error) {
+      throw _mapPostgrestError(error);
+    }
+  }
+
+  @override
+  Future<void> deleteSingle({
+    required String table,
+    required Map<String, Object?> equals,
+  }) async {
+    try {
+      dynamic query = _client.from(table).delete();
+      for (final entry in equals.entries) {
+        query = query.eq(entry.key, entry.value);
+      }
+      await query;
+    } on PostgrestException catch (error) {
+      throw _mapPostgrestError(error);
+    }
+  }
+
+  @override
   Future<JsonMap> rpcSingle(
     String functionName, {
     JsonMap parameters = const {},
@@ -137,6 +182,7 @@ class SupabaseDatabaseDataSource implements DatabaseDataSource {
       'bike_unavailable' => DatabaseErrorCode.bikeUnavailable,
       'active_rental_exists' => DatabaseErrorCode.activeRentalExists,
       'payment_method_not_found' => DatabaseErrorCode.paymentMethodNotFound,
+      'payment_method_in_use' => DatabaseErrorCode.paymentMethodInUse,
       'rental_plan_unavailable' => DatabaseErrorCode.rentalPlanUnavailable,
       'payment_authorization_required' =>
         DatabaseErrorCode.paymentAuthorizationRequired,

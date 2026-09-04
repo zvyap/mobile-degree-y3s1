@@ -16,9 +16,11 @@ enum AppPage {
   bikeReport(routeName: '/admin/bike/bikeReport', icon: Icons.receipt_long_rounded ),
   transferBike(routeName: '/admin/bike/transfer', icon: Icons.compare_arrows_rounded,),
   serviceBike(routeName: '/admin/bike/service', icon: Icons.build_rounded,),
-  bikeReportDetail(routeName: '/admin/bikes/reports/detail', icon: Icons.description_outlined,),
-  pendingBikeReports(routeName: '/admin/bikes/reports/pending', icon: Icons.pending_actions_rounded,),
+  bikeReportDetail(routeName: '/admin/bike/reports/detail', icon: Icons.description_outlined,),
+  pendingBikeReports(routeName: '/admin/bike/reports/pending', icon: Icons.pending_actions_rounded,),
   stationManagement(routeName: '/admin/stations', icon: Icons.map_rounded),
+  reportForm(routeName: '/admin/bikes/reports/new', icon: Icons.add_rounded,),
+  pendingReportDetail(routeName: '/admin/bikes/reports/pending/detail',icon: Icons.description_outlined,),
   settings(routeName: '/settings', icon: Icons.settings_rounded);
 
   const AppPage({required this.routeName, required this.icon});
@@ -45,6 +47,8 @@ enum AppPage {
     serviceBike => 'Service Bike',
     bikeReportDetail => 'Report Detail',
     pendingBikeReports => 'Pending Reports',
+    reportForm => 'New Report',
+    pendingReportDetail => 'Pending Report Details',
   };
 
   String navigationLabel(AppLocalizations l10n) => switch (this) {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:bike_renting_app/constants.dart';
 import 'package:bike_renting_app/data/database/database_exception.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/data/models/rental_session_snapshot.dart';
@@ -24,6 +25,7 @@ class RentingController extends ChangeNotifier {
     this.bypassGeofence = false,
     this.debugSource,
     PayPalPaymentGateway? paypalGateway,
+    this.bikeReadyTimeout = defaultBikeReadyTimeout,
   }) : _now = now ?? DateTime.now,
        _paypalGateway = paypalGateway ?? PayPalGateway(),
        _ownsPayPalGateway = paypalGateway == null;
@@ -32,19 +34,21 @@ class RentingController extends ChangeNotifier {
   static const demoBikeCode = 'BIKE-C042';
   static const defaultUnlockFee = 0.50;
   static const defaultPerMinuteRate = 0.10;
+  static const defaultHoldAmount = 20.00;
   static const _initializationRetryDelay = Duration(milliseconds: 250);
 
   /// Mirrors `private.return_geofence_radius_m()` in the return RPC.
   static const returnGeofenceRadiusMeters = 250;
   static const maxRideExtensions = 2;
 
+  static const paypalPaymentMethod = RentalPaymentMethod(
+    id: 'paypal',
+    brand: 'PayPal',
+    lastFour: '',
+  );
+
   static const paymentMethods = [
-    RentalPaymentMethod(
-      id: 'test-payment',
-      brand: 'BikeRent Test',
-      lastFour: '4242',
-    ),
-    RentalPaymentMethod(id: 'paypal', brand: 'PayPal', lastFour: ''),
+    paypalPaymentMethod,
   ];
 
   final RentalSessionRepository repository;
@@ -54,6 +58,9 @@ class RentingController extends ChangeNotifier {
   final DebugRentBikeSource? debugSource;
   final DateTime Function() _now;
   final bool enableClock;
+  final Duration bikeReadyTimeout;
+  Timer? _bikeReadyTimer;
+  DateTime? _bikeReadyExpiresAt;
 
   /// Debug/test escape hatch: skips device GPS and reports the rider standing
   /// on the selected station, which also passes the server-side geofence.
@@ -65,6 +72,17 @@ class RentingController extends ChangeNotifier {
 
   String? get paypalAuthorizationId => _paypalAuthorizationId;
   Uri? get paypalApprovalUrl => _paypalOrder?.approvalUrl;
+  DateTime? get bikeReadyExpiresAt => _bikeReadyExpiresAt;
+
+  int? get bikeReadyRemainingSeconds {
+    if (stage != RentalStage.bikeCheck && stage != RentalStage.authorizing) {
+      return null;
+    }
+    final expires = _bikeReadyExpiresAt;
+    if (expires == null) return null;
+    final diff = expires.difference(_now()).inSeconds;
+    return math.max(0, diff);
+  }
 
   List<RentalPaymentMethod> availablePaymentMethods = paymentMethods;
 
@@ -77,7 +95,7 @@ class RentingController extends ChangeNotifier {
   RentalStage stage = RentalStage.scan;
   RideMetrics metrics = const RideMetrics(elapsedSeconds: 0, distanceKm: 0);
   PaymentAuthorization authorization = const PaymentAuthorization(
-    amount: 0,
+    amount: defaultHoldAmount,
     status: PaymentStatus.ready,
   );
   RentalBike? bike;
@@ -101,7 +119,9 @@ class RentingController extends ChangeNotifier {
   List<RentalIssueNote> get localIssueNotes =>
       List.unmodifiable(_localIssueNotes);
 
-  String get bikeCode => bike?.id ?? demoBikeCode;
+  String? _scannedBikeCode;
+
+  String get bikeCode => bike?.id ?? _scannedBikeCode ?? demoBikeCode;
 
   double get unlockFee =>
       _completedSession?.rental.unlockFee ?? _session?.rental.unlockFee ?? 0;
@@ -111,8 +131,12 @@ class RentingController extends ChangeNotifier {
       _session?.rental.perMinuteRate ??
       0;
 
-  double get holdAmount =>
-      _completedSession?.rental.holdAmount ?? _session?.rental.holdAmount ?? 0;
+  double get holdAmount {
+    final amount =
+        _completedSession?.rental.holdAmount ?? _session?.rental.holdAmount;
+    if (amount != null && amount > 0) return amount;
+    return defaultHoldAmount;
+  }
 
   bool get isRideActive => switch (stage) {
     RentalStage.riding ||
@@ -191,13 +215,7 @@ class RentingController extends ChangeNotifier {
             )
             .toList();
         if (!list.any((p) => p.id == 'paypal')) {
-          list.add(
-            const RentalPaymentMethod(
-              id: 'paypal',
-              brand: 'PayPal',
-              lastFour: '',
-            ),
-          );
+          list.insert(0, paypalPaymentMethod);
         }
         availablePaymentMethods = List.unmodifiable(list);
       } else {
@@ -358,21 +376,56 @@ class RentingController extends ChangeNotifier {
   }
 
   Future<void> scanBike([String? qrToken]) async {
-    if (isBusy) return;
+    if (isBusy || _session != null) return;
+    _clearError();
     await initialize();
-    if (error != null && _session == null) return;
+    if (error == RentalError.authenticationFailed ||
+        error == RentalError.connectionFailed) {
+      return;
+    }
 
     final token = await resolveQrToken(qrToken ?? demoBikeQrToken);
     if (token == null) {
+      _scannedBikeCode = null;
       error = RentalError.invalidQr;
       notifyListeners();
       return;
     }
 
+    _scannedBikeCode = await _resolveBikeCode(qrToken ?? token);
+
     await _run(() async {
       final snapshot = await repository.reserveSession(token);
       _applySnapshot(snapshot);
     });
+  }
+
+  Future<String?> _resolveBikeCode(String rawInput) async {
+    final trimmed = rawInput.trim();
+    if (trimmed.isEmpty) return demoBikeCode;
+    if (trimmed.toUpperCase() == demoBikeCode.toUpperCase()) return demoBikeCode;
+
+    final source = debugSource;
+    if (source != null) {
+      try {
+        final bikes = await source.listAllBikes();
+        final match = bikes.cast<BikeDatabaseRecord?>().firstWhere(
+          (b) =>
+              b != null &&
+              (b.code.toUpperCase() == trimmed.toUpperCase() ||
+                  b.qrToken.toLowerCase() == trimmed.toLowerCase()),
+          orElse: () => null,
+        );
+        if (match != null && match.code.isNotEmpty) {
+          return match.code;
+        }
+      } catch (_) {}
+    }
+
+    if (!_uuidRegex.hasMatch(trimmed) && !trimmed.startsWith('http')) {
+      return trimmed;
+    }
+    return null;
   }
 
   /// DEBUG ONLY: every bike in the system, any status, for the camera-less
@@ -414,6 +467,7 @@ class RentingController extends ChangeNotifier {
         status: PaymentStatus.authorized,
       );
       _clearError();
+      _stopBikeReadyTimer();
       stage = RentalStage.unlocking;
     } on RentalPaymentSimulationException {
       error = RentalError.holdDeclined;
@@ -468,6 +522,7 @@ class RentingController extends ChangeNotifier {
       _paypalAuthorizationId = 'AUTH-${order.orderId}';
     } finally {
       _paypalOrder = null;
+      _stopBikeReadyTimer();
       authorization = PaymentAuthorization(
         amount: holdAmount,
         status: PaymentStatus.authorized,
@@ -897,37 +952,43 @@ class RentingController extends ChangeNotifier {
       batteryPercent: snapshot.bike.batteryPercent,
     );
     startStation = _stationFromDatabase(snapshot.startStation);
-    selectedPaymentMethod ??=
-        availablePaymentMethods.firstOrNull ?? paymentMethods.first;
+    selectedPaymentMethod ??= availablePaymentMethods.firstWhere(
+      (m) => m.id == 'paypal',
+      orElse: () => availablePaymentMethods.first,
+    );
 
     switch (snapshot.rental.status) {
       case RentalDatabaseStatus.reserved:
         _stopClock();
         authorization = PaymentAuthorization(
-          amount: snapshot.rental.holdAmount,
+          amount: holdAmount,
           status: PaymentStatus.ready,
         );
         metrics = const RideMetrics(elapsedSeconds: 0, distanceKm: 0);
         selectedStation = null;
         isAtStation = false;
         stage = RentalStage.bikeCheck;
+        _startBikeReadyTimer();
         break;
       case RentalDatabaseStatus.pendingAuthorization:
         _stopClock();
         authorization = PaymentAuthorization(
-          amount: snapshot.rental.holdAmount,
+          amount: holdAmount,
           status: PaymentStatus.ready,
         );
         stage = RentalStage.authorizing;
+        if (_bikeReadyExpiresAt == null) _startBikeReadyTimer();
         break;
       case RentalDatabaseStatus.authorized:
+        _stopBikeReadyTimer();
         authorization = PaymentAuthorization(
-          amount: snapshot.rental.holdAmount,
+          amount: holdAmount,
           status: PaymentStatus.authorized,
         );
         stage = RentalStage.unlocking;
         break;
       case RentalDatabaseStatus.active:
+        _stopBikeReadyTimer();
         metrics = RideMetrics(
           elapsedSeconds: _elapsedFromServerStart(),
           distanceKm: snapshot.rental.distanceKm,
@@ -941,6 +1002,7 @@ class RentingController extends ChangeNotifier {
         _startClock();
         break;
       case RentalDatabaseStatus.returning:
+        _stopBikeReadyTimer();
         metrics = RideMetrics(
           elapsedSeconds: _elapsedFromServerStart(),
           distanceKm: snapshot.rental.distanceKm,
@@ -953,6 +1015,7 @@ class RentingController extends ChangeNotifier {
         _startClock();
         break;
       case RentalDatabaseStatus.completed:
+        _stopBikeReadyTimer();
         _completedSession = snapshot;
         _stopClock();
         selectedStation = _stationFromSnapshot(snapshot.endStation);
@@ -1112,14 +1175,78 @@ class RentingController extends ChangeNotifier {
     _rideTimer = null;
   }
 
+  void _startBikeReadyTimer() {
+    _stopBikeReadyTimer();
+    _bikeReadyExpiresAt = _now().add(bikeReadyTimeout);
+    if (!enableClock) return;
+    _bikeReadyTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _tickBikeReady();
+    });
+  }
+
+  void _stopBikeReadyTimer() {
+    _bikeReadyTimer?.cancel();
+    _bikeReadyTimer = null;
+    _bikeReadyExpiresAt = null;
+  }
+
+  void _tickBikeReady() {
+    if (stage != RentalStage.bikeCheck && stage != RentalStage.authorizing) {
+      _stopBikeReadyTimer();
+      return;
+    }
+    final remaining = bikeReadyRemainingSeconds ?? 0;
+    if (remaining <= 0) {
+      _stopBikeReadyTimer();
+      unawaited(handleBikeReadyTimeout());
+    } else {
+      notifyListeners();
+    }
+  }
+
+  Future<void> tickBikeReady({int seconds = 1}) async {
+    if (stage != RentalStage.bikeCheck && stage != RentalStage.authorizing) {
+      return;
+    }
+    final remaining = bikeReadyRemainingSeconds ?? 0;
+    if (remaining <= 0) {
+      _stopBikeReadyTimer();
+      await handleBikeReadyTimeout();
+    } else {
+      notifyListeners();
+    }
+  }
+
+  Future<void> handleBikeReadyTimeout() async {
+    _stopBikeReadyTimer();
+    if (stage == RentalStage.bikeCheck || stage == RentalStage.authorizing) {
+      await cancelReservation();
+      if (stage != RentalStage.scan) {
+        _resetLocal();
+      }
+    }
+  }
+
+  void handleAppExit() {
+    if (stage == RentalStage.bikeCheck || stage == RentalStage.authorizing) {
+      final id = rentalId;
+      _stopBikeReadyTimer();
+      _resetLocal();
+      if (id != null) {
+        unawaited(repository.cancelSession(id).catchError((_) {}));
+      }
+    }
+  }
+
   void _resetLocal() {
     _stopClock();
+    _stopBikeReadyTimer();
     _session = null;
     _completedSession = null;
     stage = RentalStage.scan;
     metrics = const RideMetrics(elapsedSeconds: 0, distanceKm: 0);
     authorization = const PaymentAuthorization(
-      amount: 0,
+      amount: defaultHoldAmount,
       status: PaymentStatus.ready,
     );
     bike = null;
@@ -1136,12 +1263,14 @@ class RentingController extends ChangeNotifier {
     _arrivalPosition = null;
     _paypalOrder = null;
     _paypalAuthorizationId = null;
+    _scannedBikeCode = null;
     notifyListeners();
   }
 
   @override
   void dispose() {
     _stopClock();
+    _stopBikeReadyTimer();
     if (_ownsPayPalGateway) _paypalGateway.close();
     super.dispose();
   }

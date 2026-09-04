@@ -1335,13 +1335,13 @@ abstract class AppLocalizations {
   /// No description provided for @paypalCheckoutTitle.
   ///
   /// In en, this message translates to:
-  /// **'PayPal Sandbox'**
+  /// **'PayPal Payment'**
   String get paypalCheckoutTitle;
 
   /// No description provided for @paypalCheckoutSemantics.
   ///
   /// In en, this message translates to:
-  /// **'Secure PayPal Sandbox approval page'**
+  /// **'Secure PayPal Payment approval page'**
   String get paypalCheckoutSemantics;
 
   /// No description provided for @selected.

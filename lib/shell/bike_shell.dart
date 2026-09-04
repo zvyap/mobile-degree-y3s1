@@ -26,6 +26,7 @@ class _BikeShellState extends State<BikeShell> {
   late final AppNavigatorObserver _navigatorObserver;
   late final RentingController _rentingController;
   late final ProfileController _profileController;
+  late final AppLifecycleListener _lifecycleListener;
 
   AppPage _currentPage = AppPage.home;
   AppPage _selectedRootPage = AppPage.home;
@@ -51,6 +52,15 @@ class _BikeShellState extends State<BikeShell> {
       ..addListener(_handleProfileChanged)
       ..loadProfile();
     _navigatorObserver = AppNavigatorObserver(_handleRouteChanged);
+    _lifecycleListener = AppLifecycleListener(
+      onPause: _handleAppLifecycleExit,
+      onDetach: _handleAppLifecycleExit,
+      onHide: _handleAppLifecycleExit,
+    );
+  }
+
+  void _handleAppLifecycleExit() {
+    _rentingController.handleAppExit();
   }
 
   void _handleProfileChanged() {
@@ -60,6 +70,7 @@ class _BikeShellState extends State<BikeShell> {
 
   @override
   void dispose() {
+    _lifecycleListener.dispose();
     _profileController.removeListener(_handleProfileChanged);
     _profileController.dispose();
     _rentingController.dispose();

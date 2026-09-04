@@ -18,6 +18,8 @@ class _AuthorizationStage extends StatelessWidget {
             title: context.l10n.authorizeCardHold,
             subtitle: context.l10n.authorizeCardHoldDescription,
           ),
+          const SizedBox(height: 12),
+          _ReservationTimerBadge(controller: controller),
           const SizedBox(height: 14),
           Center(
             child: Column(
