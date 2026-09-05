@@ -29,10 +29,12 @@ class UserProfileRecord {
     required this.displayName,
     required this.role,
     required this.accountStatus,
+    required this.icVerified,
     required this.createdAt,
     required this.updatedAt,
     this.phone,
     this.avatarUrl,
+    this.icNumber,
   });
 
   factory UserProfileRecord.fromJson(JsonMap json) {
@@ -41,6 +43,8 @@ class UserProfileRecord {
       displayName: json['display_name'] as String,
       phone: json['phone'] as String?,
       avatarUrl: json['avatar_url'] as String?,
+      icNumber: json['ic_number'] as String?,
+      icVerified: json['ic_verified'] as bool,
       role: _enumFromDatabase(
         AppUserRole.values,
         json['role'],
@@ -62,6 +66,8 @@ class UserProfileRecord {
   final String? avatarUrl;
   final AppUserRole role;
   final AccountStatus accountStatus;
+  final String? icNumber;
+  final bool icVerified;
   final DateTime createdAt;
   final DateTime updatedAt;
 }

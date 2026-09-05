@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
@@ -53,8 +54,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _displayNameController.text = profile.displayName;
     _phoneController.text = profile.phone ?? '';
 
-    // IC number is currently not stored in the profile model.
-    _icController.clear();
+    _icController.text = profile.icNumber ?? '';
 
     setState(() {
       _isEditing = true;
@@ -67,6 +67,68 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  String _maskIcNumber(String? icNumber) {
+    if (icNumber == null || icNumber.isEmpty) {
+      return 'Not set';
+    }
+    if (icNumber.length < 4) {
+      return '****';
+    }
+    return '${'*' * (icNumber.length - 4)}${icNumber.substring(icNumber.length - 4)}';
+  }
+
+  Future<void> _verifyIc() async {
+    final profile = widget.profileCTRL.profile;
+
+    if (profile == null) return;
+
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+    );
+
+    if (image == null || !mounted) return;
+
+    final inputImage = InputImage.fromFilePath(image.path);
+
+    final faceDetector = FaceDetector(
+      options: FaceDetectorOptions(
+        performanceMode: FaceDetectorMode.fast,
+        enableLandmarks: false,
+        enableContours: false,
+        enableClassification: false,
+      ),
+    );
+
+    try {
+      final faces = await faceDetector.processImage(inputImage);
+
+      if (!mounted) return;
+
+      if (faces.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No face detected. Please select a clear IC image.'),
+          ),
+        );
+        return;
+      }
+
+      await widget.profileCTRL.verifyIc();
+
+      if (!mounted) return;
+
+      if (widget.profileCTRL.error == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('IC verified successfully.'),
+          ),
+        );
+      }
+    } finally {
+      await faceDetector.close();
+    }
+  }
+
   Future<void> _saveProfile() async {
     final profile = widget.profileCTRL.profile;
 
@@ -74,6 +136,7 @@ class _ProfilePageState extends State<ProfilePage> {
       displayName: _displayNameController.text,
       phone: _phoneController.text,
       avatarUrl: profile?.avatarUrl,
+      icNumber: _icController.text,
     );
 
     if (!mounted) return;
@@ -345,6 +408,46 @@ class _ProfilePageState extends State<ProfilePage> {
               prefixIcon: Icon(Icons.badge_outlined),
             ),
           ),
+        ],
+
+        if (!_isEditing) ...[
+          _profileItem(
+            context,
+            icon: Icons.badge_outlined,
+            label: 'IC Number',
+            value: _maskIcNumber(profile.icNumber),
+          ),
+
+          const SizedBox(height: 4),
+
+          Padding(
+            padding: const EdgeInsets.only(left: 36),
+            child: Text(
+              profile.icVerified ? 'Verified' : 'Not verified',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: profile.icVerified
+                    ? scheme.primary
+                    : scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+
+          if (!profile.icVerified && profile.icNumber != null && profile.icNumber!.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: widget.profileCTRL.isBusy
+                    ? null
+                    : _verifyIc,
+                icon: const Icon(Icons.verified_outlined),
+                label: const Text('Verify IC'),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 16),
         ],
 
         const SizedBox(height: 16),

@@ -22,6 +22,9 @@ class _EditUserPageState extends State<EditUserPage> {
 
   late final TextEditingController _displayNameController;
   late final TextEditingController _phoneController;
+  late final TextEditingController _icNumberController;
+
+
 
   AppUserRole? _selectedRole;
   AccountStatus? _selectedStatus;
@@ -32,6 +35,7 @@ class _EditUserPageState extends State<EditUserPage> {
 
     _displayNameController = TextEditingController();
     _phoneController = TextEditingController();
+    _icNumberController = TextEditingController();
 
     _loadUser();
   }
@@ -47,6 +51,7 @@ class _EditUserPageState extends State<EditUserPage> {
 
     _displayNameController.text = user.displayName;
     _phoneController.text = user.phone ?? '';
+    _icNumberController.text = user.icNumber ?? '';
 
     setState(() {
       _selectedRole = user.role;
@@ -58,6 +63,7 @@ class _EditUserPageState extends State<EditUserPage> {
   void dispose() {
     _displayNameController.dispose();
     _phoneController.dispose();
+    _icNumberController.dispose();
     super.dispose();
   }
 
@@ -70,6 +76,7 @@ class _EditUserPageState extends State<EditUserPage> {
       userId: widget.userId,
       displayName: _displayNameController.text,
       phone: _phoneController.text,
+      icNumber: _icNumberController.text,
       role: _selectedRole,
       accountStatus: _selectedStatus,
     );
@@ -207,13 +214,16 @@ class _EditUserPageState extends State<EditUserPage> {
 
                       const SizedBox(height: 24),
 
-                      // TODO: Add IC number and verification controls
-                      // after the database migration.
-                      //
-                      // TextFormField(
-                      //   controller: _icNumberController,
-                      //   ...
-                      // ),
+                      TextFormField(
+                        controller: _icNumberController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'IC Number',
+                          hintText: 'Enter IC number',
+                          prefixIcon: Icon(Icons.badge_outlined),
+                        ),
+                      ),
 
                       SizedBox(
                         width: double.infinity,

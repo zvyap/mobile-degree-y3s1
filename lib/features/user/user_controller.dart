@@ -73,6 +73,7 @@ class UserController extends ChangeNotifier {
     required String displayName,
     String? phone,
     String? avatarUrl,
+    String? icNumber,
     AppUserRole? role,
     AccountStatus? accountStatus,
 
@@ -99,6 +100,7 @@ class UserController extends ChangeNotifier {
         displayName: displayName.trim(),
         phone: phone?.trim(),
         avatarUrl: avatarUrl,
+        icNumber: icNumber,
         role: role,
         accountStatus: accountStatus,
 

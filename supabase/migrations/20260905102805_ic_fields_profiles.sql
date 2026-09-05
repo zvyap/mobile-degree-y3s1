@@ -1,0 +1,3 @@
+ALTER TABLE public.profiles
+ADD COLUMN ic_number TEXT,
+ADD COLUMN ic_verified BOOLEAN NOT NULL DEFAULT FALSE;

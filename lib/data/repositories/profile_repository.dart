@@ -8,7 +8,7 @@ class ProfileRepository {
 
   static const _columns =
       'id, display_name, phone, avatar_url, role, account_status, '
-      'created_at, updated_at';
+      'ic_number, ic_verified, created_at, updated_at';
 
   final DatabaseDataSource _dataSource;
 
@@ -32,6 +32,7 @@ class ProfileRepository {
     required String displayName,
     String? phone,
     String? avatarUrl,
+    String? icNumber,
   }) async {
     final userId = _requireUserId();
     final json = await _dataSource.updateSingle(
@@ -40,10 +41,26 @@ class ProfileRepository {
         'display_name': displayName.trim(),
         'phone': phone,
         'avatar_url': avatarUrl,
+        'ic_number': icNumber,
       },
       equals: {'id': userId},
       columns: _columns,
     );
+    return UserProfileRecord.fromJson(json);
+  }
+
+  Future<UserProfileRecord> verifyIc() async {
+    final userId = _requireUserId();
+
+    final json = await _dataSource.updateSingle(
+      table: 'profiles',
+      values: {
+        'ic_verified': true,
+      },
+      equals: {'id': userId},
+      columns: _columns,
+    );
+
     return UserProfileRecord.fromJson(json);
   }
 
@@ -86,6 +103,7 @@ class ProfileRepository {
     required String displayName,
     String? phone,
     String? avatarUrl,
+    String? icNumber,
     AppUserRole? role,
     AccountStatus? accountStatus,
 
@@ -96,6 +114,7 @@ class ProfileRepository {
     final values = <String, dynamic>{
       'display_name': displayName.trim(),
       'phone': phone,
+      'ic_number': icNumber,
     };
 
     if (avatarUrl != null) {

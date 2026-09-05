@@ -37,6 +37,7 @@ class ProfileController extends ChangeNotifier {
     required String displayName,
     String? phone,
     String? avatarUrl,
+    String? icNumber,
   }) async {
     if (isBusy) return;
 
@@ -55,7 +56,25 @@ class ProfileController extends ChangeNotifier {
         displayName: displayName.trim(),
         phone: phone?.trim(),
         avatarUrl: avatarUrl,
+        icNumber: icNumber,
       );
+    } catch (caught) {
+      error = UserError.profileUpdateFailed;
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> verifyIc() async {
+    if (isBusy) return;
+
+    isBusy = true;
+    error = null;
+    notifyListeners();
+
+    try {
+      profile = await _profileRepository.verifyIc();
     } catch (caught) {
       error = UserError.profileUpdateFailed;
     } finally {
