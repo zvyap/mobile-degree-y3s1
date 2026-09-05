@@ -67,7 +67,7 @@ class AdminManagementPage extends StatelessWidget {
           icon: Icons.manage_accounts_rounded,
           title: context.l10n.userManagement,
           subtitle: context.l10n.userManagementDescription,
-          onTap: onOpenUserManagement ?? () => onNavigate(AppPage.userManagement),
+          onTap: onOpenUserManagement,
         ),
       ],
     );

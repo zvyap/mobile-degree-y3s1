@@ -21,9 +21,7 @@ class UserController extends ChangeNotifier {
 
   Future<void> loadUsers() async {
     if (isBusy) return;
-
     _beginBusy();
-
     try {
       users = await _profileRepository.getAllUsers();
     } catch (caught) {

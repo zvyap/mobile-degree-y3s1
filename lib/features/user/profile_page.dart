@@ -1,9 +1,11 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/features/user/profile_controller.dart';
 import 'package:bike_renting_app/features/user/user_models.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter/material.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -18,14 +20,102 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  bool _isEditing = false;
+
+  late final TextEditingController _displayNameController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _icController;
+
   @override
   void initState() {
     super.initState();
+
+    _displayNameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _icController = TextEditingController();
+
     _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _displayNameController.dispose();
+    _phoneController.dispose();
+    _icController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProfile() async {
     await widget.profileCTRL.loadProfile();
+  }
+
+  void _startEditing(UserProfileRecord profile) {
+    _displayNameController.text = profile.displayName;
+    _phoneController.text = profile.phone ?? '';
+
+    // IC number is currently not stored in the profile model.
+    _icController.clear();
+
+    setState(() {
+      _isEditing = true;
+    });
+  }
+
+  void _cancelEditing() {
+    setState(() {
+      _isEditing = false;
+    });
+  }
+
+  Future<void> _saveProfile() async {
+    final profile = widget.profileCTRL.profile;
+
+    await widget.profileCTRL.updateProfile(
+      displayName: _displayNameController.text,
+      phone: _phoneController.text,
+      avatarUrl: profile?.avatarUrl,
+    );
+
+    if (!mounted) return;
+
+    if (widget.profileCTRL.error == null) {
+      setState(() {
+        _isEditing = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile updated successfully.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickAvatar() async {
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+    );
+
+    if (image == null || !mounted) return;
+
+    final profile = widget.profileCTRL.profile;
+
+    if (profile == null) return;
+
+    await widget.profileCTRL.uploadAvatar(
+      userId: profile.id,
+      image: File(image.path),
+    );
+
+    if (!mounted) return;
+
+    if (widget.profileCTRL.error == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile picture updated.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -73,8 +163,8 @@ class _ProfilePageState extends State<ProfilePage> {
         }
 
         if (profile == null) {
-          return Center(
-            child: Text("Profile not found"),
+          return const Center(
+            child: Text('Profile not found'),
           );
         }
 
@@ -95,18 +185,32 @@ class _ProfilePageState extends State<ProfilePage> {
       ColorScheme scheme,
       ) {
     final email =
-        Supabase.instance.client.auth.currentUser?.email ??
-            'No email';
+        Supabase.instance.client.auth.currentUser?.email ?? 'No email';
 
     return ListView(
       key: const ValueKey<String>('profile-page'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        Text(
-          context.l10n.profile,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w900,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                context.l10n.profile,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+
+            if (!_isEditing)
+              IconButton(
+                onPressed: () => _startEditing(profile),
+                tooltip: 'Edit profile',
+                icon: const Icon(
+                  Icons.edit_rounded,
+                ),
+              ),
+          ],
         ),
 
         const SizedBox(height: 28),
@@ -114,76 +218,88 @@ class _ProfilePageState extends State<ProfilePage> {
         // Avatar
         Center(
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
               CircleAvatar(
-                radius: 52,
+                radius: 62,
                 backgroundColor: scheme.surfaceContainerHighest,
-                backgroundImage: profile.avatarUrl != null &&
+                backgroundImage:
+                profile.avatarUrl != null &&
                     profile.avatarUrl!.isNotEmpty
                     ? NetworkImage(profile.avatarUrl!)
                     : null,
-                child: profile.avatarUrl == null ||
+                child:
+                profile.avatarUrl == null ||
                     profile.avatarUrl!.isEmpty
                     ? Icon(
                   Icons.person_rounded,
-                  size: 52,
+                  size: 62,
                   color: scheme.onSurfaceVariant,
                 )
                     : null,
               ),
 
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
+              if (_isEditing)
+                Positioned(
+                  right: -4,
+                  bottom: -4,
+                  child: Material(
                     color: scheme.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: theme.scaffoldBackgroundColor,
-                      width: 3,
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      onPressed: widget.profileCTRL.isBusy
+                          ? null
+                          : _pickAvatar,
+                      tooltip: 'Change profile picture',
+                      icon: const Icon(
+                        Icons.camera_alt_rounded,
+                        size: 18,
+                        color: Colors.white,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 42,
+                        minHeight: 42,
+                        maxWidth: 42,
+                        maxHeight: 42,
+                      ),
+                      padding: EdgeInsets.zero,
                     ),
                   ),
-                  child: const Icon(
-                    Icons.camera_alt_rounded,
-                    size: 17,
-                    color: Colors.white,
-                  ),
                 ),
-              ),
             ],
           ),
         ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
-        // Display name + edit icon
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(
-                profile.displayName,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+        // Display name
+        if (!_isEditing)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  profile.displayName,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
+            ],
+          )
+        else
+          TextField(
+            controller: _displayNameController,
+            textAlign: TextAlign.center,
+            decoration: const InputDecoration(
+              labelText: 'Display Name',
+              prefixIcon: Icon(Icons.person_outline_rounded),
             ),
-            const SizedBox(width: 6),
-            Icon(
-              Icons.edit_rounded,
-              size: 18,
-              color: scheme.onSurfaceVariant,
-            ),
-          ],
-        ),
+          ),
 
         const SizedBox(height: 6),
 
-        // Email
         Text(
           email,
           textAlign: TextAlign.center,
@@ -199,93 +315,165 @@ class _ProfilePageState extends State<ProfilePage> {
         const SizedBox(height: 12),
 
         // Phone
-        _profileItem(
-          theme: theme,
-          scheme: scheme,
-          icon: Icons.phone_outlined,
-          label: "Phone",
-          value: profile.phone?.isNotEmpty == true
-              ? profile.phone!
-              : "-",
-        ),
+        if (_isEditing)
+          TextField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Phone',
+              prefixIcon: Icon(Icons.phone_outlined),
+            ),
+          )
+        else
+          _profileItem(
+            context,
+            icon: Icons.phone_outlined,
+            label: 'Phone',
+            value: _formatValue(profile.phone),
+          ),
 
-        // Role
+        if (_isEditing) ...[
+          const SizedBox(height: 16),
+
+          // IC Number
+          TextField(
+            controller: _icController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'IC Number',
+              hintText: 'Enter your IC number',
+              prefixIcon: Icon(Icons.badge_outlined),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 16),
+
         _profileItem(
-          theme: theme,
-          scheme: scheme,
+          context,
           icon: Icons.badge_outlined,
-          label: "Role",
+          label: 'Role',
           value: _formatValue(profile.role),
         ),
 
-        // Account status
+        const SizedBox(height: 16),
+
         _profileItem(
-          theme: theme,
-          scheme: scheme,
+          context,
           icon: Icons.verified_user_outlined,
-          label: "Status",
+          label: 'Status',
           value: _formatValue(profile.accountStatus),
+        ),
+
+        if (_isEditing) ...[
+          const SizedBox(height: 28),
+
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: widget.profileCTRL.isBusy
+                      ? null
+                      : _cancelEditing,
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: widget.profileCTRL.isBusy
+                      ? null
+                      : _saveProfile,
+                  child: widget.profileCTRL.isBusy
+                      ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  )
+                      : const Text('Save'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _profileItem(
+      BuildContext context, {
+        required IconData icon,
+        required String label,
+        required String value,
+      }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 22,
+          color: scheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _profileItem({
-    required ThemeData theme,
-    required ColorScheme scheme,
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      leading: Icon(icon),
-      title: Text(
-        label,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: scheme.onSurfaceVariant,
-        ),
-      ),
-      subtitle: Text(
-        value,
-        style: theme.textTheme.bodyLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
+  String _formatValue(Object? value) {
+    if (value == null) return 'Not set';
 
-  String _formatValue(Object value) {
-    final text = value.toString();
+    if (value is Enum) {
+      final raw = value.name;
 
-    if (text.contains('.')) {
-      return text
-          .split('.')
-          .last
-          .replaceAllMapped(
-        RegExp(r'([a-z])([A-Z])'),
-            (match) => '${match.group(1)} ${match.group(2)}',
+      return raw
+          .split('_')
+          .map(
+            (word) => word.isEmpty
+            ? word
+            : '${word[0].toUpperCase()}${word.substring(1)}',
       )
-          .replaceFirstMapped(
-        RegExp(r'^.'),
-            (match) => match.group(0)!.toUpperCase(),
-      );
+          .join(' ');
     }
+
+    final text = value.toString().trim();
+
+    if (text.isEmpty) return 'Not set';
 
     return text;
   }
 
   String _errorMessage(UserError error) {
     switch (error) {
+      case UserError.displayNameRequired:
+        return 'Display name is required.';
       case UserError.profileLoadFailed:
         return 'Unable to load your profile.';
-
-      case UserError.notAuthenticated:
-        return 'You are not logged in.';
-
-      case UserError.connectionFailed:
-        return 'Unable to connect. Please try again.';
-
+      case UserError.profileUpdateFailed:
+        return 'Unable to update your profile.';
       default:
         return 'Something went wrong. Please try again.';
     }
