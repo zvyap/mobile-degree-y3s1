@@ -128,13 +128,27 @@ class _ScanStageState extends State<ScanStage> with WidgetsBindingObserver {
       _lastScanTime = now;
       _isProcessing = true;
 
-      widget.controller.scanBike(raw).whenComplete(() {
+      widget.controller.scanBike(
+        raw,
+        (battery, code) async {
+          final proceed = await showLowBatteryWarningDialog(
+            context,
+            batteryPercent: battery,
+            bikeCode: code,
+          );
+          if (proceed) {
+            widget.controller.acknowledgeLowBatteryWarning();
+          }
+          return proceed;
+        },
+      ).whenComplete(() {
         if (!mounted) return;
         setState(() => _isProcessing = false);
         if (widget.controller.error == RentalError.invalidQr) {
           _showInvalidQrDialog();
         } else if (widget.controller.error == RentalError.bikeMaintenance ||
             widget.controller.error == RentalError.bikeUnavailable ||
+            widget.controller.error == RentalError.bikeLowBattery ||
             widget.controller.error == RentalError.stationMaintenance ||
             widget.controller.error == RentalError.stationTerminated) {
           _showBikeCannotRentDialog();
@@ -692,7 +706,9 @@ Future<void> showBikeCannotRentDialog(
           controller.error == RentalError.bikeMaintenance ||
                   controller.error == RentalError.stationMaintenance
               ? Icons.build_circle_outlined
-              : Icons.block_rounded,
+              : controller.error == RentalError.bikeLowBattery
+                  ? Icons.battery_alert_rounded
+                  : Icons.block_rounded,
           size: 36,
           color: scheme.error,
         ),
@@ -717,6 +733,88 @@ Future<void> showBikeCannotRentDialog(
   );
 }
 
+Future<bool> showLowBatteryWarningDialog(
+  BuildContext context, {
+  required int batteryPercent,
+  String? bikeCode,
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      final l10n = dialogContext.l10n;
+      final bikeLabel =
+          bikeCode != null && bikeCode.isNotEmpty ? bikeCode : 'this bike';
+      return AlertDialog(
+        icon: const Icon(
+          Icons.battery_alert_rounded,
+          size: 36,
+          color: Color(0xFFF59E0B),
+        ),
+        title: Text(l10n.lowBatteryWarningTitle),
+        content: Text(
+          l10n.lowBatteryWarningMessage(bikeLabel, batteryPercent),
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          OutlinedButton(
+            key: const ValueKey<String>('rent-low-battery-cancel-button'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(100, 48),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            key: const ValueKey<String>('rent-low-battery-continue-button'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(100, 48),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.continueButton),
+          ),
+        ],
+      );
+    },
+  );
+  return result ?? false;
+}
+
+Future<bool> guardBikeBattery(
+  BuildContext context, {
+  required RentingController controller,
+  required int? batteryPercent,
+  String? bikeCode,
+  bool forceWarning = false,
+}) async {
+  if (batteryPercent == null) return true;
+
+  if (BikeBatteryGuard.isTooLow(batteryPercent)) {
+    controller.error = RentalError.bikeLowBattery;
+    await showBikeCannotRentDialog(context, controller: controller);
+    return false;
+  }
+
+  if (BikeBatteryGuard.isWarning(batteryPercent)) {
+    if (forceWarning || !controller.hasAcknowledgedLowBatteryWarning) {
+      final proceed = await showLowBatteryWarningDialog(
+        context,
+        batteryPercent: batteryPercent,
+        bikeCode: bikeCode ?? controller.bikeCode,
+      );
+      if (proceed) {
+        controller.acknowledgeLowBatteryWarning();
+        return true;
+      }
+      return false;
+    }
+  }
+
+  return true;
+}
+
 Future<void> _handleCameraTap(
   BuildContext context,
   RentingController controller, {
@@ -729,7 +827,20 @@ Future<void> _handleCameraTap(
     builder: (sheetContext) => _DebugBikePickerSheet(controller: controller),
   );
   if (token == null || token.trim().isEmpty) return;
-  await controller.scanBike(token.trim());
+  await controller.scanBike(
+    token.trim(),
+    (battery, code) async {
+      final proceed = await showLowBatteryWarningDialog(
+        context,
+        batteryPercent: battery,
+        bikeCode: code,
+      );
+      if (proceed) {
+        controller.acknowledgeLowBatteryWarning();
+      }
+      return proceed;
+    },
+  );
   if (controller.error == RentalError.invalidQr) {
     if (onInvalidQr != null) {
       await onInvalidQr();
@@ -738,6 +849,7 @@ Future<void> _handleCameraTap(
     }
   } else if (controller.error == RentalError.bikeMaintenance ||
       controller.error == RentalError.bikeUnavailable ||
+      controller.error == RentalError.bikeLowBattery ||
       controller.error == RentalError.stationMaintenance ||
       controller.error == RentalError.stationTerminated) {
     if (context.mounted) {

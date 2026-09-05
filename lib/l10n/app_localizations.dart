@@ -1410,6 +1410,30 @@ abstract class AppLocalizations {
   /// **'Bike {bikeId} is currently unavailable and cannot be rented. Choose another bike and scan again.'**
   String errorBikeUnavailable(String bikeId);
 
+  /// No description provided for @errorBikeLowBattery.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike {bikeId} has low battery ({percent}%) and cannot be rented. Minimum required is 10%. Choose another bike and scan again.'**
+  String errorBikeLowBattery(String bikeId, int percent);
+
+  /// No description provided for @lowBatteryWarningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Battery Warning'**
+  String get lowBatteryWarningTitle;
+
+  /// No description provided for @lowBatteryWarningMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike {bikeId} battery is at {percent}%. Riding distance and motor assist may be limited. Do you want to continue?'**
+  String lowBatteryWarningMessage(String bikeId, int percent);
+
+  /// No description provided for @continueButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get continueButton;
+
   /// No description provided for @bikeCannotBeRentedTitle.
   ///
   /// In en, this message translates to:

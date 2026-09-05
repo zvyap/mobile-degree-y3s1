@@ -813,6 +813,22 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String errorBikeLowBattery(String bikeId, int percent) {
+    return 'Bike $bikeId has low battery ($percent%) and cannot be rented. Minimum required is 10%. Choose another bike and scan again.';
+  }
+
+  @override
+  String get lowBatteryWarningTitle => 'Low Battery Warning';
+
+  @override
+  String lowBatteryWarningMessage(String bikeId, int percent) {
+    return 'Bike $bikeId battery is at $percent%. Riding distance and motor assist may be limited. Do you want to continue?';
+  }
+
+  @override
+  String get continueButton => 'Continue';
+
+  @override
   String get bikeCannotBeRentedTitle => 'Bike Cannot Be Rented';
 
   @override

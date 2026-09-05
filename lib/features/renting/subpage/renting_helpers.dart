@@ -28,6 +28,12 @@ String _rentalError(BuildContext context, RentingController controller) {
       l10n.errorBikeMaintenance(controller.bikeCode),
     RentalError.bikeUnavailable =>
       l10n.errorBikeUnavailable(controller.bikeCode),
+    RentalError.bikeLowBattery => l10n.errorBikeLowBattery(
+        controller.bikeCode,
+        controller.scannedBikeBatteryPercent ??
+            controller.bike?.batteryPercent ??
+            0,
+      ),
     RentalError.stationMaintenance => controller.errorStation != null
         ? l10n.errorStationMaintenance(
             _stationName(l10n, controller.errorStation!),
