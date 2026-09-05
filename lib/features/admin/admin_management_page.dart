@@ -44,7 +44,7 @@ class AdminManagementPage extends StatelessWidget {
         _AdminDestination(
           actionKey: 'admin-rentals',
           icon: Icons.pedal_bike_rounded,
-          title: 'Active Rentals',
+          title: 'Rental Management',
           subtitle: 'Monitor active renting sessions and end rides',
           onTap: onOpenRentingManagement ?? () => onNavigate(AppPage.rentingManagement),
         ),

@@ -7,6 +7,7 @@ import 'package:bike_renting_app/bike_station/shared_map.dart';
 import 'package:bike_renting_app/bike_station/station_details.dart';
 import 'package:bike_renting_app/bike_station/station_map.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
+import 'package:bike_renting_app/features/renting/bike_battery_guard.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/features/renting/widgets/ride_warning_banner.dart';

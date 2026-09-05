@@ -153,6 +153,14 @@ class _BikeCheckStage extends StatelessWidget {
                           controller.startStation?.name ?? '',
                         ),
                 ),
+              ] else if (BikeBatteryGuard.isTooLow(controller.bike?.batteryPercent)) ...[
+                const SizedBox(height: 14),
+                _ErrorPanel(
+                  message: context.l10n.errorBikeLowBattery(
+                    controller.bikeCode,
+                    controller.bike?.batteryPercent ?? 0,
+                  ),
+                ),
               ],
               const SizedBox(height: 14),
               const _TermsAndPrivacyNotice(),
@@ -165,9 +173,20 @@ class _BikeCheckStage extends StatelessWidget {
                 icon: Icons.account_balance_wallet_rounded,
                 onPressed: (controller.startStation?.isUnderMaintenance == true ||
                         controller.startStation?.isTerminated == true ||
+                        BikeBatteryGuard.isTooLow(controller.bike?.batteryPercent) ||
                         controller.error != null)
                     ? null
-                    : controller.reviewAuthorization,
+                    : () async {
+                        final canProceed = await guardBikeBattery(
+                          context,
+                          controller: controller,
+                          batteryPercent: controller.bike?.batteryPercent,
+                          bikeCode: controller.bike?.id,
+                        );
+                        if (canProceed) {
+                          controller.reviewAuthorization();
+                        }
+                      },
               ),
               const SizedBox(height: 8),
               Center(

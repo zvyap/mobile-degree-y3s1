@@ -1410,6 +1410,30 @@ abstract class AppLocalizations {
   /// **'Bike {bikeId} is currently unavailable and cannot be rented. Choose another bike and scan again.'**
   String errorBikeUnavailable(String bikeId);
 
+  /// No description provided for @errorBikeLowBattery.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike {bikeId} has low battery ({percent}%) and cannot be rented. Minimum required is 10%. Choose another bike and scan again.'**
+  String errorBikeLowBattery(String bikeId, int percent);
+
+  /// No description provided for @lowBatteryWarningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Battery Warning'**
+  String get lowBatteryWarningTitle;
+
+  /// No description provided for @lowBatteryWarningMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike {bikeId} battery is at {percent}%. Riding distance and motor assist may be limited. Do you want to continue?'**
+  String lowBatteryWarningMessage(String bikeId, int percent);
+
+  /// No description provided for @continueButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get continueButton;
+
   /// No description provided for @bikeCannotBeRentedTitle.
   ///
   /// In en, this message translates to:
@@ -2621,6 +2645,414 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Questions? Contact support@bikerent.app'**
   String get contactSupport;
+
+  /// Error message when stations fail to fetch from database
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading stations: {error}'**
+  String errorLoadingStations(String error);
+
+  /// No description provided for @stationA.
+  ///
+  /// In en, this message translates to:
+  /// **'Station A'**
+  String get stationA;
+
+  /// No description provided for @stationB.
+  ///
+  /// In en, this message translates to:
+  /// **'Station B'**
+  String get stationB;
+
+  /// No description provided for @selectOriginStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Select origin station'**
+  String get selectOriginStation;
+
+  /// No description provided for @selectDestinationStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Select destination station'**
+  String get selectDestinationStation;
+
+  /// No description provided for @underMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Under Maintenance'**
+  String get underMaintenance;
+
+  /// No description provided for @selectedStationTooFar.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected Station are too far away'**
+  String get selectedStationTooFar;
+
+  /// No description provided for @etaLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'ETA:'**
+  String get etaLabel;
+
+  /// No description provided for @estimatedArrivalTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated Arrival Time (ETA)'**
+  String get estimatedArrivalTime;
+
+  /// Duration display in minutes for route calculation
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} minutes'**
+  String durationInMinutes(int minutes);
+
+  /// Calculated route distance in kilometers
+  ///
+  /// In en, this message translates to:
+  /// **'Total Distance: {distance} km'**
+  String totalDistanceKm(String distance);
+
+  /// No description provided for @selectStationsToCalculateRoutePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Station A & Station B to calculate route.'**
+  String get selectStationsToCalculateRoutePrompt;
+
+  /// Error message when fetching station bikes fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load bikes: {error}'**
+  String failedToLoadBikes(String error);
+
+  /// No description provided for @invalidBikeIdError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open: Invalid Bike ID'**
+  String get invalidBikeIdError;
+
+  /// No description provided for @stationBikes.
+  ///
+  /// In en, this message translates to:
+  /// **'Station Bikes'**
+  String get stationBikes;
+
+  /// No description provided for @locationCoordinatesNotProvided.
+  ///
+  /// In en, this message translates to:
+  /// **'Location coordinates not provided'**
+  String get locationCoordinatesNotProvided;
+
+  /// No description provided for @searchBikesCodeOrId.
+  ///
+  /// In en, this message translates to:
+  /// **'Search bikes by code or ID'**
+  String get searchBikesCodeOrId;
+
+  /// No description provided for @noBikesInStationYet.
+  ///
+  /// In en, this message translates to:
+  /// **'there is no bikes in this station yet'**
+  String get noBikesInStationYet;
+
+  /// No description provided for @noBikesMatchSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'No bikes match your search.'**
+  String get noBikesMatchSearch;
+
+  /// No description provided for @unknownStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get unknownStatus;
+
+  /// Label indicating the operational status of a bike
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {status}'**
+  String bikeStatus(String status);
+
+  /// Error message shown in SnackBar when station fetching fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load stations: {error}'**
+  String failedToLoadStations(String error);
+
+  /// No description provided for @searchStationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search station code, name or address...'**
+  String get searchStationHint;
+
+  /// No description provided for @longPressMapToAddStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press map to add new station'**
+  String get longPressMapToAddStation;
+
+  /// No description provided for @noMatchingStationsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching stations found.'**
+  String get noMatchingStationsFound;
+
+  /// No description provided for @unnamedStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed Station'**
+  String get unnamedStation;
+
+  /// No description provided for @noAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'No address'**
+  String get noAddress;
+
+  /// No description provided for @stationNameEmptyError.
+  ///
+  /// In en, this message translates to:
+  /// **'Station name cannot be empty.'**
+  String get stationNameEmptyError;
+
+  /// No description provided for @stationAddressEmptyError.
+  ///
+  /// In en, this message translates to:
+  /// **'Station address cannot be empty.'**
+  String get stationAddressEmptyError;
+
+  /// No description provided for @validCapacityError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid number for max capacity.'**
+  String get validCapacityError;
+
+  /// Error message shown when the entered capacity is lower than current bikes
+  ///
+  /// In en, this message translates to:
+  /// **'Max capacity ({capacity}) cannot be less than current docked bikes ({bikes}).'**
+  String maxCapacityExceededError(int capacity, int bikes);
+
+  /// No description provided for @stationUpdatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Station updated successfully!'**
+  String get stationUpdatedSuccess;
+
+  /// No description provided for @stationAddedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Station added successfully!'**
+  String get stationAddedSuccess;
+
+  /// Error notification when saving station fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save station: {error}'**
+  String failedToSaveStation(String error);
+
+  /// No description provided for @removeStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Station'**
+  String get removeStation;
+
+  /// No description provided for @confirmRemoveStationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to remove this station?'**
+  String get confirmRemoveStationBody;
+
+  /// No description provided for @stationRemovedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Station removed successfully!'**
+  String get stationRemovedSuccess;
+
+  /// Error notification when deleting a station fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to remove station: {error}'**
+  String failedToRemoveStation(String error);
+
+  /// No description provided for @changePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Photo'**
+  String get changePhoto;
+
+  /// No description provided for @stationName.
+  ///
+  /// In en, this message translates to:
+  /// **'Station Name'**
+  String get stationName;
+
+  /// No description provided for @enterStationNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter station name...'**
+  String get enterStationNameHint;
+
+  /// No description provided for @stationCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Station Code'**
+  String get stationCode;
+
+  /// No description provided for @readOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-Only'**
+  String get readOnly;
+
+  /// No description provided for @address.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get address;
+
+  /// No description provided for @enterStationAddressHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter station address...'**
+  String get enterStationAddressHint;
+
+  /// No description provided for @operatingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating status'**
+  String get operatingStatus;
+
+  /// No description provided for @currentDockedBikes.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Docked Bikes'**
+  String get currentDockedBikes;
+
+  /// No description provided for @maxBikesPerStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Max bike per station'**
+  String get maxBikesPerStation;
+
+  /// No description provided for @addStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Station'**
+  String get addStation;
+
+  /// No description provided for @updateStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Station'**
+  String get updateStation;
+
+  /// No description provided for @viewBikesAtStation.
+  ///
+  /// In en, this message translates to:
+  /// **'View Bikes at Station'**
+  String get viewBikesAtStation;
+
+  /// No description provided for @noAddressSet.
+  ///
+  /// In en, this message translates to:
+  /// **'No address set'**
+  String get noAddressSet;
+
+  /// No description provided for @noBikesAtStation.
+  ///
+  /// In en, this message translates to:
+  /// **'No bikes at this station.'**
+  String get noBikesAtStation;
+
+  /// Notification when a station is successfully deactivated by an admin
+  ///
+  /// In en, this message translates to:
+  /// **'{stationName} deactivated successfully'**
+  String stationDeactivatedSuccess(String stationName);
+
+  /// No description provided for @searchStationToRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Search station to remove...'**
+  String get searchStationToRemove;
+
+  /// No description provided for @searchStationNameOrAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Search station name or address...'**
+  String get searchStationNameOrAddress;
+
+  /// No description provided for @noStationsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No stations found.'**
+  String get noStationsFound;
+
+  /// Pluralized count of available bikes
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 bike} other{{count} bikes}}'**
+  String bikesCount(int count);
+
+  /// No description provided for @currentlySelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Currently Selected'**
+  String get currentlySelected;
+
+  /// No description provided for @targetStationToRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Target Station to Remove'**
+  String get targetStationToRemove;
+
+  /// No description provided for @closestToYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Closest to you'**
+  String get closestToYou;
+
+  /// No description provided for @reset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get reset;
+
+  /// No description provided for @allActiveStations.
+  ///
+  /// In en, this message translates to:
+  /// **'All Active Stations'**
+  String get allActiveStations;
+
+  /// No description provided for @nearbyStations.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby Stations'**
+  String get nearbyStations;
+
+  /// Subtitle format for featured station displaying address, bike count, and optional distance
+  ///
+  /// In en, this message translates to:
+  /// **'{address} • {count} Bikes{distance}'**
+  String stationSummarySubtitle(String address, int count, String distance);
+
+  /// Title prompt for admin station removal confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure to remove\n{stationName}?'**
+  String confirmRemoveStationTitle(String stationName);
+
+  /// No description provided for @actionIrreversibleWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This action is irreversible, are you sure to continue?'**
+  String get actionIrreversibleWarning;
+
+  /// No description provided for @removeLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Location'**
+  String get removeLocation;
 }
 
 class _AppLocalizationsDelegate

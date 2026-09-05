@@ -28,6 +28,7 @@ import 'package:bike_renting_app/features/bike/pages/bike_report_detail_page.dar
 import 'package:bike_renting_app/features/bike/pages/pending_report_page.dart';
 import 'package:bike_renting_app/features/bike/pages/report_form.dart';
 import 'package:bike_renting_app/data/database/database_data_source.dart';
+import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/data/repositories/payment_method_repository.dart';
 import 'package:bike_renting_app/features/payment_methods/pages/payment_methods_page.dart';
 import 'package:bike_renting_app/features/bike/pages/pending_report_detail.dart';
@@ -145,6 +146,16 @@ class AppNavigator extends StatelessWidget {
       ),
       AppPage.rentingManagement => AdminRentalsPage(
         repository: rentingController.repository,
+        userId: switch (arguments) {
+          final AdminRentalsRouteArguments args => args.userId,
+          final UserProfileRecord user => user.id,
+          _ => null,
+        },
+        userName: switch (arguments) {
+          final AdminRentalsRouteArguments args => args.userName,
+          final UserProfileRecord user => user.displayName,
+          _ => null,
+        },
         onOpenDetails: (rentalId) => navigatorKey.currentState?.pushNamed(
           AppPage.rentingDetail.routeName,
           arguments: rentalId,
@@ -274,7 +285,15 @@ class AppNavigator extends StatelessWidget {
             AppPage.addUser.routeName,
           );
         },
-
+        onOpenRentalHistory: (user) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.rentingManagement.routeName,
+            arguments: AdminRentalsRouteArguments(
+              userId: user.id,
+              userName: user.displayName,
+            ),
+          );
+        },
       ),
 
       AppPage.settings => SettingsPage(onToggleTheme: onToggleTheme),
