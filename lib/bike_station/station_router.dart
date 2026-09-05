@@ -1,8 +1,7 @@
-import 'package:bike_renting_app/bike_station/osrm_service.dart';
+import 'package:bike_renting_app/bike_station/base_station_map.dart';
 import 'package:bike_renting_app/bike_station/shared_map.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
 class StationRoutePlannerScreen extends StatefulWidget {
@@ -130,15 +129,6 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
     return double.tryParse(val.toString());
   }
 
-  // 🟢 Enforce UTC+8 (Malaysia Time - MYT)
-  String _formatEtaRange(int durationMinutes) {
-    final nowMyt = DateTime.now().toUtc().add(const Duration(hours: 8));
-    final arrivalMyt = nowMyt.add(Duration(minutes: durationMinutes));
-    final timeFormat = DateFormat('h:mm');
-    final amPmFormat = DateFormat('a');
-    return "${timeFormat.format(nowMyt)} - ${timeFormat.format(arrivalMyt)} ${amPmFormat.format(arrivalMyt)}";
-  }
-
   void _showStationPickerDialog(bool isOrigin) {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -223,108 +213,6 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
           },
         );
       },
-    );
-  }
-
-  Widget _buildRouteInfo(ColorScheme colorScheme) {
-    if (isCalculating) {
-      return const Center(child: CircularProgressIndicator.adaptive());
-    }
-
-    if (isRouteTooFar) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            "Selected Station are too far away",
-            style: TextStyle(
-              color: Color(0xFFDC2626),
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Text(
-                "ETA: ",
-                style: TextStyle(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                "__:__",
-                style: TextStyle(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          if (routeResult != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              "Total Distance: ${routeResult!.distanceKm.toStringAsFixed(2)} km",
-              style: TextStyle(
-                color: colorScheme.onSurface.withValues(alpha: 0.8),
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ],
-      );
-    }
-
-    if (routeResult != null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            "Estimated Arrival Time (ETA)",
-            style: TextStyle(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _formatEtaRange(routeResult!.durationMinutes),
-            style: TextStyle(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          Text(
-            "${routeResult!.durationMinutes} minutes",
-            style: TextStyle(
-              color: colorScheme.onSurface.withValues(alpha: 0.6),
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Total Distance: ${routeResult!.distanceKm.toStringAsFixed(2)} km",
-            style: TextStyle(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Text(
-      "Select Station A & Station B to calculate route.",
-      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
     );
   }
 
@@ -446,8 +334,7 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
                                     ),
                                   ),
                                 ),
-                                _buildStationRow(
-                                  context: context,
+                                StationPlaceholderRow(
                                   station: originStation,
                                   isOrigin: true,
                                   onEdit: () => _showStationPickerDialog(true),
@@ -460,8 +347,7 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
                                     size: 20,
                                   ),
                                 ),
-                                _buildStationRow(
-                                  context: context,
+                                StationPlaceholderRow(
                                   station: destinationStation,
                                   isOrigin: false,
                                   onEdit: () => _showStationPickerDialog(false),
@@ -469,7 +355,11 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
                                 const SizedBox(height: 16),
                                 Divider(color: colorScheme.outline.withValues(alpha: 0.5), height: 1),
                                 const SizedBox(height: 16),
-                                _buildRouteInfo(colorScheme),
+                                StationRouteDisplay(
+                                  isCalculating: isCalculating,
+                                  isRouteTooFar: isRouteTooFar,
+                                  routeResult: routeResult,
+                                ),
                               ],
                             ),
                           ),
@@ -483,66 +373,6 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildStationRow({
-    required BuildContext context,
-    required Map<String, dynamic>? station,
-    required bool isOrigin,
-    required VoidCallback onEdit,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    final String defaultTitle = isOrigin ? "Station A" : "Station B";
-    final String defaultSubtitle = isOrigin ? "Select origin station" : "Select destination station";
-
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: colorScheme.onSurface, width: 2),
-          ),
-          child: Icon(
-            Icons.location_on,
-            size: 20,
-            color: colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                station?['name'] ?? defaultTitle,
-                style: TextStyle(
-                  color: station != null ? colorScheme.onSurface : colorScheme.onSurface.withValues(alpha: 0.6),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                station?['address'] ?? defaultSubtitle,
-                style: TextStyle(
-                  color: colorScheme.onSurface.withValues(alpha: 0.5),
-                  fontSize: 12,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        IconButton(
-          icon: Icon(Icons.edit_square, color: colorScheme.onSurface.withValues(alpha: 0.7)),
-          onPressed: onEdit,
-        ),
-      ],
     );
   }
 }

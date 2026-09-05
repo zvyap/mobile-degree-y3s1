@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:bike_renting_app/bike_station/osrm_service.dart';
 import 'package:bike_renting_app/bike_station/shared_map.dart';
+
+export 'package:bike_renting_app/bike_station/osrm_service.dart';
 
 /// Base abstraction for station map views.
 abstract class BaseStationMapView extends StatefulWidget {
@@ -351,4 +355,242 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
       body: buildMapLayer(context),
     );
   }
+
+  /// Builds placeholder / selected station row display
+  Widget buildStationPlaceholderRow({
+    required Map<String, dynamic>? station,
+    required bool isOrigin,
+    required VoidCallback onEdit,
+    String? defaultTitle,
+    String? defaultSubtitle,
+  }) {
+    return StationPlaceholderRow(
+      station: station,
+      isOrigin: isOrigin,
+      onEdit: onEdit,
+      defaultTitle: defaultTitle,
+      defaultSubtitle: defaultSubtitle,
+    );
+  }
+
+  /// Builds route calculation status, ETA, and distance display
+  Widget buildRouteDisplay({
+    required bool isCalculating,
+    bool isRouteTooFar = false,
+    OsrmRouteResult? routeResult,
+  }) {
+    return StationRouteDisplay(
+      isCalculating: isCalculating,
+      isRouteTooFar: isRouteTooFar,
+      routeResult: routeResult,
+    );
+  }
 }
+
+/// Displays a station row or a placeholder (e.g. "Station A" / "Station B")
+/// with an edit button.
+class StationPlaceholderRow extends StatelessWidget {
+  final Map<String, dynamic>? station;
+  final bool isOrigin;
+  final VoidCallback onEdit;
+  final String? defaultTitle;
+  final String? defaultSubtitle;
+
+  const StationPlaceholderRow({
+    super.key,
+    required this.station,
+    required this.isOrigin,
+    required this.onEdit,
+    this.defaultTitle,
+    this.defaultSubtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final String resolvedTitle = defaultTitle ?? (isOrigin ? "Station A" : "Station B");
+    final String resolvedSubtitle = defaultSubtitle ?? (isOrigin ? "Select origin station" : "Select destination station");
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: colorScheme.onSurface, width: 2),
+          ),
+          child: Icon(
+            Icons.location_on,
+            size: 20,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                station?['name'] ?? resolvedTitle,
+                style: TextStyle(
+                  color: station != null ? colorScheme.onSurface : colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                station?['address'] ?? resolvedSubtitle,
+                style: TextStyle(
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                  fontSize: 12,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: Icon(Icons.edit_square, color: colorScheme.onSurface.withValues(alpha: 0.7)),
+          onPressed: onEdit,
+        ),
+      ],
+    );
+  }
+}
+
+/// Displays route calculation status, errors (e.g. route too far),
+/// ETA time range, duration, and total distance.
+class StationRouteDisplay extends StatelessWidget {
+  final bool isCalculating;
+  final bool isRouteTooFar;
+  final OsrmRouteResult? routeResult;
+
+  const StationRouteDisplay({
+    super.key,
+    required this.isCalculating,
+    this.isRouteTooFar = false,
+    this.routeResult,
+  });
+
+  // 🟢 Enforce UTC+8 (Malaysia Time - MYT)
+  static String formatEtaRange(int durationMinutes) {
+    final nowMyt = DateTime.now().toUtc().add(const Duration(hours: 8));
+    final arrivalMyt = nowMyt.add(Duration(minutes: durationMinutes));
+    final timeFormat = DateFormat('h:mm');
+    final amPmFormat = DateFormat('a');
+    return "${timeFormat.format(nowMyt)} - ${timeFormat.format(arrivalMyt)} ${amPmFormat.format(arrivalMyt)}";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (isCalculating) {
+      return const Center(child: CircularProgressIndicator.adaptive());
+    }
+
+    if (isRouteTooFar) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            "Selected Station are too far away",
+            style: TextStyle(
+              color: Color(0xFFDC2626),
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Text(
+                "ETA: ",
+                style: TextStyle(
+                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                "__:__",
+                style: TextStyle(
+                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          if (routeResult != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              "Total Distance: ${routeResult!.distanceKm.toStringAsFixed(2)} km",
+              style: TextStyle(
+                color: colorScheme.onSurface.withValues(alpha: 0.8),
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ],
+      );
+    }
+
+    if (routeResult != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            "Estimated Arrival Time (ETA)",
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            formatEtaRange(routeResult!.durationMinutes),
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          Text(
+            "${routeResult!.durationMinutes} minutes",
+            style: TextStyle(
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Total Distance: ${routeResult!.distanceKm.toStringAsFixed(2)} km",
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Text(
+      "Select Station A & Station B to calculate route.",
+      style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
+    );
+  }
+}
+
+typedef StationPlaceholderDisplay = StationPlaceholderRow;
+typedef RouteInfoDisplay = StationRouteDisplay;
+typedef StationRouteInfoDisplay = StationRouteDisplay;
