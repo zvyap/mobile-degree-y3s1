@@ -1156,4 +1156,124 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get reportCancelledDescription =>
       'You cancelled this report before it was reviewed.';
+
+  @override
+  String get addNewBike => 'Add new bike';
+
+  @override
+  String get step1BasicInformation => 'Step 1 of 3 • Basic information';
+
+  @override
+  String get step2QrCode => 'Step 2 of 3 • QR code';
+
+  @override
+  String get step3ReviewInformation => 'Step 3 of 3 • Review information';
+
+  @override
+  String get bikeCode => 'Bike Code';
+
+  @override
+  String get enterBikeCode => 'Enter bike code';
+
+  @override
+  String get bikeCodeTooShort => 'Bike code is too short';
+
+  @override
+  String get initialStation => 'Initial station';
+
+  @override
+  String get pleaseSelectStation => 'Please select a station';
+
+  @override
+  String get selectStation => 'Select a station';
+
+  @override
+  String get unableToLoadStations => 'Unable to load stations';
+
+  @override
+  String get noStationsAvailable => 'No stations are available.';
+
+  @override
+  String get noStationSelected => 'No station selected';
+
+  @override
+  String get batteryPercentage => 'Battery percentage';
+
+  @override
+  String get enterBatteryPercentage => 'Enter battery percentage';
+
+  @override
+  String get invalidBatteryPercentage => 'Invalid battery percentage';
+
+  @override
+  String get enterValidNumber => 'Enter a valid number';
+
+  @override
+  String get batteryRangeError => 'Battery must be between 0 and 100';
+
+  @override
+  String get battery => 'Battery';
+
+  @override
+  String get initialStatus => 'Initial status';
+
+  @override
+  String get status => 'Status';
+
+  @override
+  String get available => 'Available';
+
+  @override
+  String get maintenance => 'Maintenance';
+
+  @override
+  String get retired => 'Retired';
+
+  @override
+  String get qrGeneratedAutomatically =>
+      'A unique QR token will be generated automatically.';
+
+  @override
+  String get qrScanningDescription =>
+      'The QR code can later contain this token for bike scanning.';
+
+  @override
+  String get bikeQrCode => 'Bike QR Code';
+
+  @override
+  String get qrTokenIdentifiesBike =>
+      'The following token will identify this bike when scanned.';
+
+  @override
+  String get qrToken => 'QR Token';
+
+  @override
+  String get qrTokenNotGenerated => 'QR token has not been generated';
+
+  @override
+  String get notGenerated => 'Not generated';
+
+  @override
+  String get qrPlaceholderDescription =>
+      'The visual QR image is currently a placeholder. Later we can generate an actual QR code from this token.';
+
+  @override
+  String get generatedQrCode => 'Generated QR Code';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get bikeInformation => 'Bike information';
+
+  @override
+  String get notSelected => 'Not selected';
+
+  @override
+  String get bikeAddedSuccessfully => 'Bike added successfully';
+
+  @override
+  String failedToAddBike(String error) {
+    return 'Failed to add bike: $error';
+  }
 }

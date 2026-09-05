@@ -490,6 +490,59 @@
   "reviewNote": "Review note",
   "noReviewNoteProvided": "No review note provided.",
   "reportCancelledStatus": "Report cancelled",
-  "reportCancelledDescription": "You cancelled this report before it was reviewed."
+  "reportCancelledDescription": "You cancelled this report before it was reviewed.",
+
+  "addNewBike": "Add new bike",
+  "step1BasicInformation": "Step 1 of 3 • Basic information",
+  "step2QrCode": "Step 2 of 3 • QR code",
+  "step3ReviewInformation": "Step 3 of 3 • Review information",
+
+  "bikeCode": "Bike Code",
+  "enterBikeCode": "Enter bike code",
+  "bikeCodeTooShort": "Bike code is too short",
+
+  "initialStation": "Initial station",
+  "pleaseSelectStation": "Please select a station",
+  "selectStation": "Select a station",
+  "unableToLoadStations": "Unable to load stations",
+  "noStationsAvailable": "No stations are available.",
+  "noStationSelected": "No station selected",
+
+  "batteryPercentage": "Battery percentage",
+  "enterBatteryPercentage": "Enter battery percentage",
+  "invalidBatteryPercentage": "Invalid battery percentage",
+  "enterValidNumber": "Enter a valid number",
+  "batteryRangeError": "Battery must be between 0 and 100",
+  "battery": "Battery",
+
+  "initialStatus": "Initial status",
+  "status": "Status",
+  "available": "Available",
+  "maintenance": "Maintenance",
+  "retired": "Retired",
+
+  "qrGeneratedAutomatically": "A unique QR token will be generated automatically.",
+  "qrScanningDescription": "The QR code can later contain this token for bike scanning.",
+  "bikeQrCode": "Bike QR Code",
+  "qrTokenIdentifiesBike": "The following token will identify this bike when scanned.",
+  "qrToken": "QR Token",
+  "qrTokenNotGenerated": "QR token has not been generated",
+  "notGenerated": "Not generated",
+  "qrPlaceholderDescription": "The visual QR image is currently a placeholder. Later we can generate an actual QR code from this token.",
+  "generatedQrCode": "Generated QR Code",
+
+  "next": "Next",
+  "bikeInformation": "Bike information",
+  "notSelected": "Not selected",
+
+  "bikeAddedSuccessfully": "Bike added successfully",
+  "failedToAddBike": "Failed to add bike: {error}",
+  "@failedToAddBike": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 
 }

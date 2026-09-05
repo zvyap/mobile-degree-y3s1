@@ -1,6 +1,7 @@
-import 'package:uuid/uuid.dart';
+import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/station.dart';
 import '../repositories/bike_repository.dart';
@@ -17,9 +18,14 @@ class AddBike extends StatefulWidget {
 
 class _AddBikeState extends State<AddBike> {
   final _formKey = GlobalKey<FormState>();
+
   final Uuid _uuid = const Uuid();
-  final BikeRepository _bikeRepository = BikeRepository();
-  final StationRepository _stationRepository = StationRepository();
+
+  final BikeRepository _bikeRepository =
+  BikeRepository();
+
+  final StationRepository _stationRepository =
+  StationRepository();
 
   final TextEditingController _bikeIdController =
   TextEditingController();
@@ -79,7 +85,8 @@ class _AddBikeState extends State<AddBike> {
         _stations = stations;
 
         if (stations.isNotEmpty) {
-          _selectedStationId ??= stations.first.id;
+          _selectedStationId ??=
+              stations.first.id;
         }
 
         _isLoadingStations = false;
@@ -88,8 +95,11 @@ class _AddBikeState extends State<AddBike> {
       if (!mounted) return;
 
       setState(() {
-        _stationError = error.toString();
-        _isLoadingStations = false;
+        _stationError =
+            error.toString();
+
+        _isLoadingStations =
+        false;
       });
     }
   }
@@ -98,7 +108,9 @@ class _AddBikeState extends State<AddBike> {
   // SNACKBAR
   // ===========================================================================
 
-  void showSnackBar(String message) {
+  void _showSnackBar(
+      String message,
+      ) {
     final messenger =
     ScaffoldMessenger.of(context);
 
@@ -106,7 +118,8 @@ class _AddBikeState extends State<AddBike> {
 
     messenger.showSnackBar(
       SnackBar(
-        content: Text(message),
+        content:
+        Text(message),
       ),
     );
   }
@@ -123,23 +136,34 @@ class _AddBikeState extends State<AddBike> {
   // NEXT STEP
   // ===========================================================================
 
-  void _goToNextStep(int nextStep) {
+  void _goToNextStep(
+      int nextStep,
+      ) {
+    final l10n =
+    AppLocalizations.of(context);
+
     if (nextStep == 1) {
-      if (!(_formKey.currentState?.validate() ??
+      if (!(_formKey.currentState
+          ?.validate() ??
           false)) {
         return;
       }
 
-      if (_selectedStationId == null) {
-        showSnackBar(
-          'Please select a station',
+      if (_selectedStationId ==
+          null) {
+        _showSnackBar(
+          l10n.pleaseSelectStation,
         );
+
         return;
       }
 
       setState(() {
-        _qrToken = _generateQrToken();
-        _currentStep = 1;
+        _qrToken =
+            _generateQrToken();
+
+        _currentStep =
+        1;
       });
 
       return;
@@ -147,7 +171,8 @@ class _AddBikeState extends State<AddBike> {
 
     if (nextStep == 2) {
       setState(() {
-        _currentStep = 2;
+        _currentStep =
+        2;
       });
     }
   }
@@ -157,69 +182,95 @@ class _AddBikeState extends State<AddBike> {
   // ===========================================================================
 
   Future<void> _addBike() async {
-    final user = Supabase.instance.client.auth.currentUser;
+    final l10n =
+    AppLocalizations.of(context);
 
-    debugPrint('Current user: ${user?.id}');
-    debugPrint('Current email: ${user?.email}');
+    final user =
+        Supabase.instance.client.auth.currentUser;
+
+    debugPrint(
+      'Current user: ${user?.id}',
+    );
+
+    debugPrint(
+      'Current email: ${user?.email}',
+    );
+
     if (_isSaving) return;
 
     final batteryPercent =
     int.tryParse(
-      _batteryController.text.trim(),
+      _batteryController.text
+          .trim(),
     );
 
-    if (batteryPercent == null) {
-      showSnackBar(
-        'Invalid battery percentage',
+    if (batteryPercent ==
+        null) {
+      _showSnackBar(
+        l10n.invalidBatteryPercentage,
       );
+
       return;
     }
 
-    if (_selectedStationId == null) {
-      showSnackBar(
-        'No station selected',
+    if (_selectedStationId ==
+        null) {
+      _showSnackBar(
+        l10n.noStationSelected,
       );
+
       return;
     }
 
     if (_qrToken == null) {
-      showSnackBar(
-        'QR token has not been generated',
+      _showSnackBar(
+        l10n.qrTokenNotGenerated,
       );
+
       return;
     }
 
     try {
       setState(() {
-        _isSaving = true;
+        _isSaving =
+        true;
       });
 
       await _bikeRepository.addBike(
-        code: _bikeIdController.text
+        code:
+        _bikeIdController.text
             .trim()
             .toUpperCase(),
-        qrToken: _qrToken!,
-        stationId: _selectedStationId!,
-        batteryPercent: batteryPercent,
-        status: _selectedStatus,
+        qrToken:
+        _qrToken!,
+        stationId:
+        _selectedStationId!,
+        batteryPercent:
+        batteryPercent,
+        status:
+        _selectedStatus,
       );
 
       if (!mounted) return;
 
-      showSnackBar(
-        'Bike added successfully',
+      _showSnackBar(
+        l10n.bikeAddedSuccessfully,
       );
 
-      Navigator.of(context).pop(true);
+      Navigator.of(context)
+          .pop(true);
     } catch (error) {
       if (!mounted) return;
 
       setState(() {
-        _isSaving = false;
+        _isSaving =
+        false;
       });
 
-      showSnackBar(
-        'Failed to add bike: $error',
+      _showSnackBar(
+        l10n.failedToAddBike(
+          error.toString(),
+        ),
       );
     }
   }
@@ -229,12 +280,22 @@ class _AddBikeState extends State<AddBike> {
   // ===========================================================================
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context,
+      ) {
     return switch (_currentStep) {
-      0 => _buildStepOne(context),
-      1 => _buildStepTwo(context),
-      2 => _buildStepThree(context),
-      _ => _buildStepOne(context),
+      0 => _buildStepOne(
+        context,
+      ),
+      1 => _buildStepTwo(
+        context,
+      ),
+      2 => _buildStepThree(
+        context,
+      ),
+      _ => _buildStepOne(
+        context,
+      ),
     };
   }
 
@@ -245,13 +306,22 @@ class _AddBikeState extends State<AddBike> {
   Widget _buildStepOne(
       BuildContext context,
       ) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final theme =
+    Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
+
+    final l10n =
+    AppLocalizations.of(context);
 
     return Form(
-      key: _formKey,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(
+      key:
+      _formKey,
+      child:
+      ListView(
+        padding:
+        const EdgeInsets.fromLTRB(
           18,
           16,
           18,
@@ -259,71 +329,103 @@ class _AddBikeState extends State<AddBike> {
         ),
         children: [
           // -------------------------------------------------------------------
-          // Title
+          // TITLE
           // -------------------------------------------------------------------
 
           Text(
-            'Add new bike',
-            style:
-            theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
+            l10n.addNewBike,
+            style: theme
+                .textTheme
+                .headlineSmall
+                ?.copyWith(
+              fontWeight:
+              FontWeight.w800,
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(
+            height:
+            8,
+          ),
 
           Text(
-            'Step 1 of 3 • Basic information',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurface.withValues(
-                alpha: 0.75,
+            l10n.step1BasicInformation,
+            style: theme
+                .textTheme
+                .bodySmall
+                ?.copyWith(
+              color: scheme
+                  .onSurface
+                  .withValues(
+                alpha:
+                0.75,
               ),
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(
+            height:
+            10,
+          ),
 
           ClipRRect(
             borderRadius:
-            BorderRadius.circular(20),
-            child: LinearProgressIndicator(
-              value: 1 / 3,
-              minHeight: 6,
+            BorderRadius.circular(
+              20,
+            ),
+            child:
+            LinearProgressIndicator(
+              value:
+              1 / 3,
+              minHeight:
+              6,
               backgroundColor:
               scheme.surfaceContainerHighest,
             ),
           ),
 
-          const SizedBox(height: 28),
+          const SizedBox(
+            height:
+            28,
+          ),
 
           // -------------------------------------------------------------------
-          // Bike ID
+          // BIKE CODE
           // -------------------------------------------------------------------
 
           _FormSection(
-            label: 'Bike Code',
-            child: TextFormField(
+            label:
+            l10n.bikeCode,
+            child:
+            TextFormField(
               controller:
               _bikeIdController,
               textCapitalization:
               TextCapitalization.characters,
               decoration:
               const InputDecoration(
-                hintText: 'BIKE-1000',
-                prefixIcon: Icon(
+                hintText:
+                'BIKE-1000',
+                prefixIcon:
+                Icon(
                   Icons.directions_bike_rounded,
                 ),
               ),
-              validator: (value) {
+              validator:
+                  (value) {
                 final code =
-                    value?.trim() ?? '';
+                    value?.trim() ??
+                        '';
 
                 if (code.isEmpty) {
-                  return 'Enter bike ID';
+                  return l10n
+                      .enterBikeCode;
                 }
 
-                if (code.length < 3) {
-                  return 'Bike ID is too short';
+                if (code.length <
+                    3) {
+                  return l10n
+                      .bikeCodeTooShort;
                 }
 
                 return null;
@@ -331,54 +433,73 @@ class _AddBikeState extends State<AddBike> {
             ),
           ),
 
-          const SizedBox(height: 18),
-
-          // -------------------------------------------------------------------
-          // Station
-          // -------------------------------------------------------------------
-
-          const _FieldLabel(
-            'Initial station',
+          const SizedBox(
+            height:
+            18,
           ),
 
-          const SizedBox(height: 6),
+          // -------------------------------------------------------------------
+          // STATION
+          // -------------------------------------------------------------------
+
+          _FieldLabel(
+            l10n.initialStation,
+          ),
+
+          const SizedBox(
+            height:
+            6,
+          ),
 
           if (_isLoadingStations)
             const Padding(
               padding:
               EdgeInsets.symmetric(
-                vertical: 20,
+                vertical:
+                20,
               ),
-              child: Center(
+              child:
+              Center(
                 child:
                 CircularProgressIndicator(),
               ),
             )
-          else if (_stationError != null)
+          else if (_stationError !=
+              null)
             Container(
               padding:
-              const EdgeInsets.all(12),
-              decoration: BoxDecoration(
+              const EdgeInsets.all(
+                12,
+              ),
+              decoration:
+              BoxDecoration(
                 color:
                 scheme.errorContainer,
                 borderRadius:
-                BorderRadius.circular(12),
+                BorderRadius.circular(
+                  12,
+                ),
               ),
-              child: Column(
+              child:
+              Column(
                 crossAxisAlignment:
                 CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Unable to load stations',
-                    style: TextStyle(
-                      color: scheme
-                          .onErrorContainer,
+                    l10n.unableToLoadStations,
+                    style:
+                    TextStyle(
+                      color:
+                      scheme.onErrorContainer,
                       fontWeight:
                       FontWeight.w700,
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(
+                    height:
+                    8,
+                  ),
 
                   Text(
                     _stationError!,
@@ -386,43 +507,51 @@ class _AddBikeState extends State<AddBike> {
                     theme.textTheme.bodySmall,
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(
+                    height:
+                    8,
+                  ),
 
                   OutlinedButton.icon(
                     onPressed:
                     _loadStations,
-                    icon: const Icon(
+                    icon:
+                    const Icon(
                       Icons.refresh_rounded,
                     ),
-                    label: const Text(
-                      'Retry',
+                    label:
+                    Text(
+                      l10n.retry,
                     ),
                   ),
                 ],
               ),
             )
           else if (_stations.isEmpty)
-              const Text(
-                'No stations are available.',
+              Text(
+                l10n.noStationsAvailable,
               )
             else
               DropdownButtonFormField<int>(
                 initialValue:
                 _selectedStationId,
-                isExpanded: true,
+                isExpanded:
+                true,
                 decoration:
                 const InputDecoration(
-                  prefixIcon: Icon(
-                    Icons
-                        .location_on_outlined,
+                  prefixIcon:
+                  Icon(
+                    Icons.location_on_outlined,
                   ),
                 ),
-                items: _stations.map(
+                items:
+                _stations.map(
                       (station) {
-                    return DropdownMenuItem<
-                        int>(
-                      value: station.id,
-                      child: Text(
+                    return DropdownMenuItem<int>(
+                      value:
+                      station.id,
+                      child:
+                      Text(
                         station.name,
                         overflow:
                         TextOverflow.ellipsis,
@@ -430,46 +559,63 @@ class _AddBikeState extends State<AddBike> {
                     );
                   },
                 ).toList(),
-                onChanged: (value) {
+                onChanged:
+                    (value) {
                   setState(() {
                     _selectedStationId =
                         value;
                   });
                 },
-                validator: (value) {
-                  if (value == null) {
-                    return 'Select a station';
+                validator:
+                    (value) {
+                  if (value ==
+                      null) {
+                    return l10n
+                        .selectStation;
                   }
 
                   return null;
                 },
               ),
 
-          const SizedBox(height: 18),
+          const SizedBox(
+            height:
+            18,
+          ),
 
           // -------------------------------------------------------------------
-          // Battery
+          // BATTERY
           // -------------------------------------------------------------------
 
           _FormSection(
-            label: 'Battery percentage',
-            child: TextFormField(
+            label:
+            l10n.batteryPercentage,
+            child:
+            TextFormField(
               controller:
               _batteryController,
               keyboardType:
               TextInputType.number,
               decoration:
               const InputDecoration(
-                hintText: '100',
-                suffixText: '%',
-                prefixIcon: Icon(
+                hintText:
+                '100',
+                suffixText:
+                '%',
+                prefixIcon:
+                Icon(
                   Icons.battery_full_rounded,
                 ),
               ),
-              validator: (value) {
-                if (value == null ||
-                    value.trim().isEmpty) {
-                  return 'Enter battery percentage';
+              validator:
+                  (value) {
+                if (value ==
+                    null ||
+                    value
+                        .trim()
+                        .isEmpty) {
+                  return l10n
+                      .enterBatteryPercentage;
                 }
 
                 final battery =
@@ -477,13 +623,18 @@ class _AddBikeState extends State<AddBike> {
                   value.trim(),
                 );
 
-                if (battery == null) {
-                  return 'Enter a valid number';
+                if (battery ==
+                    null) {
+                  return l10n
+                      .enterValidNumber;
                 }
 
-                if (battery < 0 ||
-                    battery > 100) {
-                  return 'Battery must be between 0 and 100';
+                if (battery <
+                    0 ||
+                    battery >
+                        100) {
+                  return l10n
+                      .batteryRangeError;
                 }
 
                 return null;
@@ -491,42 +642,56 @@ class _AddBikeState extends State<AddBike> {
             ),
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(
+            height:
+            18,
+          ),
 
           // -------------------------------------------------------------------
-          // Status
+          // STATUS
           // -------------------------------------------------------------------
 
           _FormSection(
-            label: 'Initial status',
+            label:
+            l10n.initialStatus,
             child:
-            DropdownButtonFormField<
-                String>(
+            DropdownButtonFormField<String>(
               initialValue:
               _selectedStatus,
-              isExpanded: true,
-              items: const [
+              isExpanded:
+              true,
+              items: [
                 DropdownMenuItem(
-                  value: 'available',
-                  child: Text(
-                    'Available',
+                  value:
+                  'available',
+                  child:
+                  Text(
+                    l10n.available,
                   ),
                 ),
                 DropdownMenuItem(
-                  value: 'maintenance',
-                  child: Text(
-                    'Maintenance',
+                  value:
+                  'maintenance',
+                  child:
+                  Text(
+                    l10n.maintenance,
                   ),
                 ),
                 DropdownMenuItem(
-                  value: 'unavailable',
-                  child: Text(
-                    'Unavailable',
+                  value:
+                  'retired',
+                  child:
+                  Text(
+                    l10n.retired,
                   ),
                 ),
               ],
-              onChanged: (value) {
-                if (value == null) return;
+              onChanged:
+                  (value) {
+                if (value ==
+                    null) {
+                  return;
+                }
 
                 setState(() {
                   _selectedStatus =
@@ -536,43 +701,58 @@ class _AddBikeState extends State<AddBike> {
             ),
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(
+            height:
+            18,
+          ),
 
           // -------------------------------------------------------------------
-          // QR info
+          // QR INFO
           // -------------------------------------------------------------------
 
           Container(
             padding:
             const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 11,
+              horizontal:
+              12,
+              vertical:
+              11,
             ),
-            decoration: BoxDecoration(
-              color: scheme
-                  .surfaceContainerHighest,
+            decoration:
+            BoxDecoration(
+              color:
+              scheme.surfaceContainerHighest,
               borderRadius:
-              BorderRadius.circular(12),
+              BorderRadius.circular(
+                12,
+              ),
             ),
-            child: Row(
+            child:
+            Row(
               crossAxisAlignment:
               CrossAxisAlignment.start,
               children: [
                 Icon(
                   Icons.info_rounded,
-                  color: scheme.primary,
-                  size: 22,
+                  color:
+                  scheme.primary,
+                  size:
+                  22,
                 ),
 
-                const SizedBox(width: 10),
+                const SizedBox(
+                  width:
+                  10,
+                ),
 
                 Expanded(
-                  child: Column(
+                  child:
+                  Column(
                     crossAxisAlignment:
                     CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'A unique QR token will be generated automatically.',
+                        l10n.qrGeneratedAutomatically,
                         style: theme
                             .textTheme
                             .bodySmall
@@ -583,11 +763,12 @@ class _AddBikeState extends State<AddBike> {
                       ),
 
                       const SizedBox(
-                        height: 2,
+                        height:
+                        2,
                       ),
 
                       Text(
-                        'The QR code can later contain this token for bike scanning.',
+                        l10n.qrScanningDescription,
                         style: theme
                             .textTheme
                             .bodySmall
@@ -595,7 +776,8 @@ class _AddBikeState extends State<AddBike> {
                           color: scheme
                               .onSurface
                               .withValues(
-                            alpha: 0.60,
+                            alpha:
+                            0.60,
                           ),
                         ),
                       ),
@@ -606,19 +788,26 @@ class _AddBikeState extends State<AddBike> {
             ),
           ),
 
-          const SizedBox(height: 28),
+          const SizedBox(
+            height:
+            28,
+          ),
 
           // -------------------------------------------------------------------
-          // Next
+          // NEXT
           // -------------------------------------------------------------------
 
           Align(
             alignment:
             Alignment.centerRight,
-            child: SizedBox(
-              width: 125,
-              height: 48,
-              child: FilledButton(
+            child:
+            SizedBox(
+              width:
+              125,
+              height:
+              48,
+              child:
+              FilledButton(
                 onPressed:
                 _isLoadingStations ||
                     _stations.isEmpty
@@ -628,21 +817,25 @@ class _AddBikeState extends State<AddBike> {
                     1,
                   );
                 },
-                child: const Row(
+                child:
+                Row(
                   mainAxisAlignment:
                   MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Next',
-                      style: TextStyle(
+                      l10n.next,
+                      style:
+                      const TextStyle(
                         fontWeight:
                         FontWeight.w700,
                       ),
                     ),
-                    SizedBox(width: 8),
-                    Icon(
-                      Icons
-                          .chevron_right_rounded,
+                    const SizedBox(
+                      width:
+                      8,
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
                     ),
                   ],
                 ),
@@ -661,11 +854,18 @@ class _AddBikeState extends State<AddBike> {
   Widget _buildStepTwo(
       BuildContext context,
       ) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final theme =
+    Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
+
+    final l10n =
+    AppLocalizations.of(context);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
+      padding:
+      const EdgeInsets.fromLTRB(
         18,
         16,
         18,
@@ -673,77 +873,116 @@ class _AddBikeState extends State<AddBike> {
       ),
       children: [
         Text(
-          'Add new bike',
-          style:
-          theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
+          l10n.addNewBike,
+          style: theme
+              .textTheme
+              .headlineSmall
+              ?.copyWith(
+            fontWeight:
+            FontWeight.w800,
           ),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(
+          height:
+          8,
+        ),
 
         Text(
-          'Step 2 of 3 • QR code',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: scheme.onSurface.withValues(
-              alpha: 0.75,
+          l10n.step2QrCode,
+          style: theme
+              .textTheme
+              .bodySmall
+              ?.copyWith(
+            color: scheme
+                .onSurface
+                .withValues(
+              alpha:
+              0.75,
             ),
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(
+          height:
+          10,
+        ),
 
         ClipRRect(
           borderRadius:
-          BorderRadius.circular(20),
-          child: LinearProgressIndicator(
-            value: 2 / 3,
-            minHeight: 6,
+          BorderRadius.circular(
+            20,
+          ),
+          child:
+          LinearProgressIndicator(
+            value:
+            2 / 3,
+            minHeight:
+            6,
             backgroundColor:
             scheme.surfaceContainerHighest,
           ),
         ),
 
-        const SizedBox(height: 28),
+        const SizedBox(
+          height:
+          28,
+        ),
 
         Text(
-          'Bike QR Code',
-          style:
-          theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
+          l10n.bikeQrCode,
+          style: theme
+              .textTheme
+              .titleMedium
+              ?.copyWith(
+            fontWeight:
+            FontWeight.w800,
           ),
         ),
 
-        const SizedBox(height: 8),
-
-        Text(
-          'The following token will identify this bike when scanned.',
-          style: theme.textTheme.bodySmall,
+        const SizedBox(
+          height:
+          8,
         ),
 
-        const SizedBox(height: 24),
+        Text(
+          l10n.qrTokenIdentifiesBike,
+          style:
+          theme.textTheme.bodySmall,
+        ),
+
+        const SizedBox(
+          height:
+          24,
+        ),
 
         Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
+          width:
+          double.infinity,
+          padding:
+          const EdgeInsets.all(
+            24,
+          ),
+          decoration:
+          BoxDecoration(
             color:
             scheme.surfaceContainer,
             borderRadius:
-            BorderRadius.circular(16),
-            border: Border.all(
+            BorderRadius.circular(
+              16,
+            ),
+            border:
+            Border.all(
               color: scheme.outline
                   .withValues(
-                alpha: 0.5,
+                alpha:
+                0.5,
               ),
             ),
           ),
-          child: Column(
+          child:
+          Column(
             children: [
-              // ---------------------------------------------------------------
-              // Bike code
-              // ---------------------------------------------------------------
-
               Text(
                 _bikeIdController.text
                     .trim()
@@ -757,33 +996,44 @@ class _AddBikeState extends State<AddBike> {
                 ),
               ),
 
-              const SizedBox(height: 24),
-
-              // ---------------------------------------------------------------
-              // QR placeholder
-              // ---------------------------------------------------------------
+              const SizedBox(
+                height:
+                24,
+              ),
 
               Container(
-                width: 220,
-                height: 220,
+                width:
+                220,
+                height:
+                220,
                 alignment:
                 Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white,
+                decoration:
+                BoxDecoration(
+                  color:
+                  Colors.white,
                   borderRadius:
-                  BorderRadius.circular(12),
+                  BorderRadius.circular(
+                    12,
+                  ),
                 ),
-                child: const Icon(
+                child:
+                const Icon(
                   Icons.qr_code_2_rounded,
-                  size: 190,
-                  color: Colors.black,
+                  size:
+                  190,
+                  color:
+                  Colors.black,
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(
+                height:
+                24,
+              ),
 
               Text(
-                'QR Token',
+                l10n.qrToken,
                 style: theme
                     .textTheme
                     .labelMedium
@@ -793,30 +1043,38 @@ class _AddBikeState extends State<AddBike> {
                 ),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(
+                height:
+                8,
+              ),
 
               SelectableText(
                 _qrToken ??
-                    'Not generated',
+                    l10n.notGenerated,
                 textAlign:
                 TextAlign.center,
                 style:
                 theme.textTheme.bodySmall,
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(
+                height:
+                12,
+              ),
 
               Text(
-                'The visual QR image is currently a placeholder. Later we can generate an actual QR code from this token.',
+                l10n.qrPlaceholderDescription,
                 textAlign:
                 TextAlign.center,
                 style: theme
                     .textTheme
                     .bodySmall
                     ?.copyWith(
-                  color: scheme.onSurface
+                  color: scheme
+                      .onSurface
                       .withValues(
-                    alpha: 0.6,
+                    alpha:
+                    0.6,
                   ),
                 ),
               ),
@@ -824,33 +1082,45 @@ class _AddBikeState extends State<AddBike> {
           ),
         ),
 
-        const SizedBox(height: 60),
+        const SizedBox(
+          height:
+          60,
+        ),
 
         Row(
           mainAxisAlignment:
           MainAxisAlignment.spaceBetween,
           children: [
             SizedBox(
-              width: 125,
-              height: 48,
-              child: OutlinedButton(
-                onPressed: () {
+              width:
+              125,
+              height:
+              48,
+              child:
+              OutlinedButton(
+                onPressed:
+                    () {
                   setState(() {
-                    _currentStep = 0;
+                    _currentStep =
+                    0;
                   });
                 },
-                child: const Row(
+                child:
+                Row(
                   mainAxisAlignment:
                   MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons
-                          .chevron_left_rounded,
+                    const Icon(
+                      Icons.chevron_left_rounded,
                     ),
-                    SizedBox(width: 6),
+                    const SizedBox(
+                      width:
+                      6,
+                    ),
                     Text(
-                      'Back',
-                      style: TextStyle(
+                      l10n.back,
+                      style:
+                      const TextStyle(
                         fontWeight:
                         FontWeight.w700,
                       ),
@@ -861,27 +1131,37 @@ class _AddBikeState extends State<AddBike> {
             ),
 
             SizedBox(
-              width: 125,
-              height: 48,
-              child: FilledButton(
-                onPressed: () {
-                  _goToNextStep(2);
+              width:
+              125,
+              height:
+              48,
+              child:
+              FilledButton(
+                onPressed:
+                    () {
+                  _goToNextStep(
+                    2,
+                  );
                 },
-                child: const Row(
+                child:
+                Row(
                   mainAxisAlignment:
                   MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Next',
-                      style: TextStyle(
+                      l10n.next,
+                      style:
+                      const TextStyle(
                         fontWeight:
                         FontWeight.w700,
                       ),
                     ),
-                    SizedBox(width: 6),
-                    Icon(
-                      Icons
-                          .chevron_right_rounded,
+                    const SizedBox(
+                      width:
+                      6,
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
                     ),
                   ],
                 ),
@@ -900,14 +1180,21 @@ class _AddBikeState extends State<AddBike> {
   Widget _buildStepThree(
       BuildContext context,
       ) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final theme =
+    Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
+
+    final l10n =
+    AppLocalizations.of(context);
 
     final selectedStation =
     _getSelectedStation();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
+      padding:
+      const EdgeInsets.fromLTRB(
         18,
         16,
         18,
@@ -915,65 +1202,97 @@ class _AddBikeState extends State<AddBike> {
       ),
       children: [
         Text(
-          'Add new bike',
-          style:
-          theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
+          l10n.addNewBike,
+          style: theme
+              .textTheme
+              .headlineSmall
+              ?.copyWith(
+            fontWeight:
+            FontWeight.w800,
           ),
         ),
 
-        const SizedBox(height: 8),
+        const SizedBox(
+          height:
+          8,
+        ),
 
         Text(
-          'Step 3 of 3 • Review information',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: scheme.onSurface.withValues(
-              alpha: 0.75,
+          l10n.step3ReviewInformation,
+          style: theme
+              .textTheme
+              .bodySmall
+              ?.copyWith(
+            color: scheme
+                .onSurface
+                .withValues(
+              alpha:
+              0.75,
             ),
           ),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(
+          height:
+          10,
+        ),
 
         ClipRRect(
           borderRadius:
-          BorderRadius.circular(20),
-          child: LinearProgressIndicator(
-            value: 1,
-            minHeight: 6,
+          BorderRadius.circular(
+            20,
+          ),
+          child:
+          LinearProgressIndicator(
+            value:
+            1,
+            minHeight:
+            6,
             backgroundColor:
             scheme.surfaceContainerHighest,
           ),
         ),
 
-        const SizedBox(height: 28),
+        const SizedBox(
+          height:
+          28,
+        ),
 
         // ---------------------------------------------------------------------
-        // Review card
+        // REVIEW CARD
         // ---------------------------------------------------------------------
 
         Container(
-          width: double.infinity,
+          width:
+          double.infinity,
           padding:
-          const EdgeInsets.all(18),
-          decoration: BoxDecoration(
+          const EdgeInsets.all(
+            18,
+          ),
+          decoration:
+          BoxDecoration(
             color:
             scheme.surfaceContainer,
             borderRadius:
-            BorderRadius.circular(16),
-            border: Border.all(
+            BorderRadius.circular(
+              16,
+            ),
+            border:
+            Border.all(
               color: scheme.outline
                   .withValues(
-                alpha: 0.5,
+                alpha:
+                0.5,
               ),
             ),
           ),
-          child: Column(
+          child:
+          Column(
             crossAxisAlignment:
             CrossAxisAlignment.start,
             children: [
               Text(
-                'Bike information',
+                l10n.bikeInformation,
                 style: theme
                     .textTheme
                     .titleMedium
@@ -983,59 +1302,84 @@ class _AddBikeState extends State<AddBike> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(
+                height:
+                20,
+              ),
 
               _reviewRow(
                 context,
-                label: 'Bike ID:',
+                label:
+                '${l10n.bikeId}:',
                 value:
                 _bikeIdController.text
                     .trim()
                     .toUpperCase(),
               ),
 
-              const SizedBox(height: 14),
-
-              _reviewRow(
-                context,
-                label: 'Initial station:',
-                value:
-                selectedStation?.name ??
-                    'Not selected',
+              const SizedBox(
+                height:
+                14,
               ),
 
-              const SizedBox(height: 14),
+              _reviewRow(
+                context,
+                label:
+                '${l10n.initialStation}:',
+                value:
+                selectedStation?.name ??
+                    l10n.notSelected,
+              ),
+
+              const SizedBox(
+                height:
+                14,
+              ),
 
               _reviewRow(
                 context,
-                label: 'Battery:',
+                label:
+                '${l10n.battery}:',
                 value:
                 '${_batteryController.text.trim()}%',
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(
+                height:
+                14,
+              ),
 
               _reviewRow(
                 context,
-                label: 'Status:',
-                value: _statusDisplayName(
+                label:
+                '${l10n.status}:',
+                value:
+                _statusDisplayName(
                   _selectedStatus,
+                  l10n,
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(
+                height:
+                24,
+              ),
 
               Divider(
                 color: scheme.outline
                     .withValues(
-                  alpha: 0.5,
+                  alpha:
+                  0.5,
                 ),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(
+                height:
+                18,
+              ),
 
               Text(
-                'Generated QR Code',
+                l10n.generatedQrCode,
                 style: theme
                     .textTheme
                     .titleSmall
@@ -1045,29 +1389,43 @@ class _AddBikeState extends State<AddBike> {
                 ),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(
+                height:
+                18,
+              ),
 
               Center(
-                child: Container(
-                  width: 120,
-                  height: 120,
+                child:
+                Container(
+                  width:
+                  120,
+                  height:
+                  120,
                   alignment:
                   Alignment.center,
-                  color: Colors.white,
-                  child: const Icon(
+                  color:
+                  Colors.white,
+                  child:
+                  const Icon(
                     Icons.qr_code_2_rounded,
-                    size: 105,
-                    color: Colors.black,
+                    size:
+                    105,
+                    color:
+                    Colors.black,
                   ),
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(
+                height:
+                12,
+              ),
 
               Center(
-                child: SelectableText(
+                child:
+                SelectableText(
                   _qrToken ??
-                      'Not generated',
+                      l10n.notGenerated,
                   textAlign:
                   TextAlign.center,
                   style:
@@ -1078,10 +1436,13 @@ class _AddBikeState extends State<AddBike> {
           ),
         ),
 
-        const SizedBox(height: 40),
+        const SizedBox(
+          height:
+          40,
+        ),
 
         // ---------------------------------------------------------------------
-        // Back + Add
+        // BACK + ADD
         // ---------------------------------------------------------------------
 
         Row(
@@ -1089,28 +1450,37 @@ class _AddBikeState extends State<AddBike> {
           MainAxisAlignment.spaceBetween,
           children: [
             SizedBox(
-              width: 125,
-              height: 48,
-              child: OutlinedButton(
-                onPressed: _isSaving
+              width:
+              125,
+              height:
+              48,
+              child:
+              OutlinedButton(
+                onPressed:
+                _isSaving
                     ? null
                     : () {
                   setState(() {
-                    _currentStep = 1;
+                    _currentStep =
+                    1;
                   });
                 },
-                child: const Row(
+                child:
+                Row(
                   mainAxisAlignment:
                   MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons
-                          .chevron_left_rounded,
+                    const Icon(
+                      Icons.chevron_left_rounded,
                     ),
-                    SizedBox(width: 6),
+                    const SizedBox(
+                      width:
+                      6,
+                    ),
                     Text(
-                      'Back',
-                      style: TextStyle(
+                      l10n.back,
+                      style:
+                      const TextStyle(
                         fontWeight:
                         FontWeight.w700,
                       ),
@@ -1121,25 +1491,33 @@ class _AddBikeState extends State<AddBike> {
             ),
 
             SizedBox(
-              width: 125,
-              height: 48,
-              child: FilledButton(
+              width:
+              125,
+              height:
+              48,
+              child:
+              FilledButton(
                 onPressed:
                 _isSaving
                     ? null
                     : _addBike,
-                child: _isSaving
+                child:
+                _isSaving
                     ? const SizedBox(
-                  width: 20,
-                  height: 20,
+                  width:
+                  20,
+                  height:
+                  20,
                   child:
                   CircularProgressIndicator(
-                    strokeWidth: 2,
+                    strokeWidth:
+                    2,
                   ),
                 )
-                    : const Text(
-                  'Add Bike',
-                  style: TextStyle(
+                    : Text(
+                  l10n.addBike,
+                  style:
+                  const TextStyle(
                     fontWeight:
                     FontWeight.w700,
                   ),
@@ -1157,11 +1535,13 @@ class _AddBikeState extends State<AddBike> {
   // ===========================================================================
 
   Station? _getSelectedStation() {
-    if (_selectedStationId == null) {
+    if (_selectedStationId ==
+        null) {
       return null;
     }
 
-    for (final station in _stations) {
+    for (final station
+    in _stations) {
       if (station.id ==
           _selectedStationId) {
         return station;
@@ -1173,16 +1553,17 @@ class _AddBikeState extends State<AddBike> {
 
   String _statusDisplayName(
       String status,
+      AppLocalizations l10n,
       ) {
     switch (status) {
       case 'available':
-        return 'Available';
+        return l10n.available;
 
       case 'maintenance':
-        return 'Maintenance';
+        return l10n.maintenance;
 
-      case 'unavailable':
-        return 'Unavailable';
+      case 'retired':
+        return l10n.retired;
 
       default:
         return status;
@@ -1194,15 +1575,18 @@ class _AddBikeState extends State<AddBike> {
         required String label,
         required String value,
       }) {
-    final theme = Theme.of(context);
+    final theme =
+    Theme.of(context);
 
     return Row(
       crossAxisAlignment:
       CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 130,
-          child: Text(
+          width:
+          130,
+          child:
+          Text(
             label,
             style: theme
                 .textTheme
@@ -1214,10 +1598,14 @@ class _AddBikeState extends State<AddBike> {
           ),
         ),
 
-        const SizedBox(width: 8),
+        const SizedBox(
+          width:
+          8,
+        ),
 
         Expanded(
-          child: Text(
+          child:
+          Text(
             value,
             style:
             theme.textTheme.bodyMedium,
@@ -1242,13 +1630,20 @@ class _FormSection extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context,
+      ) {
     return Column(
       crossAxisAlignment:
       CrossAxisAlignment.start,
       children: [
-        _FieldLabel(label),
-        const SizedBox(height: 6),
+        _FieldLabel(
+          label,
+        ),
+        const SizedBox(
+          height:
+          6,
+        ),
         child,
       ],
     );
@@ -1267,7 +1662,9 @@ class _FieldLabel extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context,
+      ) {
     return Text(
       text,
       style: Theme.of(context)

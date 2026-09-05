@@ -2003,6 +2003,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You cancelled this report before it was reviewed.'**
   String get reportCancelledDescription;
+
+  /// No description provided for @addNewBike.
+  ///
+  /// In en, this message translates to:
+  /// **'Add new bike'**
+  String get addNewBike;
+
+  /// No description provided for @step1BasicInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Step 1 of 3 • Basic information'**
+  String get step1BasicInformation;
+
+  /// No description provided for @step2QrCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Step 2 of 3 • QR code'**
+  String get step2QrCode;
+
+  /// No description provided for @step3ReviewInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Step 3 of 3 • Review information'**
+  String get step3ReviewInformation;
+
+  /// No description provided for @bikeCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike Code'**
+  String get bikeCode;
+
+  /// No description provided for @enterBikeCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter bike code'**
+  String get enterBikeCode;
+
+  /// No description provided for @bikeCodeTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike code is too short'**
+  String get bikeCodeTooShort;
+
+  /// No description provided for @initialStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial station'**
+  String get initialStation;
+
+  /// No description provided for @pleaseSelectStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a station'**
+  String get pleaseSelectStation;
+
+  /// No description provided for @selectStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a station'**
+  String get selectStation;
+
+  /// No description provided for @unableToLoadStations.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load stations'**
+  String get unableToLoadStations;
+
+  /// No description provided for @noStationsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No stations are available.'**
+  String get noStationsAvailable;
+
+  /// No description provided for @noStationSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'No station selected'**
+  String get noStationSelected;
+
+  /// No description provided for @batteryPercentage.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery percentage'**
+  String get batteryPercentage;
+
+  /// No description provided for @enterBatteryPercentage.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter battery percentage'**
+  String get enterBatteryPercentage;
+
+  /// No description provided for @invalidBatteryPercentage.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid battery percentage'**
+  String get invalidBatteryPercentage;
+
+  /// No description provided for @enterValidNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid number'**
+  String get enterValidNumber;
+
+  /// No description provided for @batteryRangeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery must be between 0 and 100'**
+  String get batteryRangeError;
+
+  /// No description provided for @battery.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery'**
+  String get battery;
+
+  /// No description provided for @initialStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial status'**
+  String get initialStatus;
+
+  /// No description provided for @status.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get status;
+
+  /// No description provided for @available.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get available;
+
+  /// No description provided for @maintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance'**
+  String get maintenance;
+
+  /// No description provided for @retired.
+  ///
+  /// In en, this message translates to:
+  /// **'Retired'**
+  String get retired;
+
+  /// No description provided for @qrGeneratedAutomatically.
+  ///
+  /// In en, this message translates to:
+  /// **'A unique QR token will be generated automatically.'**
+  String get qrGeneratedAutomatically;
+
+  /// No description provided for @qrScanningDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The QR code can later contain this token for bike scanning.'**
+  String get qrScanningDescription;
+
+  /// No description provided for @bikeQrCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike QR Code'**
+  String get bikeQrCode;
+
+  /// No description provided for @qrTokenIdentifiesBike.
+  ///
+  /// In en, this message translates to:
+  /// **'The following token will identify this bike when scanned.'**
+  String get qrTokenIdentifiesBike;
+
+  /// No description provided for @qrToken.
+  ///
+  /// In en, this message translates to:
+  /// **'QR Token'**
+  String get qrToken;
+
+  /// No description provided for @qrTokenNotGenerated.
+  ///
+  /// In en, this message translates to:
+  /// **'QR token has not been generated'**
+  String get qrTokenNotGenerated;
+
+  /// No description provided for @notGenerated.
+  ///
+  /// In en, this message translates to:
+  /// **'Not generated'**
+  String get notGenerated;
+
+  /// No description provided for @qrPlaceholderDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The visual QR image is currently a placeholder. Later we can generate an actual QR code from this token.'**
+  String get qrPlaceholderDescription;
+
+  /// No description provided for @generatedQrCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Generated QR Code'**
+  String get generatedQrCode;
+
+  /// No description provided for @next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get next;
+
+  /// No description provided for @bikeInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike information'**
+  String get bikeInformation;
+
+  /// No description provided for @notSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not selected'**
+  String get notSelected;
+
+  /// No description provided for @bikeAddedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike added successfully'**
+  String get bikeAddedSuccessfully;
+
+  /// No description provided for @failedToAddBike.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to add bike: {error}'**
+  String failedToAddBike(String error);
 }
 
 class _AppLocalizationsDelegate
