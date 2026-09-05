@@ -30,17 +30,21 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
   }
 
   // Fetch bikes assigned to this station from Supabase
+  // Fetch bikes assigned to this station from Supabase
   Future<void> _fetchBikes() async {
-    final stationId = widget.stationData?['id'];
+    final rawStationId = widget.stationData?['id'];
 
-    if (stationId == null) {
+    if (rawStationId == null) {
       setState(() => isLoading = false);
       return;
     }
 
+    final stationId = int.tryParse(rawStationId.toString()) ?? rawStationId;
+
     setState(() => isLoading = true);
 
     try {
+      // 🟢 Fixed column name from 'station_id' to 'current_station_id'
       final response = await supabase
           .from('bikes')
           .select()
@@ -49,11 +53,13 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
 
       final fetchedBikes = List<Map<String, dynamic>>.from(response);
 
-      setState(() {
-        allBikes = fetchedBikes;
-        filteredBikes = fetchedBikes;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          allBikes = fetchedBikes;
+          filteredBikes = fetchedBikes;
+          isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() => isLoading = false);

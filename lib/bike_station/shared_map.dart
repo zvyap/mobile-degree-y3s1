@@ -633,6 +633,11 @@ class SharedBikeMapState extends State<SharedBikeMap> {
       final String stationCode = station['code']?.toString() ?? '';
       final String status = station['status']?.toString() ?? 'Normal';
 
+      // 🟢 Skip rendering markers for Terminated stations in User View (when isAdminMode is false)
+      if (!widget.isAdminMode && status.trim().toLowerCase() == 'terminated') {
+        continue;
+      }
+
       final bool isOrigin = widget.originStationId != null &&
           widget.originStationId!.isNotEmpty &&
           (stationId == widget.originStationId || stationCode == widget.originStationId);
@@ -654,11 +659,11 @@ class SharedBikeMapState extends State<SharedBikeMap> {
         markerColor = const Color(0xFFDC2626);
       }
 
-      // 🟢 Hard OVERRIDE for active route planner selection: Origin = Emerald Green, Destination = Royal Blue
+      // Hard OVERRIDE for active route planner selection: Origin = Emerald Green, Destination = Royal Blue
       if (isOrigin) {
-        markerColor = const Color(0xFF10B981); // Emerald Green
+        markerColor = const Color(0xFF10B981);
       } else if (isDestination) {
-        markerColor = const Color(0xFF2563EB); // Royal Blue
+        markerColor = const Color(0xFF2563EB);
       }
 
       final double effectiveSize = isSelected ? markerSize * 1.25 : markerSize;

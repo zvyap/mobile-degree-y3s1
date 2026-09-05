@@ -28,7 +28,6 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
   final GlobalKey<SharedBikeMapState> _mapTileKey = GlobalKey<SharedBikeMapState>();
   final DraggableScrollableController _sheetController = DraggableScrollableController();
 
-  // 🟢 Increased minimum bounds to ensure contents fit without overflowing
   static const double _minSheetSize = 0.32;
   static const double _initialSheetSize = 0.38;
   static const double _maxSheetSize = 0.70;
@@ -107,14 +106,15 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
     }
   }
 
-  void _openStationDetail(Map<String, dynamic> station) {
+  void _openStationDetail(Map<String, dynamic> station) async {
     searchFocusNode.unfocus();
     setState(() => isSearching = false);
 
     if (widget.isAdminDeleteMode) {
       _showDeleteConfirmationDialog(context, station, Theme.of(context), Theme.of(context).colorScheme, const Color(0xFFDC2626));
     } else {
-      Navigator.push(
+      // 🟢 Refresh stations when returning from detail view
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => StationDetailScreen(
@@ -123,6 +123,8 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
           ),
         ),
       );
+
+      fetchStations(); // Re-fetch updated station list from Supabase
     }
   }
 
@@ -411,8 +413,14 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
       );
     }
 
-    final isCurrentlySelected = selectedStation != null;
-    final displayStation = selectedStation ?? stations.first;
+    // 🟢 If currently selected station is terminated (e.g. from state), fallback to null/first active
+    final bool isSelectedTerminated = selectedStation != null &&
+        selectedStation!['status']?.toString().trim().toLowerCase() == 'terminated' &&
+        !widget.isAdminMode;
+
+    final displayStation = isSelectedTerminated ? stations.first : (selectedStation ?? stations.first);
+    final isCurrentlySelected = selectedStation != null && !isSelectedTerminated;
+
     final String statusStr = displayStation['status']?.toString() ?? 'Normal';
     final Color statusColor = _getStatusColor(statusStr);
 

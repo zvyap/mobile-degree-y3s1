@@ -6,14 +6,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bike_renting_app/bike_station/shared_map.dart';
 
 /// Base abstraction for station map views.
-///
-/// Encapsulates common state, Supabase/local station data loading,
-/// GPS location resolution, distance computation/formatting, geofencing,
-/// and map presentation.
-///
-/// Can be extended by:
-/// - [RefinedUserBikeView] for the main station browsing & admin screen.
-/// - [_ReturnStationMap] for the return station selection map in renting.
 abstract class BaseStationMapView extends StatefulWidget {
   final List<Map<String, dynamic>>? initialStations;
   final LatLng? initialCenter;
@@ -87,8 +79,12 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
   void didUpdateWidget(covariant T oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.initialStations != oldWidget.initialStations && widget.initialStations != null) {
+      var list = List<Map<String, dynamic>>.from(widget.initialStations!);
+      if (!widget.isAdminMode) {
+        list.removeWhere((s) => s['status']?.toString().trim().toLowerCase() == 'terminated');
+      }
       setState(() {
-        stations = List<Map<String, dynamic>>.from(widget.initialStations!);
+        stations = list;
         filteredStations = stations;
         if (widget.selectedStationId != null) {
           selectedStation = stations
@@ -100,8 +96,8 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
       setState(() {
         selectedStation = widget.selectedStationId != null
             ? stations
-                .where((s) => s['id']?.toString() == widget.selectedStationId)
-                .firstOrNull
+            .where((s) => s['id']?.toString() == widget.selectedStationId)
+            .firstOrNull
             : null;
       });
     }
@@ -146,8 +142,12 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
   /// Initialize station data either from [widget.initialStations] or Supabase
   Future<void> initStationData() async {
     if (widget.initialStations != null) {
+      var list = List<Map<String, dynamic>>.from(widget.initialStations!);
+      if (!widget.isAdminMode) {
+        list.removeWhere((s) => s['status']?.toString().trim().toLowerCase() == 'terminated');
+      }
       setState(() {
-        stations = List<Map<String, dynamic>>.from(widget.initialStations!);
+        stations = list;
         filteredStations = stations;
         isLoading = false;
         if (widget.selectedStationId != null) {
@@ -165,7 +165,7 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
     }
   }
 
-  /// Fetch stations from Supabase and sort them by distance from user location
+  /// Fetch stations from Supabase and filter out Terminated ones for non-admin mode
   Future<void> fetchStations() async {
     setState(() => isLoading = true);
     try {
@@ -184,6 +184,11 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
           .eq('is_active', true);
 
       List<Map<String, dynamic>> fetched = List<Map<String, dynamic>>.from(response);
+
+      // 🟢 Exclude Terminated stations in User View
+      if (!widget.isAdminMode) {
+        fetched.removeWhere((s) => s['status']?.toString().trim().toLowerCase() == 'terminated');
+      }
 
       if (userPos != null) {
         for (var s in fetched) {
