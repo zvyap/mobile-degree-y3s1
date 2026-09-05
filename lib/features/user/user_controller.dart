@@ -119,6 +119,7 @@ class UserController extends ChangeNotifier {
         selectedUser = updatedUser;
       }
     } catch (caught) {
+      debugPrint('UPDATE USER FAILED: $caught');
       error = UserError.userUpdateFailed;
     } finally {
       isBusy = false;

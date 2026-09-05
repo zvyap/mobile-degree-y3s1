@@ -54,6 +54,7 @@ class _BikeShellState extends State<BikeShell> {
     _profileController = ProfileController(repositories.profiles)
       ..addListener(_handleProfileChanged)
       ..loadProfile();
+    _userController = UserController(repositories.profiles);
     _navigatorObserver = AppNavigatorObserver(_handleRouteChanged);
     _lifecycleListener = AppLifecycleListener(
       onPause: _handleAppLifecycleExit,
@@ -76,6 +77,7 @@ class _BikeShellState extends State<BikeShell> {
     _lifecycleListener.dispose();
     _profileController.removeListener(_handleProfileChanged);
     _profileController.dispose();
+    _userController.dispose();
     _rentingController.dispose();
     super.dispose();
   }

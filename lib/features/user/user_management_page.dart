@@ -123,6 +123,17 @@ class _UserManagementPageState extends State<UserManagementPage> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: widget.onAddUser,
+                  icon: const Icon(Icons.person_add_rounded),
+                  label: const Text('Add New User'),
+                ),
+              ),
+
+              const SizedBox(height: 16),
 
               const SizedBox(height: 16),
 
@@ -240,16 +251,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
   Future<void> _editUser(UserProfileRecord user) async {
     // TODO: Navigate to AdminEditUserPage.
-    //
-    // Example:
-    // await Navigator.of(context).push(
-    //   MaterialPageRoute(
-    //     builder: (_) => AdminEditUserPage(
-    //       userCTRL: widget.userCTRL,
-    //       user: user,
-    //     ),
-    //   ),
-    // );
+    widget.onEditUser(user.id);
   }
 
   Future<void> _verifyIc(UserProfileRecord user) async {
@@ -371,9 +373,9 @@ class _UserListItem extends StatelessWidget {
           radius: 22,
           backgroundImage: NetworkImage(user.avatarUrl!),
         )
-            : const IconTile(
+            : IconTile(
           icon: Icons.person_rounded,
-          color: Colors.blue,
+          color: scheme.primary,
           size: 44,
         ),
 
