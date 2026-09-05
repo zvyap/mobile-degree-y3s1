@@ -3,11 +3,13 @@ import 'dart:typed_data';
 import '../models/bike_report.dart';
 
 class BikeReportRepository {
-  final SupabaseClient _supabase;
+  final SupabaseClient? _customClient;
 
   BikeReportRepository({
     SupabaseClient? supabase,
-  }) : _supabase = supabase ?? Supabase.instance.client;
+  }) : _customClient = supabase;
+
+  SupabaseClient get _client => _customClient ?? Supabase.instance.client;
 
   Future<String?> getReportPhotoUrl({
     required int reportId,
@@ -21,7 +23,7 @@ class BikeReportRepository {
     final folderPath =
         '$reporterId/$reportId';
 
-    final files = await _supabase.storage
+    final files = await _client.storage
         .from('bike-report-photos')
         .list(
       path: folderPath,
@@ -38,7 +40,7 @@ class BikeReportRepository {
     final filePath =
         '$folderPath/report.webp';
 
-    return await _supabase.storage
+    return await _client.storage
         .from('bike-report-photos')
         .createSignedUrl(
       filePath,
@@ -56,7 +58,7 @@ class BikeReportRepository {
     required String description,
   }) async {
     final user =
-        _supabase.auth.currentUser;
+        _client.auth.currentUser;
 
     if (user == null) {
       throw Exception(
@@ -65,7 +67,7 @@ class BikeReportRepository {
     }
 
     final response =
-    await _supabase
+    await _client
         .from('bike_reports')
         .insert({
       'bike_id': bikeId,
@@ -87,7 +89,7 @@ class BikeReportRepository {
   // ===========================================================================
 
   Future<List<BikeReport>> getReports() async {
-    final response = await _supabase
+    final response = await _client
         .from('bike_reports')
         .select('''
           id,
@@ -125,7 +127,7 @@ class BikeReportRepository {
   // ===========================================================================
 
   Future<List<BikeReport>> getPendingReports() async {
-    final response = await _supabase
+    final response = await _client
         .from('bike_reports')
         .select('''
           id,
@@ -166,7 +168,7 @@ class BikeReportRepository {
   Future<BikeReport> getReport(
       int reportId,
       ) async {
-    final response = await _supabase
+    final response = await _client
         .from('bike_reports')
         .select('''
           id,
@@ -201,13 +203,13 @@ class BikeReportRepository {
     required int reportId,
     String? reviewNote,
   }) async {
-    final user = _supabase.auth.currentUser;
+    final user = _client.auth.currentUser;
 
     if (user == null) {
       throw Exception('User is not authenticated');
     }
 
-    await _supabase
+    await _client
         .from('bike_reports')
         .update({
       'status': 'approved',
@@ -227,13 +229,13 @@ class BikeReportRepository {
     required int reportId,
     String? reviewNote,
   }) async {
-    final user = _supabase.auth.currentUser;
+    final user = _client.auth.currentUser;
 
     if (user == null) {
       throw Exception('User is not authenticated');
     }
 
-    await _supabase
+    await _client
         .from('bike_reports')
         .update({
       'status': 'rejected',
@@ -255,7 +257,7 @@ class BikeReportRepository {
     required int reportId,
   }) async {
     final user =
-        _supabase.auth.currentUser;
+        _client.auth.currentUser;
 
     if (user == null) {
       throw Exception(
@@ -263,7 +265,7 @@ class BikeReportRepository {
       );
     }
 
-    await _supabase.rpc(
+    await _client.rpc(
       'cancel_bike_report',
       params: {
         'p_report_id': reportId,
@@ -274,7 +276,23 @@ class BikeReportRepository {
   Future<List<BikeReport>> getReportsForBike(
       int bikeId,
       ) async {
-    final response = await _supabase
+    try {
+      final rpcResponse = await _client.rpc(
+        'get_bike_reports_for_bike',
+        params: {
+          'p_bike_id': bikeId,
+        },
+      );
+      if (rpcResponse is List) {
+        return rpcResponse
+            .map<BikeReport>(
+              (json) => BikeReport.fromJson(json as Map<String, dynamic>),
+            )
+            .toList();
+      }
+    } catch (_) {}
+
+    final response = await _client
         .from('bike_reports')
         .select('''
         id,
@@ -313,7 +331,7 @@ class BikeReportRepository {
     required Uint8List webpBytes,
   }) async {
     final user =
-        _supabase.auth.currentUser;
+        _client.auth.currentUser;
 
     if (user == null) {
       throw Exception(
@@ -324,7 +342,7 @@ class BikeReportRepository {
     final path =
         '${user.id}/$reportId/report.webp';
 
-    await _supabase.storage
+    await _client.storage
         .from('bike-report-photos')
         .uploadBinary(
       path,

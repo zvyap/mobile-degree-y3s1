@@ -71,6 +71,7 @@ class _ReceiptStage extends StatelessWidget {
                 _PriceRow(
                   label: context.l10n.returnedAt,
                   value: _stationName(context.l10n, receipt.returnStation),
+                  textAlign: TextAlign.left,
                 ),
                 const Divider(height: 28),
                 _PriceRow(

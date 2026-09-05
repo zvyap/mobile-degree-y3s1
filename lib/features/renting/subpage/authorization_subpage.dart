@@ -1,12 +1,24 @@
 part of '../renting_flow_page.dart';
 
-class _AuthorizationStage extends StatelessWidget {
+class _AuthorizationStage extends StatefulWidget {
   const _AuthorizationStage({required this.controller});
 
   final RentingController controller;
 
   @override
+  State<_AuthorizationStage> createState() => _AuthorizationStageState();
+}
+
+class _AuthorizationStageState extends State<_AuthorizationStage> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(widget.controller.reloadPaymentMethods());
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
     final scheme = Theme.of(context).colorScheme;
     return SurfacePanel(
       padding: const EdgeInsets.all(16),

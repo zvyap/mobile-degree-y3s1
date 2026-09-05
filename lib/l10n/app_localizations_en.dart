@@ -448,10 +448,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get brakesSafe => 'Brakes and tyres look safe';
 
   @override
+  String brakesIssueReported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Brakes / tyres: $count issues reported',
+      one: 'Brakes / tyres: 1 issue reported',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get frameSafe => 'Seat and frame have no visible damage';
 
   @override
+  String frameIssueReported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Seat / frame: $count issues reported',
+      one: 'Seat / frame: 1 issue reported',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get lightsSafe => 'Front and rear lights are working';
+
+  @override
+  String lightsIssueReported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Lights / bell: $count issues reported',
+      one: 'Lights / bell: 1 issue reported',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get checkingBikeCondition => 'Checking bike condition reports…';
 
   @override
   String get reportBikeIssue => 'Report bike issue';
@@ -1963,4 +1999,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cvNameNeedsTwoParts => 'Please enter first and last name';
+
+  @override
+  String get cvNameDuplicate =>
+      'Cardholder name is already used by another card';
 }

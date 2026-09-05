@@ -63,6 +63,17 @@ class PaymentMethodsController extends ChangeNotifier {
     _clearErrorFields();
     notifyListeners();
 
+    if (cardholderName != null && cardholderName.trim().isNotEmpty) {
+      final name = cardholderName.trim().toLowerCase();
+      if (_cards.any((c) => c.cardholderName?.trim().toLowerCase() == name)) {
+        _errorType = PaymentMethodErrorType.duplicate;
+        _errorDetail = 'Card name already in use';
+        _isSaving = false;
+        notifyListeners();
+        return false;
+      }
+    }
+
     try {
       await _repository.createCard(
         brand: brand,
@@ -94,6 +105,17 @@ class PaymentMethodsController extends ChangeNotifier {
     _isSaving = true;
     _clearErrorFields();
     notifyListeners();
+
+    if (cardholderName != null && cardholderName.trim().isNotEmpty) {
+      final name = cardholderName.trim().toLowerCase();
+      if (_cards.any((c) => c.id != id && c.cardholderName?.trim().toLowerCase() == name)) {
+        _errorType = PaymentMethodErrorType.duplicate;
+        _errorDetail = 'Card name already in use';
+        _isSaving = false;
+        notifyListeners();
+        return false;
+      }
+    }
 
     try {
       await _repository.updateCard(

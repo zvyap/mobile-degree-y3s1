@@ -183,8 +183,27 @@
   },
   "view": "View",
   "brakesSafe": "Brakes and tyres look safe",
+  "brakesIssueReported": "{count, plural, =1{Brakes / tyres: 1 issue reported} other{Brakes / tyres: {count} issues reported}}",
+  "@brakesIssueReported": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "frameSafe": "Seat and frame have no visible damage",
+  "frameIssueReported": "{count, plural, =1{Seat / frame: 1 issue reported} other{Seat / frame: {count} issues reported}}",
+  "@frameIssueReported": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "lightsSafe": "Front and rear lights are working",
+  "lightsIssueReported": "{count, plural, =1{Lights / bell: 1 issue reported} other{Lights / bell: {count} issues reported}}",
+  "@lightsIssueReported": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "checkingBikeCondition": "Checking bike condition reports…",
   "reportBikeIssue": "Report bike issue",
   "change": "Change",
   "reviewHold": "Review {amount} hold",
@@ -939,5 +958,6 @@
   "cvNameTooShort": "Name must be at least 2 characters",
   "cvNameTooLong": "Name cannot exceed 50 characters",
   "cvNameInvalidChars": "Only letters, spaces, hyphens, and dots allowed",
-  "cvNameNeedsTwoParts": "Please enter first and last name"
+  "cvNameNeedsTwoParts": "Please enter first and last name",
+  "cvNameDuplicate": "Cardholder name is already used by another card"
 }

@@ -113,6 +113,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
       CardValidationError.nameTooLong => context.l10n.cvNameTooLong,
       CardValidationError.nameInvalidChars => context.l10n.cvNameInvalidChars,
       CardValidationError.nameNeedsTwoParts => context.l10n.cvNameNeedsTwoParts,
+      CardValidationError.nameDuplicate => context.l10n.cvNameDuplicate,
     };
   }
 
@@ -286,11 +287,20 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                         ),
                         errorMaxLines: 2,
                       ),
-                      validator: (v) => _cardValidationMessage(
-                        context,
-                        v,
-                        CardValidator.validateCardholderName(v),
-                      ),
+                      validator: (v) {
+                        final currentId = widget.editingCard?.id;
+                        final otherNames = widget.controller.cards
+                            .where((c) => c.id != currentId)
+                            .map((c) => c.cardholderName);
+                        return _cardValidationMessage(
+                          context,
+                          v,
+                          CardValidator.validateCardholderName(
+                            v,
+                            existingNames: otherNames,
+                          ),
+                        );
+                      },
                     ),
 
                     const SizedBox(height: 18),

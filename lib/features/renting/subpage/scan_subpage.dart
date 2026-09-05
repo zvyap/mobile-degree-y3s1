@@ -269,8 +269,8 @@ class _ScanStageState extends State<ScanStage> with WidgetsBindingObserver {
             color: scheme.onSurface.withValues(alpha: 0.64),
           ),
         ),
-        const SizedBox(height: 12),
         if (kDebugMode) ...[
+          const SizedBox(height: 12),
           OutlinedButton.icon(
             key: const ValueKey<String>('rent-choose-bike-button'),
             onPressed: () => _handleCameraTap(
@@ -554,16 +554,18 @@ class _ScanStageState extends State<ScanStage> with WidgetsBindingObserver {
     final scheme = theme.colorScheme;
 
     return Semantics(
-      button: true,
+      button: kDebugMode,
       label: context.l10n.cameraPreviewSemantics,
       child: GestureDetector(
         key: const ValueKey<String>('rent-camera-preview'),
         behavior: HitTestBehavior.opaque,
-        onTap: () => _handleCameraTap(
-          context,
-          widget.controller,
-          onInvalidQr: _showInvalidQrDialog,
-        ),
+        onTap: kDebugMode
+            ? () => _handleCameraTap(
+                context,
+                widget.controller,
+                onInvalidQr: _showInvalidQrDialog,
+              )
+            : null,
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(

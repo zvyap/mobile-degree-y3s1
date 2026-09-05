@@ -816,17 +816,41 @@ abstract class AppLocalizations {
   /// **'Brakes and tyres look safe'**
   String get brakesSafe;
 
+  /// No description provided for @brakesIssueReported.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Brakes / tyres: 1 issue reported} other{Brakes / tyres: {count} issues reported}}'**
+  String brakesIssueReported(int count);
+
   /// No description provided for @frameSafe.
   ///
   /// In en, this message translates to:
   /// **'Seat and frame have no visible damage'**
   String get frameSafe;
 
+  /// No description provided for @frameIssueReported.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Seat / frame: 1 issue reported} other{Seat / frame: {count} issues reported}}'**
+  String frameIssueReported(int count);
+
   /// No description provided for @lightsSafe.
   ///
   /// In en, this message translates to:
   /// **'Front and rear lights are working'**
   String get lightsSafe;
+
+  /// No description provided for @lightsIssueReported.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Lights / bell: 1 issue reported} other{Lights / bell: {count} issues reported}}'**
+  String lightsIssueReported(int count);
+
+  /// No description provided for @checkingBikeCondition.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking bike condition reports…'**
+  String get checkingBikeCondition;
 
   /// No description provided for @reportBikeIssue.
   ///
@@ -3425,6 +3449,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter first and last name'**
   String get cvNameNeedsTwoParts;
+
+  /// No description provided for @cvNameDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Cardholder name is already used by another card'**
+  String get cvNameDuplicate;
 }
 
 class _AppLocalizationsDelegate

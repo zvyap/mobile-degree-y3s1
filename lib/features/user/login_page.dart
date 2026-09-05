@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:bike_renting_app/data/repositories/auth_repository.dart';
 import 'package:bike_renting_app/features/user/auth_controller.dart';
@@ -73,6 +74,7 @@ class _LoginPageState extends State<LoginPage> {
   ];
 
   void _showTestAccountPicker(BuildContext context) {
+    if (!kDebugMode) return;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
@@ -255,23 +257,24 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-
-                // Quick test account selector
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: _authController.isBusy
-                        ? null
-                        : () => _showTestAccountPicker(context),
-                    icon: const Icon(Icons.arrow_drop_down_rounded, size: 18),
-                    label: const Text('Use Test Account'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: scheme.onSurface.withValues(alpha: 0.7),
-                      textStyle: const TextStyle(fontSize: 12),
+                if (kDebugMode) ...[
+                  const SizedBox(height: 8),
+                  // Quick test account selector
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _authController.isBusy
+                          ? null
+                          : () => _showTestAccountPicker(context),
+                      icon: const Icon(Icons.arrow_drop_down_rounded, size: 18),
+                      label: const Text('Use Test Account'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: scheme.onSurface.withValues(alpha: 0.7),
+                        textStyle: const TextStyle(fontSize: 12),
+                      ),
                     ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 16),
 
                 // Primary Action Button

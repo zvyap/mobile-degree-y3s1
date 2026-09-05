@@ -31,10 +31,12 @@ class BikeReport {
     this.stationName,
   });
 
+  bool get isActive => status != 'rejected' && status != 'cancelled';
+
   factory BikeReport.fromJson(Map<String, dynamic> json) {
     return BikeReport(
-      id: json['id'] as int,
-      bikeId: json['bike_id'] as int,
+      id: (json['id'] as num).toInt(),
+      bikeId: (json['bike_id'] as num).toInt(),
       reporterId: json['reporter_id']?.toString(),
       category: json['category'] ?? '',
       description: json['description'] ?? '',

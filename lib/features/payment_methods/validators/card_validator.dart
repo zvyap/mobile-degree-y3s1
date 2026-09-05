@@ -22,6 +22,7 @@ enum CardValidationError {
   nameTooLong,
   nameInvalidChars,
   nameNeedsTwoParts,
+  nameDuplicate,
 }
 
 class CardValidator {
@@ -143,7 +144,10 @@ class CardValidator {
 
   /// Full validation for Cardholder Name.
   /// Supports Malaysian naming conventions including Indian patronymics (A/L, A/P, S/O, D/O).
-  static CardValidationError? validateCardholderName(String? value) {
+  static CardValidationError? validateCardholderName(
+    String? value, {
+    Iterable<String?> existingNames = const [],
+  }) {
     if (value == null || value.trim().isEmpty) {
       return CardValidationError.nameRequired;
     }
@@ -164,6 +168,13 @@ class CardValidator {
 
     if (!trimmed.contains(' ') && !trimmed.contains('/')) {
       return CardValidationError.nameNeedsTwoParts;
+    }
+
+    final lower = trimmed.toLowerCase();
+    for (final name in existingNames) {
+      if (name != null && name.trim().toLowerCase() == lower) {
+        return CardValidationError.nameDuplicate;
+      }
     }
 
     return null;

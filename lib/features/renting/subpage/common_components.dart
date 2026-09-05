@@ -161,24 +161,3 @@ class _ErrorPanel extends StatelessWidget {
     );
   }
 }
-
-class _CheckRow extends StatelessWidget {
-  const _CheckRow({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.secondary;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        children: [
-          Icon(Icons.check_circle_rounded, size: 21, color: color),
-          const SizedBox(width: 10),
-          Expanded(child: Text(label)),
-        ],
-      ),
-    );
-  }
-}

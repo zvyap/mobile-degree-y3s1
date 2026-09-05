@@ -200,11 +200,13 @@ class _PriceRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.strong = false,
+    this.textAlign = TextAlign.right,
   });
 
   final String label;
   final String value;
   final bool strong;
+  final TextAlign textAlign;
 
   @override
   Widget build(BuildContext context) {
@@ -219,7 +221,7 @@ class _PriceRow extends StatelessWidget {
         Expanded(child: Text(label, style: style)),
         const SizedBox(width: 12),
         Flexible(
-          child: Text(value, textAlign: TextAlign.right, style: style),
+          child: Text(value, textAlign: textAlign, style: style),
         ),
       ],
     );
@@ -285,7 +287,9 @@ class _PaymentMethodTile extends StatelessWidget {
 Future<void> _showPaymentMethodPicker(
   BuildContext context,
   RentingController controller,
-) {
+) async {
+  await controller.reloadPaymentMethods();
+  if (!context.mounted) return;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -310,6 +314,7 @@ class _PaymentMethodPickerSheetState extends State<_PaymentMethodPickerSheet> {
   void initState() {
     super.initState();
     widget.controller.addListener(_handleControllerChange);
+    widget.controller.reloadPaymentMethods();
   }
 
   @override
@@ -335,6 +340,44 @@ class _PaymentMethodPickerSheetState extends State<_PaymentMethodPickerSheet> {
       return;
     }
     setState(() {});
+  }
+
+  Future<void> _deleteCard(RentalPaymentMethod method) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ctx.l10n.removeCard),
+        content: Text(
+          ctx.l10n.removeCardConfirmation(method.brand, method.lastFour),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(ctx.l10n.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(ctx.l10n.remove),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final repo = widget.controller.paymentMethodRepository ??
+          AppRepositories.fromSupabase(Supabase.instance.client).paymentMethods;
+      final cardId = int.tryParse(method.id);
+      if (cardId != null) {
+        try {
+          await repo.deleteCard(cardId);
+          await widget.controller.reloadPaymentMethods();
+        } catch (_) {}
+      }
+    }
   }
 
   Future<void> _openAddCard() async {
@@ -384,6 +427,8 @@ class _PaymentMethodPickerSheetState extends State<_PaymentMethodPickerSheet> {
                   controller.selectPaymentMethod(method);
                   Navigator.of(context).pop();
                 },
+                onDelete:
+                    method.id == 'paypal' ? null : () => _deleteCard(method),
               ),
               const SizedBox(height: 8),
             ],
@@ -412,11 +457,13 @@ class _PaymentMethodOption extends StatelessWidget {
     required this.method,
     required this.selected,
     required this.onTap,
+    this.onDelete,
   });
 
   final RentalPaymentMethod method;
   final bool selected;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -449,6 +496,19 @@ class _PaymentMethodOption extends StatelessWidget {
                 ),
                 if (selected)
                   Icon(Icons.check_rounded, color: scheme.primary, size: 20),
+                if (onDelete != null) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    key: ValueKey<String>('rent-delete-${method.id}'),
+                    icon: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 20,
+                      color: scheme.error,
+                    ),
+                    onPressed: onDelete,
+                    tooltip: context.l10n.removeCard,
+                  ),
+                ],
               ],
             ),
           ),

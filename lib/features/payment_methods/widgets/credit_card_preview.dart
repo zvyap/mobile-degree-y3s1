@@ -179,6 +179,10 @@ class CreditCardPreview extends StatelessWidget {
       return '•••• •••• •••• ••••';
     }
 
+    if (input.contains('•') || input.contains('*')) {
+      return '•••• •••• •••• ${clean.length >= 4 ? clean.substring(clean.length - 4) : clean.padLeft(4, '•')}';
+    }
+
     final buffer = StringBuffer();
     for (int i = 0; i < 16; i++) {
       if (i > 0 && i % 4 == 0) {
