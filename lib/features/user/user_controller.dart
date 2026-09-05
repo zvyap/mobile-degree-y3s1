@@ -51,7 +51,7 @@ class UserController extends ChangeNotifier {
     _beginBusy();
 
     try {
-      selectedUser = await _profileRepository.getUserById(userId);
+      selectedUser = await _profileRepository.findById(userId);
     } catch (caught) {
       error = UserError.usersLoadFailed;
     } finally {

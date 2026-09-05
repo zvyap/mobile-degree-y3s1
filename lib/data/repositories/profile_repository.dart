@@ -81,23 +81,6 @@ class ProfileRepository {
         .toList();
   }
 
-  Future<UserProfileRecord> getUserById(String userId) async {
-    final json = await _dataSource.selectMaybeSingle(
-      table: 'profiles',
-      columns: _columns,
-      equals: {'id': userId},
-    );
-
-    if (json == null) {
-      throw const DatabaseException(
-        code: DatabaseErrorCode.notFound,
-        message: 'profile_not_found',
-      );
-    }
-
-    return UserProfileRecord.fromJson(json);
-  }
-
   Future<UserProfileRecord> updateUser({
     required String userId,
     required String displayName,
