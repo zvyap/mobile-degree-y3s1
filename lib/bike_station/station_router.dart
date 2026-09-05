@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bike_renting_app/bike_station/base_station_map.dart';
 import 'package:bike_renting_app/bike_station/shared_map.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,7 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
   Map<String, dynamic>? destinationStation;
 
   Position? userPosition;
+  StreamSubscription<Position>? _positionSubscription;
   OsrmRouteResult? routeResult;
   bool isCalculating = false;
   bool isRouteTooFar = false;
@@ -45,6 +47,12 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
     if (originStation != null && destinationStation != null) {
       _calculateRoute();
     }
+  }
+
+  @override
+  void dispose() {
+    _positionSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _getUserLocation() async {
@@ -69,6 +77,22 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
           userPosition = pos;
         });
       }
+
+      _positionSubscription?.cancel();
+      _positionSubscription = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 2,
+        ),
+      ).listen(
+        (pos) {
+          if (!mounted) return;
+          setState(() {
+            userPosition = pos;
+          });
+        },
+        onError: (_) {},
+      );
     } catch (e) {
       debugPrint("Error fetching user position: $e");
     }
@@ -234,6 +258,10 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
                 child: SharedBikeMap(
                   key: _mapTileKey,
                   stations: widget.stations,
+                  riderLocation: userPosition != null ? LatLng(userPosition!.latitude, userPosition!.longitude) : null,
+                  riderHeading: userPosition?.heading,
+                  trackLiveLocation: true,
+                  showDirectionIndicator: true,
                   routePoints: isRouteTooFar ? null : routeResult?.polylinePoints,
                   originStationId: originStation?['id']?.toString(),
                   destinationStationId: destinationStation?['id']?.toString(),

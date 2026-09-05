@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -370,6 +373,9 @@ class SharedBikeMap extends StatefulWidget {
   final String? originStationId;
   final String? destinationStationId;
   final LatLng? riderLocation;
+  final double? riderHeading;
+  final bool showDirectionIndicator;
+  final bool trackLiveLocation;
   final double? geofenceRadiusMeters;
   final List<LatLng>? routePoints;
 
@@ -385,6 +391,9 @@ class SharedBikeMap extends StatefulWidget {
     this.originStationId,
     this.destinationStationId,
     this.riderLocation,
+    this.riderHeading,
+    this.showDirectionIndicator = true,
+    this.trackLiveLocation = false,
     this.geofenceRadiusMeters,
     this.routePoints,
   });
@@ -396,6 +405,8 @@ class SharedBikeMap extends StatefulWidget {
 class SharedBikeMapState extends State<SharedBikeMap> {
   final MapController _mapController = MapController();
   LatLng? _currentGpsLocation;
+  double? _currentGpsHeading;
+  StreamSubscription<Position>? _gpsStreamSub;
 
   @override
   void initState() {
@@ -403,6 +414,42 @@ class SharedBikeMapState extends State<SharedBikeMap> {
     if (widget.initialCenter == null) {
       recenterToGps();
     }
+    if (widget.trackLiveLocation && widget.riderLocation == null) {
+      _startLiveGpsStream();
+    }
+  }
+
+  void _startLiveGpsStream() {
+    if (!widget.trackLiveLocation) return;
+    _gpsStreamSub?.cancel();
+    try {
+      _gpsStreamSub = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 2,
+        ),
+      ).listen(
+        (Position pos) {
+          if (!mounted) return;
+          final newPos = LatLng(pos.latitude, pos.longitude);
+          double? heading = pos.heading;
+          if (heading == 0.0 && _currentGpsLocation != null) {
+            final calcBearing = Geolocator.bearingBetween(
+              _currentGpsLocation!.latitude,
+              _currentGpsLocation!.longitude,
+              newPos.latitude,
+              newPos.longitude,
+            );
+            if (calcBearing != 0.0) heading = calcBearing;
+          }
+          setState(() {
+            _currentGpsLocation = newPos;
+            if (heading != 0.0) _currentGpsHeading = heading;
+          });
+        },
+        onError: (_) {},
+      );
+    } catch (_) {}
   }
 
   void moveCameraToLocation(LatLng location, {double? zoom}) {
@@ -444,6 +491,20 @@ class SharedBikeMapState extends State<SharedBikeMap> {
     if (widget.selectedStationId != oldWidget.selectedStationId && widget.selectedStationId != null) {
       _centerOnSelectedStation(widget.selectedStationId!);
     }
+    if (widget.trackLiveLocation != oldWidget.trackLiveLocation) {
+      if (widget.trackLiveLocation && widget.riderLocation == null) {
+        _startLiveGpsStream();
+      } else {
+        _gpsStreamSub?.cancel();
+        _gpsStreamSub = null;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _gpsStreamSub?.cancel();
+    super.dispose();
   }
 
   void _centerOnSelectedStation(String stationId) {
@@ -481,6 +542,9 @@ class SharedBikeMapState extends State<SharedBikeMap> {
       if (mounted) {
         setState(() {
           _currentGpsLocation = userLatLng;
+          if (position.heading != 0.0) {
+            _currentGpsHeading = position.heading;
+          }
         });
         moveCameraToLocation(userLatLng);
       }
@@ -602,23 +666,19 @@ class SharedBikeMapState extends State<SharedBikeMap> {
     final colorScheme = Theme.of(context).colorScheme;
     final List<Marker> markers = [];
 
-    if (activeRiderLocation != null) {
+    final LatLng? effectiveRider = activeRiderLocation ?? _currentGpsLocation;
+    final double? effectiveHeading = widget.riderHeading ?? _currentGpsHeading;
+
+    if (effectiveRider != null) {
       markers.add(
         Marker(
-          point: activeRiderLocation,
-          width: 44,
-          height: 44,
+          point: effectiveRider,
+          width: 72,
+          height: 72,
           alignment: Alignment.center,
-          child: Container(
-            decoration: BoxDecoration(
-              color: colorScheme.primary,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: const [
-                BoxShadow(color: Colors.black38, blurRadius: 6, offset: Offset(0, 2)),
-              ],
-            ),
-            child: const Icon(Icons.navigation, color: Colors.white, size: 20),
+          child: GoogleMapsLocationMarker(
+            heading: widget.showDirectionIndicator ? effectiveHeading : null,
+            markerColor: colorScheme.primary,
           ),
         ),
       );
@@ -717,4 +777,114 @@ class SharedBikeMapState extends State<SharedBikeMap> {
 
     return markers;
   }
+}
+
+/// Google Maps styled current location marker.
+/// Includes pulsing accuracy aura, crisp white-bordered blue dot,
+/// and directional beam (field of view cone) pointing towards heading.
+class GoogleMapsLocationMarker extends StatelessWidget {
+  final double? heading;
+  final Color? markerColor;
+
+  const GoogleMapsLocationMarker({
+    super.key,
+    this.heading,
+    this.markerColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final themeColor = markerColor ?? const Color(0xFF4285F4);
+
+    return SizedBox(
+      width: 72,
+      height: 72,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 1. Google Maps directional beam (field of view cone)
+          if (heading != null)
+            Transform.rotate(
+              angle: heading! * (math.pi / 180.0),
+              child: CustomPaint(
+                size: const Size(72, 72),
+                painter: _GoogleMapsBeamPainter(color: themeColor),
+              ),
+            ),
+
+          // 2. Translucent accuracy/halo circle
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: themeColor.withValues(alpha: 0.18),
+            ),
+          ),
+
+          // 3. Crisp white circular border with subtle elevation
+          Container(
+            width: 18,
+            height: 18,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            // 4. Solid Google Maps blue dot
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: themeColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoogleMapsBeamPainter extends CustomPainter {
+  final Color color;
+
+  const _GoogleMapsBeamPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          color.withValues(alpha: 0.50),
+          color.withValues(alpha: 0.18),
+          color.withValues(alpha: 0.0),
+        ],
+        stops: const [0.15, 0.55, 1.0],
+      ).createShader(rect);
+
+    // 60-degree beam pointing North (-pi/2)
+    final path = ui.Path()
+      ..moveTo(center.dx, center.dy)
+      ..arcTo(rect, -math.pi / 2 - (math.pi / 6), math.pi / 3, false)
+      ..close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GoogleMapsBeamPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

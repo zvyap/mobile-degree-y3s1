@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +9,7 @@ import 'package:bike_renting_app/bike_station/osrm_service.dart';
 import 'package:bike_renting_app/bike_station/shared_map.dart';
 
 export 'package:bike_renting_app/bike_station/osrm_service.dart';
+export 'package:bike_renting_app/bike_station/shared_map.dart' show GoogleMapsLocationMarker;
 
 /// Base abstraction for station map views.
 abstract class BaseStationMapView extends StatefulWidget {
@@ -16,6 +18,7 @@ abstract class BaseStationMapView extends StatefulWidget {
   final double initialZoom;
   final String? selectedStationId;
   final LatLng? riderLocation;
+  final double? riderHeading;
   final double? geofenceRadiusMeters;
   final List<LatLng>? routePoints;
   final bool isEmbedded;
@@ -25,6 +28,8 @@ abstract class BaseStationMapView extends StatefulWidget {
   final ValueChanged<String>? onStationTap;
   final ValueChanged<LatLng>? onMapLongPress;
   final bool isAdminMode;
+  final bool trackLiveLocation;
+  final bool showDirectionIndicator;
 
   const BaseStationMapView({
     super.key,
@@ -33,6 +38,7 @@ abstract class BaseStationMapView extends StatefulWidget {
     this.initialZoom = 14.0,
     this.selectedStationId,
     this.riderLocation,
+    this.riderHeading,
     this.geofenceRadiusMeters,
     this.routePoints,
     this.isEmbedded = false,
@@ -42,6 +48,8 @@ abstract class BaseStationMapView extends StatefulWidget {
     this.onStationTap,
     this.onMapLongPress,
     this.isAdminMode = false,
+    this.trackLiveLocation = true,
+    this.showDirectionIndicator = true,
   });
 }
 
@@ -60,6 +68,8 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
   List<Map<String, dynamic>> stations = [];
   List<Map<String, dynamic>> filteredStations = [];
   LatLng? userLocation;
+  double? userHeading;
+  StreamSubscription<Position>? _positionSubscription;
   bool isLoading = true;
   bool isSearching = false;
 
@@ -67,7 +77,9 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
   void initState() {
     super.initState();
     initStationData();
-
+    if (widget.trackLiveLocation) {
+      _startPositionStream();
+    }
     searchFocusNode.addListener(_handleSearchFocus);
   }
 
@@ -76,6 +88,57 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
       setState(() {
         isSearching = searchFocusNode.hasFocus || searchController.text.trim().isNotEmpty;
       });
+    }
+  }
+
+  Future<void> _startPositionStream() async {
+    if (!widget.trackLiveLocation) return;
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      _positionSubscription?.cancel();
+      const settings = LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 2,
+      );
+      _positionSubscription = Geolocator.getPositionStream(
+        locationSettings: settings,
+      ).listen(
+        (Position position) {
+          if (!mounted) return;
+          final newPos = LatLng(position.latitude, position.longitude);
+          double? heading = position.heading;
+          if (heading == 0.0 && userLocation != null) {
+            final calcBearing = Geolocator.bearingBetween(
+              userLocation!.latitude,
+              userLocation!.longitude,
+              newPos.latitude,
+              newPos.longitude,
+            );
+            if (calcBearing != 0.0) {
+              heading = calcBearing;
+            }
+          }
+          setState(() {
+            userLocation = newPos;
+            if (heading != 0.0) {
+              userHeading = heading;
+            }
+          });
+        },
+        onError: (err) {
+          debugPrint("Live location stream error: $err");
+        },
+      );
+    } catch (e) {
+      debugPrint("Could not start live location stream: $e");
     }
   }
 
@@ -105,10 +168,20 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
             : null;
       });
     }
+    if (widget.trackLiveLocation != oldWidget.trackLiveLocation) {
+      if (widget.trackLiveLocation) {
+        _startPositionStream();
+      } else {
+        _positionSubscription?.cancel();
+        _positionSubscription = null;
+      }
+    }
   }
 
   @override
   void dispose() {
+    _positionSubscription?.cancel();
+    _positionSubscription = null;
     searchController.dispose();
     searchFocusNode.dispose();
     super.dispose();
@@ -287,6 +360,9 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
     return SharedBikeMap(
       stations: stations,
       riderLocation: widget.riderLocation ?? userLocation,
+      riderHeading: widget.riderHeading ?? userHeading,
+      showDirectionIndicator: widget.showDirectionIndicator,
+      trackLiveLocation: widget.trackLiveLocation,
       selectedStationId: widget.selectedStationId ?? selectedStation?['id']?.toString(),
       isAdminMode: widget.isAdminMode,
       geofenceRadiusMeters: widget.geofenceRadiusMeters,

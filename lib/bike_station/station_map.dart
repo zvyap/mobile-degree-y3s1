@@ -15,6 +15,8 @@ class RefinedUserBikeView extends BaseStationMapView {
     super.key,
     this.isAdminDeleteMode = false,
     this.onRemoveStation,
+    super.trackLiveLocation = true,
+    super.showDirectionIndicator = true,
   }) : super(
     isAdminMode: isAdminDeleteMode,
     isEmbedded: false,
@@ -165,6 +167,9 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                     key: _mapTileKey,
                     stations: stations,
                     riderLocation: widget.riderLocation ?? userLocation,
+                    riderHeading: widget.riderHeading ?? userHeading,
+                    showDirectionIndicator: widget.showDirectionIndicator,
+                    trackLiveLocation: widget.trackLiveLocation,
                     selectedStationId: widget.selectedStationId ?? selectedStation?['id']?.toString(),
                     isAdminMode: widget.isAdminMode,
                     geofenceRadiusMeters: widget.geofenceRadiusMeters,
