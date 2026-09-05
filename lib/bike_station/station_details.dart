@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'docking.dart';
+
 class StationDetailScreen extends StatefulWidget {
   final Map<String, dynamic>? stationData;
   final double? initialLat;
@@ -70,7 +72,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     return 'STN-$prefix-$hash5';
   }
 
-  /// 🟢 Helper to delete an old image file from the 'app-uploads' bucket
+  /// Helper to delete an old image file from the 'app-uploads' bucket
   Future<void> _deleteOldImage(String imageUrl) async {
     try {
       String storagePath = imageUrl;
@@ -197,14 +199,22 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Station name cannot be empty.')),
+        const SnackBar(
+          content: Text('Station name cannot be empty.'),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 90, left: 16, right: 16),
+        ),
       );
       return;
     }
 
     if (address.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Station address cannot be empty.')),
+        const SnackBar(
+          content: Text('Station address cannot be empty.'),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 90, left: 16, right: 16),
+        ),
       );
       return;
     }
@@ -212,7 +222,11 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     final capacity = int.tryParse(capacityText);
     if (capacity == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid number for max capacity.')),
+        const SnackBar(
+          content: Text('Please enter a valid number for max capacity.'),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 90, left: 16, right: 16),
+        ),
       );
       return;
     }
@@ -223,6 +237,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
           content: Text(
             'Max capacity ($capacity) cannot be less than current docked bikes ($_availableBikes).',
           ),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
         ),
       );
       return;
@@ -234,7 +250,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       String? finalImageUrl = _imageUrl;
 
       if (_selectedImageFile != null) {
-        // 🟢 If updating an existing picture, delete the old image from the storage bucket
         if (_imageUrl != null && _imageUrl!.isNotEmpty) {
           await _deleteOldImage(_imageUrl!);
         }
@@ -275,13 +290,28 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
       if (mounted) {
         setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.stationData?['id'] != null
+                  ? 'Station updated successfully!'
+                  : 'Station added successfully!',
+            ),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          ),
+        );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save station: $e')),
+          SnackBar(
+            content: Text('Failed to save station: $e'),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          ),
         );
       }
     }
@@ -310,13 +340,24 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     try {
       await supabase.from('stations').update({'is_active': false}).eq('id', widget.stationData!['id']);
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Station removed successfully!'),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          ),
+        );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove station: $e')),
+          SnackBar(
+            content: Text('Failed to remove station: $e'),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          ),
         );
       }
     }
@@ -372,6 +413,19 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     child: Icon(Icons.storefront_rounded, size: 64, color: colorScheme.onSurface.withOpacity(0.3)),
                   )),
                 ),
+                // 🟢 Back Arrow for User / Rider View
+                if (widget.isViewOnly)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 8,
+                    left: 16,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.black.withOpacity(0.5),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.maybePop(context),
+                      ),
+                    ),
+                  ),
                 if (!widget.isViewOnly)
                   Positioned(
                     right: 16,
@@ -568,8 +622,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     const SizedBox(height: 12),
                   ],
 
-                  // Only show "View Bikes at Station" when modifying an existing station
-                  if (!isNewStation) ...[
+                  // Only show "View Bikes at Station" when editing an existing station AND user is Admin (!widget.isViewOnly)
+                  if (!widget.isViewOnly && !isNewStation) ...[
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -579,7 +633,16 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                           side: BorderSide(color: colorScheme.primary, width: 1.5),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                         ),
-                        onPressed: () => setState(() => _showBikesList = true),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => StationBikesScreen(
+                                stationData: widget.stationData,
+                              ),
+                            ),
+                          );
+                        },
                         icon: const Icon(Icons.directions_bike, size: 18),
                         label: const Text("View Bikes at Station", style: TextStyle(fontWeight: FontWeight.bold)),
                       ),

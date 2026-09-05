@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:bike_renting_app/navigation/app_page.dart';
+
+// 🟢 Correct import path for BikeDetailsPage
+import '../features/bike/pages/bike_details.dart';
 
 class StationBikesScreen extends StatefulWidget {
   final Map<String, dynamic>? stationData;
@@ -29,8 +33,6 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
     super.dispose();
   }
 
-  // Fetch bikes assigned to this station from Supabase
-  // Fetch bikes assigned to this station from Supabase
   Future<void> _fetchBikes() async {
     final rawStationId = widget.stationData?['id'];
 
@@ -44,7 +46,6 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
     setState(() => isLoading = true);
 
     try {
-      // 🟢 Fixed column name from 'station_id' to 'current_station_id'
       final response = await supabase
           .from('bikes')
           .select()
@@ -85,6 +86,63 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
     });
   }
 
+  void _navigateToBikeDetails(Map<String, dynamic> bike) {
+    final dynamic rawId = bike['id'];
+    final int? bikeId = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+
+    if (bikeId == null || bikeId <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open: Invalid Bike ID')),
+      );
+      return;
+    }
+
+    final String bikeCode = bike['code']?.toString() ?? 'BR-$bikeId';
+
+    // 🟢 Opens BikeDetailsPage inside a full Scaffold so it displays reliably
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Text(bikeCode, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          body: BikeDetailsPage(
+            bikeId: bikeId,
+            onEditBike: () {
+              Navigator.pushNamed(
+                context,
+                AppPage.editBike.routeName,
+                arguments: bikeId,
+              );
+            },
+            onTransferBike: () {
+              Navigator.pushNamed(
+                context,
+                AppPage.transferBike.routeName,
+                arguments: bikeId,
+              );
+            },
+            onServiceBike: () {
+              Navigator.pushNamed(
+                context,
+                AppPage.serviceBike.routeName,
+                arguments: bikeId,
+              );
+            },
+            onMakeReport: () {
+              Navigator.pushNamed(
+                context,
+                AppPage.reportForm.routeName,
+                arguments: bikeId,
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -102,17 +160,6 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   Text(
                     widget.stationData?['name']?.toString() ?? "Station Bikes",
                     style: theme.textTheme.headlineSmall?.copyWith(
@@ -180,7 +227,6 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  // 🟢 DISPLAY MESSAGE WHEN NO BIKES ARE DOCKED AT THE STATION
                   if (allBikes.isEmpty) {
                     return Center(
                       child: Column(
@@ -204,7 +250,6 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                     );
                   }
 
-                  // DISPLAY WHEN NO BIKES MATCH SEARCH QUERY
                   if (filteredBikes.isEmpty) {
                     return Center(
                       child: Text(
@@ -214,7 +259,6 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                     );
                   }
 
-                  // LIST OF BICYCLES
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     itemCount: filteredBikes.length,
@@ -293,9 +337,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
 
                             IconButton(
                               icon: Icon(Icons.visibility_outlined, color: colorScheme.onSurface),
-                              onPressed: () {
-                                // Action to view bike specifics
-                              },
+                              onPressed: () => _navigateToBikeDetails(bike),
                             ),
                           ],
                         ),
