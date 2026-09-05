@@ -34,6 +34,10 @@ class AdminRentalSession {
   DateTime? get rideDeadlineAt => rental.rideDeadlineAt;
   DateTime? get overdueAt => rental.overdueAt;
   String? get failureReason => rental.failureReason;
+  bool get isEnded =>
+      status == RentalDatabaseStatus.completed ||
+      status == RentalDatabaseStatus.cancelled ||
+      status == RentalDatabaseStatus.lost;
 
   int currentElapsedSeconds([DateTime? now]) {
     if (rental.startedAt == null) return rental.durationSeconds;

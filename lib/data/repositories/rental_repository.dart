@@ -43,7 +43,7 @@ abstract interface class RentalSessionRepository {
 
   Future<RentalDatabaseRecord?> getRental(int rentalId);
 
-  Future<List<AdminRentalSession>> listActiveRentals();
+  Future<List<AdminRentalSession>> listActiveRentals({bool includeEnded = false});
 
   Future<AdminRentalSession> getRentalSessionDetails(int rentalId);
 
@@ -311,13 +311,16 @@ class RentalRepository
   }
 
   @override
-  Future<List<AdminRentalSession>> listActiveRentals() async {
+  Future<List<AdminRentalSession>> listActiveRentals({
+    bool includeEnded = false,
+  }) async {
     final rows = await _dataSource.selectList(
       table: 'rentals',
       columns: _rentalColumns,
-      includedIn: {'status': _blockingStatuses},
+      includedIn: includeEnded ? const {} : {'status': _blockingStatuses},
       orderBy: 'created_at',
       ascending: false,
+      limit: includeEnded ? 100 : null,
     );
     final rentals = rows.map(RentalDatabaseRecord.fromJson).toList();
     return Future.wait(rentals.map(_hydrateAdminSession));
