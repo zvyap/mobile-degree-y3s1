@@ -34,13 +34,6 @@ class _ColdBootLoadingPageState extends State<ColdBootLoadingPage> {
     });
   }
 
-  void _skip() {
-    _timer?.cancel();
-    if (mounted && !_isReady) {
-      setState(() => _isReady = true);
-    }
-  }
-
   @override
   void dispose() {
     _timer?.cancel();
@@ -60,9 +53,8 @@ class _ColdBootLoadingPageState extends State<ColdBootLoadingPage> {
               key: const ValueKey('auth_gate_view'),
               onToggleTheme: widget.onToggleTheme,
             )
-          : _ColdBootBannerView(
-              key: const ValueKey('cold_boot_banner_view'),
-              onTap: _skip,
+          : const _ColdBootBannerView(
+              key: ValueKey('cold_boot_banner_view'),
             ),
     );
   }
@@ -71,10 +63,7 @@ class _ColdBootLoadingPageState extends State<ColdBootLoadingPage> {
 class _ColdBootBannerView extends StatelessWidget {
   const _ColdBootBannerView({
     super.key,
-    required this.onTap,
   });
-
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -87,10 +76,7 @@ class _ColdBootBannerView extends StatelessWidget {
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFF030F2F),
-        body: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Stack(
+        body: Stack(
             fit: StackFit.expand,
             children: [
               // 1. Malaysia Smart City Bike Rent Banner
@@ -225,26 +211,13 @@ class _ColdBootBannerView extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
 
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Connecting to station network...',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.7),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              'Tap to skip',
-                              style: TextStyle(
-                                color: const Color(0xFF00FFC2).withValues(alpha: 0.9),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          'Connecting to station network...',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
@@ -253,7 +226,6 @@ class _ColdBootBannerView extends StatelessWidget {
               ),
             ],
           ),
-        ),
       ),
     );
   }
