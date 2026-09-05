@@ -1805,6 +1805,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bike condition reports will appear here.'**
   String get bikeConditionReportsAppearHere;
+
+  /// No description provided for @reported.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported'**
+  String get reported;
+
+  /// No description provided for @unableToLoadReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load reports'**
+  String get unableToLoadReports;
+
+  /// No description provided for @brakeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Brake System'**
+  String get brakeSystem;
+
+  /// No description provided for @tyres.
+  ///
+  /// In en, this message translates to:
+  /// **'Tyres'**
+  String get tyres;
+
+  /// No description provided for @chainAndGears.
+  ///
+  /// In en, this message translates to:
+  /// **'Chain & Gears'**
+  String get chainAndGears;
+
+  /// No description provided for @seatAndFrame.
+  ///
+  /// In en, this message translates to:
+  /// **'Seat & Frame'**
+  String get seatAndFrame;
+
+  /// No description provided for @bellAndLights.
+  ///
+  /// In en, this message translates to:
+  /// **'Bell & Lights'**
+  String get bellAndLights;
+
+  /// No description provided for @qrLock.
+  ///
+  /// In en, this message translates to:
+  /// **'QR / Lock'**
+  String get qrLock;
+
+  /// No description provided for @other.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get other;
 }
 
 class _AppLocalizationsDelegate

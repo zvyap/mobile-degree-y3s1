@@ -456,6 +456,15 @@
   "noMatchingReports": "No matching reports",
   "noReportsYet": "No reports yet",
   "tryDifferentSearchTerm": "Try a different search term.",
-  "bikeConditionReportsAppearHere": "Bike condition reports will appear here."
+  "bikeConditionReportsAppearHere": "Bike condition reports will appear here.",
+  "reported": "Reported",
+  "unableToLoadReports": "Unable to load reports",
+  "brakeSystem": "Brake System",
+  "tyres": "Tyres",
+  "chainAndGears": "Chain & Gears",
+  "seatAndFrame": "Seat & Frame",
+  "bellAndLights": "Bell & Lights",
+  "qrLock": "QR / Lock",
+  "other": "Other"
 
 }

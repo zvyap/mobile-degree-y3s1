@@ -1054,4 +1054,31 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get bikeConditionReportsAppearHere =>
       'Bike condition reports will appear here.';
+
+  @override
+  String get reported => 'Reported';
+
+  @override
+  String get unableToLoadReports => 'Unable to load reports';
+
+  @override
+  String get brakeSystem => 'Brake System';
+
+  @override
+  String get tyres => 'Tyres';
+
+  @override
+  String get chainAndGears => 'Chain & Gears';
+
+  @override
+  String get seatAndFrame => 'Seat & Frame';
+
+  @override
+  String get bellAndLights => 'Bell & Lights';
+
+  @override
+  String get qrLock => 'QR / Lock';
+
+  @override
+  String get other => 'Other';
 }

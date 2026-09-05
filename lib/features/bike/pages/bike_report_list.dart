@@ -1,3 +1,4 @@
+import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -55,7 +56,6 @@ class _BikeReportPageState extends State<BikeReportPage> {
   @override
   void dispose() {
     _searchController.dispose();
-
     super.dispose();
   }
 
@@ -140,14 +140,18 @@ class _BikeReportPageState extends State<BikeReportPage> {
   Future<void> _cancelReport(
       BikeReport report,
       ) async {
+    final l10n =
+    AppLocalizations.of(context);
+
     if (_isCancelling) {
       return;
     }
 
     if (report.status != 'pending') {
       _showSnackBar(
-        'Only pending reports can be cancelled.',
+        l10n.onlyPendingReportsCanBeCancelled,
       );
+
       return;
     }
 
@@ -163,7 +167,8 @@ class _BikeReportPageState extends State<BikeReportPage> {
     try {
       setState(() {
         _isCancelling = true;
-        _cancellingReportId = report.id;
+        _cancellingReportId =
+            report.id;
       });
 
       await _reportRepository.cancelReport(
@@ -173,7 +178,11 @@ class _BikeReportPageState extends State<BikeReportPage> {
       if (!mounted) return;
 
       _showSnackBar(
-        '${_formatReportId(report.id)} cancelled.',
+        l10n.reportCancelled(
+          _formatReportId(
+            report.id,
+          ),
+        ),
       );
 
       await _loadReports();
@@ -181,7 +190,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
       if (!mounted) return;
 
       _showSnackBar(
-        'Failed to cancel report: $error',
+        l10n.failedToCancelReport(
+          error.toString(),
+        ),
       );
     } finally {
       if (mounted) {
@@ -200,8 +211,14 @@ class _BikeReportPageState extends State<BikeReportPage> {
       context: context,
       builder: (dialogContext) {
         final scheme =
-            Theme.of(dialogContext)
-                .colorScheme;
+            Theme.of(
+              dialogContext,
+            ).colorScheme;
+
+        final l10n =
+        AppLocalizations.of(
+          dialogContext,
+        );
 
         return AlertDialog(
           icon: Icon(
@@ -209,14 +226,17 @@ class _BikeReportPageState extends State<BikeReportPage> {
             size: 42,
             color: scheme.error,
           ),
-          title: const Text(
-            'Cancel Report?',
+          title: Text(
+            l10n.cancelReportQuestion,
             textAlign:
             TextAlign.center,
           ),
           content: Text(
-            'Cancel ${_formatReportId(report.id)}? '
-                'This report will no longer be reviewed by an administrator.',
+            l10n.cancelReportConfirmation(
+              _formatReportId(
+                report.id,
+              ),
+            ),
             textAlign:
             TextAlign.center,
           ),
@@ -227,9 +247,8 @@ class _BikeReportPageState extends State<BikeReportPage> {
                   dialogContext,
                 ).pop(false);
               },
-              child:
-              const Text(
-                'Keep Report',
+              child: Text(
+                l10n.keepReport,
               ),
             ),
             FilledButton(
@@ -245,9 +264,8 @@ class _BikeReportPageState extends State<BikeReportPage> {
                 foregroundColor:
                 scheme.onError,
               ),
-              child:
-              const Text(
-                'Cancel Report',
+              child: Text(
+                l10n.cancelReport,
               ),
             ),
           ],
@@ -261,6 +279,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
   // ===========================================================================
 
   List<BikeReport> get _filteredReports {
+    final l10n =
+    AppLocalizations.of(context);
+
     final query =
     _searchController.text
         .trim()
@@ -293,6 +314,7 @@ class _BikeReportPageState extends State<BikeReportPage> {
       final category =
       _categoryLabel(
         report.category,
+        l10n,
       ).toLowerCase();
 
       final description =
@@ -374,34 +396,37 @@ class _BikeReportPageState extends State<BikeReportPage> {
     );
   }
 
-  String _formatReportId(int id) {
+  String _formatReportId(
+      int id,
+      ) {
     return 'RPT-${id.toString().padLeft(4, '0')}';
   }
 
   String _categoryLabel(
       String category,
+      AppLocalizations l10n,
       ) {
     switch (category) {
       case 'brakes':
-        return 'Brake System';
+        return l10n.brakeSystem;
 
       case 'tyres':
-        return 'Tyres';
+        return l10n.tyres;
 
       case 'chain_gears':
-        return 'Chain & Gears';
+        return l10n.chainAndGears;
 
       case 'seat_frame':
-        return 'Seat & Frame';
+        return l10n.seatAndFrame;
 
       case 'bell_lights':
-        return 'Bell & Lights';
+        return l10n.bellAndLights;
 
       case 'qr_lock':
-        return 'QR / Lock';
+        return l10n.qrLock;
 
       case 'other':
-        return 'Other';
+        return l10n.other;
 
       default:
         return category;
@@ -410,19 +435,20 @@ class _BikeReportPageState extends State<BikeReportPage> {
 
   String _statusLabel(
       String status,
+      AppLocalizations l10n,
       ) {
     switch (status) {
       case 'pending':
-        return 'Pending';
+        return l10n.pending;
 
       case 'approved':
-        return 'Approved';
+        return l10n.approved;
 
       case 'rejected':
-        return 'Rejected';
+        return l10n.rejected;
 
       case 'cancelled':
-        return 'Cancelled';
+        return l10n.cancelled;
 
       default:
         return status;
@@ -486,6 +512,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
     final scheme =
         theme.colorScheme;
 
+    final l10n =
+    AppLocalizations.of(context);
+
     if (_isLoading) {
       return const Center(
         child:
@@ -515,10 +544,10 @@ class _BikeReportPageState extends State<BikeReportPage> {
                 height: 12,
               ),
 
-              const Text(
-                'Unable to load reports',
+              Text(
+                l10n.unableToLoadReports,
                 style:
-                TextStyle(
+                const TextStyle(
                   fontSize: 18,
                   fontWeight:
                   FontWeight.w700,
@@ -547,8 +576,8 @@ class _BikeReportPageState extends State<BikeReportPage> {
                   Icons.refresh_rounded,
                 ),
                 label:
-                const Text(
-                  'Retry',
+                Text(
+                  l10n.retry,
                 ),
               ),
             ],
@@ -589,7 +618,7 @@ class _BikeReportPageState extends State<BikeReportPage> {
                       CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Condition reports',
+                          l10n.conditionReports,
                           style: theme
                               .textTheme
                               .headlineSmall
@@ -606,8 +635,8 @@ class _BikeReportPageState extends State<BikeReportPage> {
 
                         Text(
                           _isAdmin
-                              ? 'Review and resolve bike issues.'
-                              : 'Track your submitted bike reports.',
+                              ? l10n.reviewAndResolveBikeIssues
+                              : l10n.trackSubmittedBikeReports,
                           style: theme
                               .textTheme
                               .bodySmall
@@ -633,8 +662,8 @@ class _BikeReportPageState extends State<BikeReportPage> {
                           widget
                               .onOpenPendingReports,
                           child:
-                          const Text(
-                            'Pending Reports',
+                          Text(
+                            l10n.pendingReports,
                           ),
                         ),
 
@@ -705,7 +734,7 @@ class _BikeReportPageState extends State<BikeReportPage> {
                 decoration:
                 InputDecoration(
                   hintText:
-                  'Search report or bike ID',
+                  l10n.searchReportOrBikeId,
                   prefixIcon:
                   const Icon(
                     Icons.search_rounded,
@@ -755,7 +784,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
                   children: [
                     _ReportFilterChip(
                       label:
-                      'All ${_reports.length}',
+                      l10n.allReports(
+                        _reports.length,
+                      ),
                       selected:
                       _selectedFilter ==
                           'all',
@@ -774,7 +805,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
 
                     _ReportFilterChip(
                       label:
-                      'Pending $_pendingCount',
+                      l10n.pendingReportsCount(
+                        _pendingCount,
+                      ),
                       selected:
                       _selectedFilter ==
                           'pending',
@@ -793,7 +826,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
 
                     _ReportFilterChip(
                       label:
-                      'Approved $_approvedCount',
+                      l10n.approvedReportsCount(
+                        _approvedCount,
+                      ),
                       selected:
                       _selectedFilter ==
                           'approved',
@@ -812,7 +847,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
 
                     _ReportFilterChip(
                       label:
-                      'Rejected $_rejectedCount',
+                      l10n.rejectedReportsCount(
+                        _rejectedCount,
+                      ),
                       selected:
                       _selectedFilter ==
                           'rejected',
@@ -831,7 +868,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
 
                     _ReportFilterChip(
                       label:
-                      'Cancelled $_cancelledCount',
+                      l10n.cancelledReportsCount(
+                        _cancelledCount,
+                      ),
                       selected:
                       _selectedFilter ==
                           'cancelled',
@@ -863,8 +902,11 @@ class _BikeReportPageState extends State<BikeReportPage> {
                   Text(
                     _selectedFilter ==
                         'all'
-                        ? 'Reports'
-                        : '${_statusLabel(_selectedFilter)} reports',
+                        ? l10n.reports
+                        : '${_statusLabel(
+                      _selectedFilter,
+                      l10n,
+                    )} ${l10n.reports.toLowerCase()}',
                     style: theme
                         .textTheme
                         .titleMedium
@@ -875,7 +917,7 @@ class _BikeReportPageState extends State<BikeReportPage> {
                   ),
 
                   Text(
-                    'Newest first',
+                    l10n.newestFirst,
                     style: theme
                         .textTheme
                         .labelMedium
@@ -931,6 +973,7 @@ class _BikeReportPageState extends State<BikeReportPage> {
                         issue:
                         _categoryLabel(
                           report.category,
+                          l10n,
                         ),
                         description:
                         report.description,
@@ -940,7 +983,10 @@ class _BikeReportPageState extends State<BikeReportPage> {
                         status:
                         _statusLabel(
                           report.status,
+                          l10n,
                         ),
+                        rawStatus:
+                        report.status,
                         reportedTime:
                         _formatDateTime(
                           report.createdAt,
@@ -1014,6 +1060,7 @@ class _ReportCard extends StatelessWidget {
     required this.description,
     required this.location,
     required this.status,
+    required this.rawStatus,
     required this.reportedTime,
     required this.onOpenDetail,
     required this.canCancel,
@@ -1027,6 +1074,7 @@ class _ReportCard extends StatelessWidget {
   final String description;
   final String location;
   final String status;
+  final String rawStatus;
   final String reportedTime;
 
   final VoidCallback onOpenDetail;
@@ -1052,11 +1100,14 @@ class _ReportCard extends StatelessWidget {
     final scheme =
         theme.colorScheme;
 
+    final l10n =
+    AppLocalizations.of(context);
+
     Color backgroundColor;
     Color textColor;
 
-    switch (status) {
-      case 'Approved':
+    switch (rawStatus) {
+      case 'approved':
         backgroundColor =
         const Color(
           0xFFDDF7E9,
@@ -1069,7 +1120,7 @@ class _ReportCard extends StatelessWidget {
 
         break;
 
-      case 'Rejected':
+      case 'rejected':
         backgroundColor =
         const Color(
           0xFFFFE5E5,
@@ -1082,7 +1133,7 @@ class _ReportCard extends StatelessWidget {
 
         break;
 
-      case 'Cancelled':
+      case 'cancelled':
         backgroundColor =
             scheme.surfaceContainerHighest;
 
@@ -1293,7 +1344,7 @@ class _ReportCard extends StatelessWidget {
                 Expanded(
                   child:
                   Text(
-                    'Reported $reportedTime',
+                    '${l10n.reported} $reportedTime',
                     style:
                     theme.textTheme.labelSmall,
                   ),
@@ -1332,10 +1383,6 @@ class _ReportCard extends StatelessWidget {
                 ),
               ],
             ),
-
-            // ---------------------------------------------------------------
-            // RIDER CANCEL ACTION
-            // ---------------------------------------------------------------
 
             if (canCancel) ...[
               const SizedBox(
@@ -1380,8 +1427,8 @@ class _ReportCard extends StatelessWidget {
                   label:
                   Text(
                     isCancelling
-                        ? 'Cancelling...'
-                        : 'Cancel Report',
+                        ? l10n.pleaseWait
+                        : l10n.cancelReport,
                     style:
                     const TextStyle(
                       fontWeight:
@@ -1496,6 +1543,9 @@ class _EmptyReports extends StatelessWidget {
     final scheme =
         theme.colorScheme;
 
+    final l10n =
+    AppLocalizations.of(context);
+
     return Padding(
       padding:
       const EdgeInsets.symmetric(
@@ -1526,8 +1576,8 @@ class _EmptyReports extends StatelessWidget {
 
           Text(
             hasSearch
-                ? 'No matching reports'
-                : 'No reports yet',
+                ? l10n.noMatchingReports
+                : l10n.noReportsYet,
             style: theme
                 .textTheme
                 .titleMedium
@@ -1544,8 +1594,8 @@ class _EmptyReports extends StatelessWidget {
 
           Text(
             hasSearch
-                ? 'Try a different search term.'
-                : 'Bike condition reports will appear here.',
+                ? l10n.tryDifferentSearchTerm
+                : l10n.bikeConditionReportsAppearHere,
             textAlign:
             TextAlign.center,
             style: theme
