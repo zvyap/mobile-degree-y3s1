@@ -28,14 +28,25 @@ class AdminRentalSession {
   double get perMinuteRate => rental.perMinuteRate;
   double get holdAmount => rental.holdAmount;
   String get currency => rental.currency;
-  bool get isOverdue => rental.overdueAt != null;
+  bool get isOverdue =>
+      rental.overdueAt != null ||
+      (rental.rideDeadlineAt != null && DateTime.now().isAfter(rental.rideDeadlineAt!));
   DateTime? get rideDeadlineAt => rental.rideDeadlineAt;
   DateTime? get overdueAt => rental.overdueAt;
   String? get failureReason => rental.failureReason;
+  bool get isEnded =>
+      status == RentalDatabaseStatus.completed ||
+      status == RentalDatabaseStatus.cancelled ||
+      status == RentalDatabaseStatus.lost;
 
   int currentElapsedSeconds([DateTime? now]) {
     if (rental.startedAt == null) return rental.durationSeconds;
-    if (rental.endedAt != null) return rental.durationSeconds;
+    if (rental.endedAt != null ||
+        rental.status == RentalDatabaseStatus.completed ||
+        rental.status == RentalDatabaseStatus.cancelled ||
+        rental.status == RentalDatabaseStatus.lost) {
+      return rental.durationSeconds;
+    }
     final currentTime = now ?? DateTime.now();
     return math.max(
       rental.durationSeconds,

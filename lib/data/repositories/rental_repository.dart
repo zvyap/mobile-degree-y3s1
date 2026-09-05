@@ -43,7 +43,7 @@ abstract interface class RentalSessionRepository {
 
   Future<RentalDatabaseRecord?> getRental(int rentalId);
 
-  Future<List<AdminRentalSession>> listActiveRentals();
+  Future<List<AdminRentalSession>> listActiveRentals({bool includeEnded = false});
 
   Future<AdminRentalSession> getRentalSessionDetails(int rentalId);
 
@@ -311,13 +311,16 @@ class RentalRepository
   }
 
   @override
-  Future<List<AdminRentalSession>> listActiveRentals() async {
+  Future<List<AdminRentalSession>> listActiveRentals({
+    bool includeEnded = false,
+  }) async {
     final rows = await _dataSource.selectList(
       table: 'rentals',
       columns: _rentalColumns,
-      includedIn: {'status': _blockingStatuses},
+      includedIn: includeEnded ? const {} : {'status': _blockingStatuses},
       orderBy: 'created_at',
       ascending: false,
+      limit: includeEnded ? 100 : null,
     );
     final rentals = rows.map(RentalDatabaseRecord.fromJson).toList();
     return Future.wait(rentals.map(_hydrateAdminSession));
@@ -348,16 +351,16 @@ class RentalRepository
 
   Future<AdminRentalSession> _hydrateAdminSession(RentalDatabaseRecord rental) async {
     final results = await Future.wait<Object?>([
-      _bikes.findById(rental.bikeId),
-      _stations.findById(rental.startStationId),
+      _bikes.findById(rental.bikeId).catchError((_) => null),
+      _stations.findById(rental.startStationId).catchError((_) => null),
       if (rental.endStationId == null)
         Future<StationAvailabilityRecord?>.value()
       else
-        _stations.findById(rental.endStationId!),
+        _stations.findById(rental.endStationId!).catchError((_) => null),
       if (rental.userId == null)
         Future<UserProfileRecord?>.value()
       else
-        _profiles.findById(rental.userId!),
+        _profiles.findById(rental.userId!).catchError((_) => null),
     ]);
     return AdminRentalSession(
       rental: rental,

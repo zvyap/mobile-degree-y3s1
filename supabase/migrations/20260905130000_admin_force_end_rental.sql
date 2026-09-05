@@ -46,9 +46,12 @@ begin
   where rental_id = v_rental.id
     and status = 'pending';
 
-  -- Free the bike back to available at current/end/start station
+  -- Free the bike back to maintenance (if mid-ride) or available (if returning or reserved)
   update public.bikes
-  set status = 'available',
+  set status = case
+        when v_rental.started_at is not null and v_rental.status <> 'returning' then 'maintenance'
+        else 'available'
+      end,
       current_station_id = coalesce(v_rental.end_station_id, v_rental.start_station_id)
   where id = v_rental.bike_id;
 
@@ -107,10 +110,13 @@ as $$
   select private.force_end_rental(p_rental_id);
 $$;
 
-revoke execute on function private.force_end_rental(bigint) from public, anon;
-grant execute on function private.force_end_rental(bigint) to authenticated;
+revoke execute on function private.force_end_rental(bigint) from public, anon, authenticated;
+grant execute on function private.force_end_rental(bigint) to service_role;
 revoke execute on function public.force_end_rental(bigint) from public, anon;
 grant execute on function public.force_end_rental(bigint) to authenticated;
+
+-- Ensure replica identity full so Realtime receives full record payloads under RLS
+alter table public.rentals replica identity full;
 
 -- Add rentals table to realtime publication if not already added
 do $$

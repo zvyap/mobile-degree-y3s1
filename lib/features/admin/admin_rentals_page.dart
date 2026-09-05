@@ -11,6 +11,7 @@ enum _RentalFilter {
   active,
   returning,
   reserved,
+  ended,
 }
 
 class AdminRentalsPage extends StatefulWidget {
@@ -22,7 +23,7 @@ class AdminRentalsPage extends StatefulWidget {
   });
 
   final RentalSessionRepository repository;
-  final ValueChanged<int> onOpenDetails;
+  final FutureOr<void> Function(int) onOpenDetails;
   final bool enableTicker;
 
   @override
@@ -37,6 +38,8 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   Timer? _tickerTimer;
+  bool _showEndedSessions = false;
+  DateTimeRange? _selectedDateRange;
 
   @override
   void initState() {
@@ -64,7 +67,9 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
           _error = null;
         });
       }
-      final result = await widget.repository.listActiveRentals();
+      final result = await widget.repository.listActiveRentals(
+        includeEnded: _showEndedSessions,
+      );
       if (!mounted) return;
       setState(() {
         _sessions = result;
@@ -80,9 +85,29 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
     }
   }
 
+  Future<void> _selectDateRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 1),
+      initialDateRange: _selectedDateRange,
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDateRange = picked;
+      });
+    }
+  }
+
   List<AdminRentalSession> get _filteredSessions {
     final query = _searchQuery.trim().toLowerCase();
     return _sessions.where((session) {
+      // Default only show ongoing sessions
+      if (!_showEndedSessions && session.isEnded) {
+        return false;
+      }
+
       // Status filter
       final matchesFilter = switch (_filter) {
         _RentalFilter.all => true,
@@ -90,8 +115,31 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
         _RentalFilter.returning => session.status == RentalDatabaseStatus.returning,
         _RentalFilter.reserved => session.status == RentalDatabaseStatus.reserved ||
             session.status == RentalDatabaseStatus.pendingAuthorization,
+        _RentalFilter.ended => session.isEnded,
       };
       if (!matchesFilter) return false;
+
+      // Date range filter
+      if (_selectedDateRange != null) {
+        final sessionDate = session.startedAt ?? session.createdAt;
+        final start = DateTime(
+          _selectedDateRange!.start.year,
+          _selectedDateRange!.start.month,
+          _selectedDateRange!.start.day,
+        );
+        final end = DateTime(
+          _selectedDateRange!.end.year,
+          _selectedDateRange!.end.month,
+          _selectedDateRange!.end.day,
+          23,
+          59,
+          59,
+          999,
+        );
+        if (sessionDate.isBefore(start) || sessionDate.isAfter(end)) {
+          return false;
+        }
+      }
 
       // Text search
       if (query.isEmpty) return true;
@@ -166,12 +214,96 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
             ),
             const SizedBox(height: 12),
 
+            // Controls: Date Range Filter + Show Ended Checkbox
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('admin-rentals-date-range-btn'),
+                    icon: Icon(
+                      _selectedDateRange != null
+                          ? Icons.date_range_rounded
+                          : Icons.calendar_today_outlined,
+                      size: 18,
+                    ),
+                    label: Text(
+                      _selectedDateRange != null
+                          ? '${context.formats.date(_selectedDateRange!.start)} - ${context.formats.date(_selectedDateRange!.end)}'
+                          : 'All Dates',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: _selectDateRange,
+                  ),
+                ),
+                if (_selectedDateRange != null) ...[
+                  const SizedBox(width: 6),
+                  IconButton(
+                    key: const ValueKey('admin-rentals-clear-date-btn'),
+                    tooltip: 'Clear date range',
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => setState(() => _selectedDateRange = null),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Show ended sessions checkbox
+            InkWell(
+              key: const ValueKey('admin-rentals-show-ended-tile'),
+              borderRadius: BorderRadius.circular(8),
+              onTap: () {
+                setState(() {
+                  _showEndedSessions = !_showEndedSessions;
+                  if (!_showEndedSessions && _filter == _RentalFilter.ended) {
+                    _filter = _RentalFilter.all;
+                  }
+                });
+                _loadSessions();
+              },
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      key: const ValueKey('admin-rentals-show-ended-checkbox'),
+                      value: _showEndedSessions,
+                      onChanged: (val) {
+                        setState(() {
+                          _showEndedSessions = val ?? false;
+                          if (!_showEndedSessions && _filter == _RentalFilter.ended) {
+                            _filter = _RentalFilter.all;
+                          }
+                        });
+                        _loadSessions();
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Show ended sessions',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
             // Filter chips
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildFilterChip('All (${_sessions.length})', _RentalFilter.all),
+                  _buildFilterChip('All ($_totalCount)', _RentalFilter.all),
                   const SizedBox(width: 8),
                   _buildFilterChip(
                     'Riding (${_countByStatus(RentalDatabaseStatus.active)})',
@@ -187,6 +319,13 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
                     'Reserved (${_countReserved()})',
                     _RentalFilter.reserved,
                   ),
+                  if (_showEndedSessions) ...[
+                    const SizedBox(width: 8),
+                    _buildFilterChip(
+                      'Ended (${_countEnded()})',
+                      _RentalFilter.ended,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -257,13 +396,19 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
               ...filtered.map((session) => _RentalSessionCard(
                     session: session,
                     onTap: () async {
-                      widget.onOpenDetails(session.id);
+                      await widget.onOpenDetails(session.id);
+                      if (mounted) _loadSessions();
                     },
                   )),
           ],
         ),
       ),
     );
+  }
+
+  int get _totalCount {
+    if (_showEndedSessions) return _sessions.length;
+    return _sessions.where((s) => !s.isEnded).length;
   }
 
   int _countByStatus(RentalDatabaseStatus status) {
@@ -274,6 +419,10 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
     return _sessions.where((s) =>
         s.status == RentalDatabaseStatus.reserved ||
         s.status == RentalDatabaseStatus.pendingAuthorization).length;
+  }
+
+  int _countEnded() {
+    return _sessions.where((s) => s.isEnded).length;
   }
 
   Widget _buildFilterChip(String label, _RentalFilter filter) {
@@ -525,13 +674,13 @@ class _RentalSessionCard extends StatelessWidget {
     final (label, bg, fg) = switch (session.status) {
       RentalDatabaseStatus.active => (
           'IN RIDE',
-          Colors.green.withValues(alpha: 0.2),
-          Colors.green.shade700,
+          scheme.tertiaryContainer,
+          scheme.onTertiaryContainer,
         ),
       RentalDatabaseStatus.returning => (
           'RETURNING',
-          Colors.amber.withValues(alpha: 0.2),
-          Colors.amber.shade900,
+          scheme.secondaryContainer,
+          scheme.onSecondaryContainer,
         ),
       RentalDatabaseStatus.reserved ||
       RentalDatabaseStatus.pendingAuthorization ||
@@ -539,6 +688,21 @@ class _RentalSessionCard extends StatelessWidget {
           'RESERVED',
           scheme.primaryContainer,
           scheme.onPrimaryContainer,
+        ),
+      RentalDatabaseStatus.completed => (
+          'COMPLETED',
+          scheme.surfaceContainerHighest,
+          scheme.onSurfaceVariant,
+        ),
+      RentalDatabaseStatus.cancelled => (
+          'CANCELLED',
+          scheme.errorContainer,
+          scheme.onErrorContainer,
+        ),
+      RentalDatabaseStatus.lost => (
+          'LOST',
+          scheme.errorContainer,
+          scheme.onErrorContainer,
         ),
       _ => (
           session.status.name.toUpperCase(),

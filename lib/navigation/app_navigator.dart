@@ -145,15 +145,13 @@ class AppNavigator extends StatelessWidget {
       ),
       AppPage.rentingManagement => AdminRentalsPage(
         repository: rentingController.repository,
-        onOpenDetails: (rentalId) {
-          navigatorKey.currentState?.pushNamed(
-            AppPage.rentingDetail.routeName,
-            arguments: rentalId,
-          );
-        },
+        onOpenDetails: (rentalId) => navigatorKey.currentState?.pushNamed(
+          AppPage.rentingDetail.routeName,
+          arguments: rentalId,
+        ),
       ),
       AppPage.rentingDetail => AdminRentalDetailPage(
-        rentalId: arguments as int,
+        rentalId: arguments is int ? arguments : 0,
         repository: rentingController.repository,
         rentingController: rentingController,
         onSessionEnded: () {

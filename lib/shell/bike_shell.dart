@@ -71,7 +71,7 @@ class _BikeShellState extends State<BikeShell> {
   }
 
   Future<void> _showGlobalForceEndAlert(String message) async {
-    if (!mounted || _rentingController.isForceEndDialogShowing) return;
+    if (!mounted || _currentPage == AppPage.scan || _rentingController.isForceEndDialogShowing) return;
     _rentingController.isForceEndDialogShowing = true;
     final dialogContext = _navigatorKey.currentContext ?? context;
     try {
