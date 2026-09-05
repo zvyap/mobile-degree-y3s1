@@ -179,6 +179,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Manage appearance and ride permissions.';
 
   @override
+  String get language => 'Language';
+
+  @override
+  String get languageDescription => 'Select your preferred app language';
+
+  @override
+  String get selectLanguage => 'Select language';
+
+  @override
+  String get english => 'English';
+
+  @override
+  String get malay => 'Bahasa Melayu';
+
+  @override
+  String get simplifiedChinese => '简体中文';
+
+  @override
   String get darkTheme => 'Dark theme';
 
   @override

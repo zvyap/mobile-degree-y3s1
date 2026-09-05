@@ -16,9 +16,16 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BikeShell extends StatefulWidget {
-  const BikeShell({super.key, required this.onToggleTheme});
+  const BikeShell({
+    super.key,
+    required this.onToggleTheme,
+    this.onLocaleChanged,
+    this.currentLocale,
+  });
 
   final ValueChanged<Brightness> onToggleTheme;
+  final ValueChanged<Locale?>? onLocaleChanged;
+  final Locale? currentLocale;
 
   @override
   State<BikeShell> createState() => _BikeShellState();
@@ -233,6 +240,8 @@ class _BikeShellState extends State<BikeShell> {
                     onSelectRootPage: _selectRootPage,
                     onOpenPage: _openPage,
                     onToggleTheme: widget.onToggleTheme,
+                    onLocaleChanged: widget.onLocaleChanged,
+                    currentLocale: widget.currentLocale,
                   ),
                 ),
               ],

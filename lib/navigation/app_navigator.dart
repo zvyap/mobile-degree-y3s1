@@ -47,6 +47,8 @@ class AppNavigator extends StatelessWidget {
     required this.onSelectRootPage,
     required this.onOpenPage,
     required this.onToggleTheme,
+    this.onLocaleChanged,
+    this.currentLocale,
   });
 
   final GlobalKey<NavigatorState> navigatorKey;
@@ -57,6 +59,8 @@ class AppNavigator extends StatelessWidget {
   final ValueChanged<AppPage> onSelectRootPage;
   final ValueChanged<AppPage> onOpenPage;
   final ValueChanged<Brightness> onToggleTheme;
+  final ValueChanged<Locale?>? onLocaleChanged;
+  final Locale? currentLocale;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +300,11 @@ class AppNavigator extends StatelessWidget {
         },
       ),
 
-      AppPage.settings => SettingsPage(onToggleTheme: onToggleTheme),
+      AppPage.settings => SettingsPage(
+        onToggleTheme: onToggleTheme,
+        onLocaleChanged: onLocaleChanged,
+        currentLocale: currentLocale,
+      ),
       AppPage.paymentMethods => PaymentMethodsPage(
         repository: rentingController.paymentMethodRepository ??
             PaymentMethodRepository(
