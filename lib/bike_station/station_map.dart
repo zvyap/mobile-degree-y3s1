@@ -28,7 +28,6 @@ class RefinedUserBikeView extends BaseStationMapView {
 }
 
 class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeView> {
-  final GlobalKey<SharedBikeMapState> _mapTileKey = GlobalKey<SharedBikeMapState>();
   final DraggableScrollableController _sheetController = DraggableScrollableController();
 
   static const double _minSheetSize = 0.32;
@@ -66,7 +65,7 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
     final double? lng = BaseStationMapViewState.toDouble(station['longitude'] ?? station['lng']);
 
     if (lat != null && lng != null) {
-      _mapTileKey.currentState?.moveCameraToLocation(LatLng(lat, lng));
+      mapTileKey.currentState?.moveCameraToLocation(LatLng(lat, lng));
     }
   }
 
@@ -122,7 +121,7 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
     if (widget.isAdminDeleteMode) {
       _showDeleteConfirmationDialog(context, station, Theme.of(context), Theme.of(context).colorScheme, const Color(0xFFDC2626));
     } else {
-      // 🟢 Refresh stations when returning from detail view
+      // Refresh stations when returning from detail view
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -171,7 +170,7 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                 // 1. MAP LAYER
                 Positioned.fill(
                   child: SharedBikeMap(
-                    key: _mapTileKey,
+                    key: mapTileKey,
                     stations: stations,
                     riderLocation: widget.riderLocation ?? userLocation,
                     riderHeading: widget.riderHeading ?? userHeading,
@@ -438,7 +437,7 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
       );
     }
 
-    // 🟢 If currently selected station is terminated (e.g. from state), fallback to null/first active
+    // If currently selected station is terminated (e.g. from state), fallback to null/first active
     final bool isSelectedTerminated = selectedStation != null &&
         selectedStation!['status']?.toString().trim().toLowerCase() == 'terminated' &&
         !widget.isAdminMode;
