@@ -14,10 +14,6 @@ class BikeManagementPage extends StatefulWidget {
     required this.onMakeReport,
   });
 
-  static const Color _cardColor = Color(0xFF1D2939);
-  static const Color _accentColor = Color(0xFF0E8EA8);
-  static const Color _borderColor = Color(0xFFD2DCE6);
-
   final ValueChanged<int> onOpenBikeDetails;
   final VoidCallback onOpenReportList;
   final VoidCallback onAddBike;
@@ -28,22 +24,38 @@ class BikeManagementPage extends StatefulWidget {
       _BikeManagementPageState();
 }
 
-class _BikeManagementPageState extends State<BikeManagementPage> {
-  final BikeRepository _bikeRepository = BikeRepository();
+class _BikeManagementPageState
+    extends State<BikeManagementPage> {
+  final BikeRepository _bikeRepository =
+  BikeRepository();
+
+  final TextEditingController _searchController =
+  TextEditingController();
 
   List<Bike> _bikes = [];
 
   bool _isLoading = true;
+
   String? _error;
+
+  String _selectedStatusFilter = 'all';
 
   @override
   void initState() {
     super.initState();
+
     _loadBikes();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+
+    super.dispose();
+  }
+
   // ===========================================================================
-  // LOAD BIKES FROM SUPABASE
+  // LOAD BIKES
   // ===========================================================================
 
   Future<void> _loadBikes() async {
@@ -55,7 +67,8 @@ class _BikeManagementPageState extends State<BikeManagementPage> {
         });
       }
 
-      final bikes = await _bikeRepository.getBikes();
+      final bikes =
+      await _bikeRepository.getBikes();
 
       if (!mounted) return;
 
@@ -75,196 +88,414 @@ class _BikeManagementPageState extends State<BikeManagementPage> {
   }
 
   // ===========================================================================
+  // FILTERED BIKES
+  // ===========================================================================
+
+  List<Bike> get _filteredBikes {
+    final query =
+    _searchController.text
+        .trim()
+        .toLowerCase();
+
+    final filtered = _bikes.where(
+          (bike) {
+        final bikeStatus =
+        _convertBikeStatus(
+          bike.status,
+        );
+
+        final matchesStatus =
+            _selectedStatusFilter ==
+                'all' ||
+                _statusFilterKey(
+                  bikeStatus,
+                ) ==
+                    _selectedStatusFilter;
+
+        if (!matchesStatus) {
+          return false;
+        }
+
+        if (query.isEmpty) {
+          return true;
+        }
+
+        final bikeCode =
+        bike.code.toLowerCase();
+
+        final station =
+            bike.stationName
+                ?.toLowerCase() ??
+                '';
+
+        final databaseStatus =
+        bike.status.toLowerCase();
+
+        final displayedStatus =
+        bikeStatus.label
+            .toLowerCase();
+
+        final battery =
+            bike.batteryPercent
+                ?.toString() ??
+                '';
+
+        final description =
+        _buildBikeDescription(
+          bike,
+        ).toLowerCase();
+
+        return bikeCode
+            .contains(query) ||
+            station.contains(query) ||
+            databaseStatus
+                .contains(query) ||
+            displayedStatus
+                .contains(query) ||
+            battery.contains(query) ||
+            description
+                .contains(query);
+      },
+    ).toList();
+
+    return filtered;
+  }
+
+  // ===========================================================================
+  // SEARCH
+  // ===========================================================================
+
+  void _onSearchChanged(
+      String value,
+      ) {
+    setState(() {});
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+
+    setState(() {});
+  }
+
+  // ===========================================================================
   // BUILD PAGE
   // ===========================================================================
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
+
+    final visibleBikes =
+        _filteredBikes;
+
     return RefreshIndicator(
-      onRefresh: _loadBikes,
-      child: ListView(
-        key: const ValueKey<String>('bike-management-page'),
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+      onRefresh:
+      _loadBikes,
+      child:
+      ListView(
+        key:
+        const ValueKey<String>(
+          'bike-management-page',
+        ),
+        physics:
+        const AlwaysScrollableScrollPhysics(),
+        padding:
+        const EdgeInsets.fromLTRB(
+          18,
+          16,
+          18,
+          32,
+        ),
         children: [
           // -------------------------------------------------------------------
-          // Title + buttons
+          // TITLE + ACTIONS
           // -------------------------------------------------------------------
 
           Row(
             children: [
               Expanded(
-                child: Text(
+                child:
+                Text(
                   context.l10n.fleetDescription,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.80),
-                    fontSize: 16,
+                  style: theme
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(
+                    color: scheme
+                        .onSurface
+                        .withValues(
+                      alpha:
+                      0.7,
+                    ),
                   ),
                 ),
               ),
 
-              FilledButton.icon(
-                onPressed: widget.onAddBike,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add Bike'),
+              const SizedBox(
+                width: 12,
               ),
 
-              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed:
+                widget.onAddBike,
+                icon:
+                const Icon(
+                  Icons.add_rounded,
+                ),
+                label:
+                Text(
+                  context.l10n.addBike,
+                ),
+              ),
+
+              const SizedBox(
+                width: 8,
+              ),
 
               OutlinedButton.icon(
-                onPressed: widget.onOpenReportList,
-                icon: const Icon(Icons.report_outlined),
-                label: const Text('Reports'),
+                onPressed:
+                widget
+                    .onOpenReportList,
+                icon:
+                const Icon(
+                  Icons.report_outlined,
+                ),
+                label:
+                Text(
+                  context.l10n.reports,
+                ),
               ),
             ],
           ),
 
-          const SizedBox(height: 28),
+          const SizedBox(
+            height: 24,
+          ),
 
           // -------------------------------------------------------------------
-          // Search
+          // SEARCH
           // -------------------------------------------------------------------
 
-          const _SearchSection(),
+          _SearchSection(
+            controller:
+            _searchController,
+            onChanged:
+            _onSearchChanged,
+            onClear:
+            _clearSearch,
+          ),
 
-          const SizedBox(height: 18),
+          const SizedBox(
+            height: 14,
+          ),
 
           // -------------------------------------------------------------------
-          // Status filters
+          // STATUS FILTERS
           // -------------------------------------------------------------------
 
           _BikeStatusFilters(
-            bikes: _bikes,
+            bikes:
+            _bikes,
+            selectedFilter:
+            _selectedStatusFilter,
+            onSelected:
+                (filter) {
+              setState(() {
+                _selectedStatusFilter =
+                    filter;
+              });
+            },
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(
+            height: 20,
+          ),
 
           // -------------------------------------------------------------------
-          // Bike count
+          // BIKE COUNT
           // -------------------------------------------------------------------
 
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment:
+            MainAxisAlignment
+                .spaceBetween,
             children: [
               Text(
-                '${_bikes.length} ${_bikes.length == 1 ? 'bike' : 'bikes'}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+                visibleBikes.length ==
+                    1
+                    ? '1 bike'
+                    : '${visibleBikes.length} bikes',
+                style: theme
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(
+                  fontWeight:
+                  FontWeight.w800,
                 ),
               ),
-              const Text(
+
+              Text(
                 'Sort: Status',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                style: theme
+                    .textTheme
+                    .labelMedium
+                    ?.copyWith(
+                  color: scheme
+                      .onSurface
+                      .withValues(
+                    alpha:
+                    0.7,
+                  ),
+                  fontWeight:
+                  FontWeight.w700,
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(
+            height: 14,
+          ),
 
           // -------------------------------------------------------------------
-          // Loading state
+          // LOADING
           // -------------------------------------------------------------------
 
           if (_isLoading)
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 50),
-              child: Center(
-                child: CircularProgressIndicator(),
+              padding:
+              EdgeInsets.symmetric(
+                vertical:
+                50,
+              ),
+              child:
+              Center(
+                child:
+                CircularProgressIndicator(),
               ),
             )
 
           // -------------------------------------------------------------------
-          // Error state
+          // ERROR
           // -------------------------------------------------------------------
 
-          else if (_error != null)
-            _buildErrorSection()
+          else if (_error !=
+              null)
+            _buildErrorSection(
+              context,
+            )
 
           // -------------------------------------------------------------------
-          // Empty state
+          // NO BIKES IN DATABASE
           // -------------------------------------------------------------------
 
           else if (_bikes.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 50),
-                child: Center(
-                  child: Text(
-                    'No bikes found',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
+              _EmptyBikeState(
+                icon:
+                Icons.directions_bike_outlined,
+                title:
+                'No bikes found',
+                message:
+                'Bikes added to the fleet will appear here.',
               )
 
             // -------------------------------------------------------------------
-            // Bike cards from Supabase
+            // SEARCH / FILTER EMPTY
             // -------------------------------------------------------------------
 
-            else
-              for (int index = 0; index < _bikes.length; index++) ...[
-                _buildBikeCard(
-                  context,
-                  _bikes[index],
-                ),
-                if (index != _bikes.length - 1)
-                  const SizedBox(height: 16),
-              ],
+            else if (visibleBikes
+                  .isEmpty)
+                _EmptyBikeState(
+                  icon:
+                  Icons.search_off_rounded,
+                  title:
+                  'No matching bikes',
+                  message:
+                  'Try a different search term or status.',
+                )
+
+              // -------------------------------------------------------------------
+              // BIKE CARDS
+              // -------------------------------------------------------------------
+
+              else
+                for (int index = 0;
+                index <
+                    visibleBikes.length;
+                index++) ...[
+                  _buildBikeCard(
+                    context,
+                    visibleBikes[index],
+                  ),
+
+                  if (index !=
+                      visibleBikes.length -
+                          1)
+                    const SizedBox(
+                      height:
+                      12,
+                    ),
+                ],
         ],
       ),
     );
   }
 
   // ===========================================================================
-  // CREATE CARD FROM BIKE MODEL
+  // CREATE CARD FROM BIKE
   // ===========================================================================
 
   Widget _buildBikeCard(
       BuildContext context,
       Bike bike,
       ) {
-    final BikeStatus bikeStatus = _convertBikeStatus(
+    final bikeStatus =
+    _convertBikeStatus(
       bike.status,
     );
 
     return _BikeCard(
-      bikeId: bike.code,
-
-      status: bikeStatus,
-
-      // Temporary: currently this displays current_station_id.
+      bikeId:
+      bike.code,
+      status:
+      bikeStatus,
       location:
       bike.stationName ??
           'No station assigned',
-
-      description: _buildBikeDescription(bike),
-
-      onViewDetails: () {
+      description:
+      _buildBikeDescription(
+        bike,
+      ),
+      onViewDetails:
+          () {
         widget.onOpenBikeDetails(
           bike.id,
         );
       },
-
-      onMakeReport: () {
+      onMakeReport:
+          () {
         widget.onMakeReport(
           bike.id,
         );
       },
-
-      onShowQr: () {
+      onShowQr:
+          () {
         BikeQrModal.show(
           context,
-          bikeCode: bike.code,
-          qrToken: bike.qrToken,
-          stationName: bike.stationName,
-          status: bike.status,
+          bikeCode:
+          bike.code,
+          qrToken:
+          bike.qrToken,
+          stationName:
+          bike.stationName,
+          status:
+          bike.status,
         );
       },
     );
@@ -274,16 +505,21 @@ class _BikeManagementPageState extends State<BikeManagementPage> {
   // BIKE DESCRIPTION
   // ===========================================================================
 
-  String _buildBikeDescription(Bike bike) {
-    final List<String> description = [];
+  String _buildBikeDescription(
+      Bike bike,
+      ) {
+    final description =
+    <String>[];
 
-    if (bike.batteryPercent != null) {
+    if (bike.batteryPercent !=
+        null) {
       description.add(
         'Battery ${bike.batteryPercent}%',
       );
     }
 
-    if (bike.lastServiceAt != null) {
+    if (bike.lastServiceAt !=
+        null) {
       description.add(
         'Last service ${_formatDate(bike.lastServiceAt!)}',
       );
@@ -293,93 +529,145 @@ class _BikeManagementPageState extends State<BikeManagementPage> {
       return 'No additional information';
     }
 
-    return description.join(' • ');
+    return description.join(
+      ' • ',
+    );
   }
 
-  String _formatDate(DateTime date) {
-    final String day = date.day.toString().padLeft(2, '0');
-    final String month = date.month.toString().padLeft(2, '0');
+  String _formatDate(
+      DateTime date,
+      ) {
+    final day =
+    date.day
+        .toString()
+        .padLeft(
+      2,
+      '0',
+    );
+
+    final month =
+    date.month
+        .toString()
+        .padLeft(
+      2,
+      '0',
+    );
 
     return '$day/$month/${date.year}';
   }
 
   // ===========================================================================
-  // CONVERT DATABASE STATUS -> UI STATUS
+  // STATUS
   // ===========================================================================
 
-  BikeStatus _convertBikeStatus(String status) {
-    switch (status.toLowerCase()) {
-      case 'available':
-        return BikeStatus.available;
+  BikeStatus _convertBikeStatus(
+      String status,
+      ) {
+    return _bikeStatusFromDatabase(
+      status,
+    );
+  }
 
-      case 'maintenance':
-      case 'in_service':
-      case 'in service':
-      case 'service':
-        return BikeStatus.inService;
-
-      case 'rented':
-      case 'in_use':
-      case 'in use':
-        return BikeStatus.rented;
-
-      case 'unavailable':
-      case 'disabled':
-      case 'lost':
-        return BikeStatus.unavailable;
-
-      default:
-        return BikeStatus.unavailable;
-    }
+  String _statusFilterKey(
+      BikeStatus status,
+      ) {
+    return switch (status) {
+      BikeStatus.available =>
+      'available',
+      BikeStatus.inService =>
+      'maintenance',
+      BikeStatus.rented =>
+      'rented',
+      BikeStatus.unavailable =>
+      'unavailable',
+    };
   }
 
   // ===========================================================================
   // ERROR SECTION
   // ===========================================================================
 
-  Widget _buildErrorSection() {
+  Widget _buildErrorSection(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 40,
+      padding:
+      const EdgeInsets.symmetric(
+        vertical:
+        40,
       ),
-      child: Column(
+      child:
+      Column(
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
-            color: Colors.redAccent,
-            size: 48,
+            color:
+            scheme.error,
+            size:
+            48,
           ),
 
-          const SizedBox(height: 12),
-
-          const Text(
-            'Unable to load bikes',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-            ),
+          const SizedBox(
+            height:
+            12,
           ),
-
-          const SizedBox(height: 6),
 
           Text(
-            _error ?? '',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
+            'Unable to load bikes',
+            style: theme
+                .textTheme
+                .titleMedium
+                ?.copyWith(
+              fontWeight:
+              FontWeight.w800,
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(
+            height:
+            6,
+          ),
+
+          Text(
+            _error ??
+                '',
+            textAlign:
+            TextAlign.center,
+            style: theme
+                .textTheme
+                .bodySmall
+                ?.copyWith(
+              color: scheme
+                  .onSurface
+                  .withValues(
+                alpha:
+                0.65,
+              ),
+            ),
+          ),
+
+          const SizedBox(
+            height:
+            16,
+          ),
 
           OutlinedButton.icon(
-            onPressed: _loadBikes,
-            icon: const Icon(
+            onPressed:
+            _loadBikes,
+            icon:
+            const Icon(
               Icons.refresh_rounded,
             ),
-            label: const Text('Retry'),
+            label:
+            Text(
+              context.l10n.retry,
+            ),
           ),
         ],
       ),
@@ -387,154 +675,280 @@ class _BikeManagementPageState extends State<BikeManagementPage> {
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // SEARCH
-// ===========================================================================
+// =============================================================================
 
-class _SearchSection extends StatelessWidget {
-  const _SearchSection();
+class _SearchSection
+    extends StatelessWidget {
+  const _SearchSection({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 58,
-            decoration: BoxDecoration(
-              color: BikeManagementPage._cardColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: BikeManagementPage._borderColor,
-                width: 1.4,
-              ),
-            ),
-            child: const TextField(
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                prefixIcon: Icon(
-                  Icons.search_rounded,
-                  color: Colors.white70,
-                  size: 28,
-                ),
-                hintText: 'Search bike ID or model',
-                hintStyle: TextStyle(
-                  color: Color(0xFF8F9BAB),
-                  fontSize: 16,
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  vertical: 17,
-                ),
-              ),
+  Widget build(
+      BuildContext context,
+      ) {
+    final scheme =
+        Theme.of(context)
+            .colorScheme;
+
+    return TextField(
+      controller:
+      controller,
+      onChanged:
+      onChanged,
+      textInputAction:
+      TextInputAction.search,
+      onSubmitted:
+          (_) {
+        FocusScope.of(context)
+            .unfocus();
+
+        onChanged(
+          controller.text,
+        );
+      },
+      decoration:
+      InputDecoration(
+        hintText:
+        'Search bike ID or station',
+        prefixIcon:
+        IconButton(
+          tooltip:
+          'Search',
+          onPressed:
+              () {
+            FocusScope.of(context)
+                .unfocus();
+
+            onChanged(
+              controller.text,
+            );
+          },
+          icon:
+          const Icon(
+            Icons.search_rounded,
+          ),
+        ),
+        suffixIcon:
+        controller.text.isEmpty
+            ? null
+            : IconButton(
+          tooltip:
+          'Clear search',
+          onPressed:
+          onClear,
+          icon:
+          const Icon(
+            Icons.close_rounded,
+          ),
+        ),
+        filled:
+        true,
+        fillColor:
+        scheme.surfaceContainer,
+        border:
+        OutlineInputBorder(
+          borderRadius:
+          BorderRadius.circular(
+            14,
+          ),
+        ),
+        enabledBorder:
+        OutlineInputBorder(
+          borderRadius:
+          BorderRadius.circular(
+            14,
+          ),
+          borderSide:
+          BorderSide(
+            color: scheme.outline
+                .withValues(
+              alpha:
+              0.6,
             ),
           ),
         ),
-
-        const SizedBox(width: 12),
-
-        Container(
-          width: 58,
-          height: 58,
-          decoration: BoxDecoration(
-            color: BikeManagementPage._cardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: BikeManagementPage._borderColor,
-              width: 1.4,
-            ),
+        focusedBorder:
+        OutlineInputBorder(
+          borderRadius:
+          BorderRadius.circular(
+            14,
           ),
-          child: IconButton(
-            onPressed: () {
-              // Filter functionality later.
-            },
-            icon: const Icon(
-              Icons.filter_alt_outlined,
-              color: Colors.white,
-            ),
+          borderSide:
+          BorderSide(
+            color:
+            scheme.primary,
+            width:
+            1.5,
           ),
         ),
-      ],
+      ),
     );
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // STATUS FILTERS
-// ===========================================================================
+// =============================================================================
 
-class _BikeStatusFilters extends StatelessWidget {
+class _BikeStatusFilters
+    extends StatelessWidget {
   const _BikeStatusFilters({
     required this.bikes,
+    required this.selectedFilter,
+    required this.onSelected,
   });
 
   final List<Bike> bikes;
+  final String selectedFilter;
+  final ValueChanged<String> onSelected;
 
   @override
-  Widget build(BuildContext context) {
-    final int availableCount = bikes.where((bike) {
-      return bike.status.toLowerCase() == 'available';
-    }).length;
+  Widget build(
+      BuildContext context,
+      ) {
+    final availableCount =
+        bikes.where(
+              (bike) {
+            return _bikeStatusFromDatabase(
+              bike.status,
+            ) ==
+                BikeStatus.available;
+          },
+        ).length;
 
-    final int maintenanceCount = bikes.where((bike) {
-      final String status = bike.status.toLowerCase();
+    final maintenanceCount =
+        bikes.where(
+              (bike) {
+            return _bikeStatusFromDatabase(
+              bike.status,
+            ) ==
+                BikeStatus.inService;
+          },
+        ).length;
 
-      return status == 'maintenance' ||
-          status == 'in_service' ||
-          status == 'in service' ||
-          status == 'service';
-    }).length;
+    final rentedCount =
+        bikes.where(
+              (bike) {
+            return _bikeStatusFromDatabase(
+              bike.status,
+            ) ==
+                BikeStatus.rented;
+          },
+        ).length;
 
-    final int rentedCount = bikes.where((bike) {
-      final String status = bike.status.toLowerCase();
-
-      return status == 'rented' ||
-          status == 'in_use' ||
-          status == 'in use';
-    }).length;
-
-    final int unavailableCount = bikes.where((bike) {
-      final String status = bike.status.toLowerCase();
-
-      return status == 'unavailable' ||
-          status == 'disabled' ||
-          status == 'lost';
-    }).length;
+    final unavailableCount =
+        bikes.where(
+              (bike) {
+            return _bikeStatusFromDatabase(
+              bike.status,
+            ) ==
+                BikeStatus.unavailable;
+          },
+        ).length;
 
     return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
+      scrollDirection:
+      Axis.horizontal,
+      child:
+      Row(
         children: [
           _StatusFilterChip(
-            label: 'All ${bikes.length}',
-            selected: true,
+            label:
+            'All ${bikes.length}',
+            selected:
+            selectedFilter ==
+                'all',
+            onTap:
+                () {
+              onSelected(
+                'all',
+              );
+            },
           ),
 
-          const SizedBox(width: 10),
-
-          _StatusFilterChip(
-            label: 'Available $availableCount',
+          const SizedBox(
+            width:
+            8,
           ),
 
-          const SizedBox(width: 10),
-
           _StatusFilterChip(
-            label: 'Maintenance $maintenanceCount',
+            label:
+            'Available $availableCount',
+            selected:
+            selectedFilter ==
+                'available',
+            onTap:
+                () {
+              onSelected(
+                'available',
+              );
+            },
           ),
 
-          const SizedBox(width: 10),
-
-          _StatusFilterChip(
-            label: 'Rented $rentedCount',
+          const SizedBox(
+            width:
+            8,
           ),
 
-          const SizedBox(width: 10),
+          _StatusFilterChip(
+            label:
+            'Maintenance $maintenanceCount',
+            selected:
+            selectedFilter ==
+                'maintenance',
+            onTap:
+                () {
+              onSelected(
+                'maintenance',
+              );
+            },
+          ),
+
+          const SizedBox(
+            width:
+            8,
+          ),
 
           _StatusFilterChip(
-            label: 'Unavailable $unavailableCount',
+            label:
+            'Rented $rentedCount',
+            selected:
+            selectedFilter ==
+                'rented',
+            onTap:
+                () {
+              onSelected(
+                'rented',
+              );
+            },
+          ),
+
+          const SizedBox(
+            width:
+            8,
+          ),
+
+          _StatusFilterChip(
+            label:
+            'Unavailable $unavailableCount',
+            selected:
+            selectedFilter ==
+                'unavailable',
+            onTap:
+                () {
+              onSelected(
+                'unavailable',
+              );
+            },
           ),
         ],
       ),
@@ -542,51 +956,90 @@ class _BikeStatusFilters extends StatelessWidget {
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // STATUS FILTER CHIP
-// ===========================================================================
+// =============================================================================
 
-class _StatusFilterChip extends StatelessWidget {
+class _StatusFilterChip
+    extends StatelessWidget {
   const _StatusFilterChip({
     required this.label,
-    this.selected = false,
+    required this.selected,
+    required this.onTap,
   });
 
   final String label;
   final bool selected;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 10,
+  Widget build(
+      BuildContext context,
+      ) {
+    final scheme =
+        Theme.of(context)
+            .colorScheme;
+
+    return InkWell(
+      onTap:
+      onTap,
+      borderRadius:
+      BorderRadius.circular(
+        20,
       ),
-      decoration: BoxDecoration(
-        color: selected
-            ? BikeManagementPage._accentColor
-            : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: selected
-              ? Colors.white
-              : const Color(0xFF667386),
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
+      child:
+      Container(
+        padding:
+        const EdgeInsets.symmetric(
+          horizontal:
+          14,
+          vertical:
+          7,
+        ),
+        decoration:
+        BoxDecoration(
+          color:
+          selected
+              ? scheme.primary
+              : scheme.surface,
+          borderRadius:
+          BorderRadius.circular(
+            20,
+          ),
+          border:
+          selected
+              ? null
+              : Border.all(
+            color:
+            scheme.outline,
+          ),
+        ),
+        child:
+        Text(
+          label,
+          style:
+          TextStyle(
+            color:
+            selected
+                ? scheme.onPrimary
+                : scheme.onSurface,
+            fontSize:
+            11,
+            fontWeight:
+            FontWeight.w700,
+          ),
         ),
       ),
     );
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // BIKE CARD
-// ===========================================================================
+// =============================================================================
 
-class _BikeCard extends StatelessWidget {
+class _BikeCard
+    extends StatelessWidget {
   const _BikeCard({
     required this.bikeId,
     required this.status,
@@ -607,177 +1060,423 @@ class _BikeCard extends StatelessWidget {
   final VoidCallback onShowQr;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: BikeManagementPage._cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: BikeManagementPage._borderColor,
-          width: 1.3,
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
+
+    return InkWell(
+      onTap:
+      onViewDetails,
+      borderRadius:
+      BorderRadius.circular(
+        16,
+      ),
+      child:
+      Container(
+        padding:
+        const EdgeInsets.all(
+          14,
+        ),
+        decoration:
+        BoxDecoration(
+          color:
+          scheme.surfaceContainer,
+          borderRadius:
+          BorderRadius.circular(
+            16,
+          ),
+          border:
+          Border.all(
+            color: scheme.outline
+                .withValues(
+              alpha:
+              0.7,
+            ),
+          ),
+        ),
+        child:
+        Row(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+          children: [
+            // -----------------------------------------------------------------
+            // BIKE ICON
+            // -----------------------------------------------------------------
+
+            Container(
+              width:
+              82,
+              height:
+              82,
+              decoration:
+              BoxDecoration(
+                color:
+                status.placeholderColor(
+                  scheme,
+                ),
+                borderRadius:
+                BorderRadius.circular(
+                  12,
+                ),
+              ),
+              child:
+              Icon(
+                Icons.directions_bike_rounded,
+                size:
+                46,
+                color:
+                status.iconColor(
+                  scheme,
+                ),
+              ),
+            ),
+
+            const SizedBox(
+              width:
+              14,
+            ),
+
+            // -----------------------------------------------------------------
+            // INFORMATION
+            // -----------------------------------------------------------------
+
+            Expanded(
+              child:
+              Column(
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child:
+                        Text(
+                          bikeId,
+                          style: theme
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                            fontWeight:
+                            FontWeight.w800,
+                          ),
+                        ),
+                      ),
+
+                      _BikeStatusBadge(
+                        status:
+                        status,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(
+                    height:
+                    10,
+                  ),
+
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        color:
+                        scheme.primary,
+                        size:
+                        18,
+                      ),
+
+                      const SizedBox(
+                        width:
+                        4,
+                      ),
+
+                      Expanded(
+                        child:
+                        Text(
+                          location,
+                          overflow:
+                          TextOverflow.ellipsis,
+                          style:
+                          theme.textTheme.bodySmall,
+                        ),
+                      ),
+
+                      IconButton(
+                        tooltip:
+                        'View QR code',
+                        onPressed:
+                        onShowQr,
+                        icon:
+                        Icon(
+                          Icons.qr_code_2_rounded,
+                          color:
+                          scheme.onSurface,
+                        ),
+                      ),
+
+                      PopupMenuButton<BikeMenuAction>(
+                        icon:
+                        Icon(
+                          Icons.more_horiz_rounded,
+                          color:
+                          scheme.onSurface,
+                        ),
+                        onSelected:
+                            (action) {
+                          switch (action) {
+                            case BikeMenuAction
+                                .details:
+                              onViewDetails();
+
+                              break;
+
+                            case BikeMenuAction
+                                .makeReport:
+                              onMakeReport();
+
+                              break;
+
+                            case BikeMenuAction
+                                .showQr:
+                              onShowQr();
+
+                              break;
+                          }
+                        },
+                        itemBuilder:
+                            (context) => [
+                          const PopupMenuItem<
+                              BikeMenuAction>(
+                            value:
+                            BikeMenuAction.details,
+                            child:
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline_rounded,
+                                ),
+                                SizedBox(
+                                  width:
+                                  10,
+                                ),
+                                Text(
+                                  'Bike details',
+                                ),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem<
+                              BikeMenuAction>(
+                            value:
+                            BikeMenuAction.showQr,
+                            child:
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.qr_code_2_rounded,
+                                ),
+                                SizedBox(
+                                  width:
+                                  10,
+                                ),
+                                Text(
+                                  'QR code',
+                                ),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem<
+                              BikeMenuAction>(
+                            value:
+                            BikeMenuAction.makeReport,
+                            child:
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.report_outlined,
+                                ),
+                                SizedBox(
+                                  width:
+                                  10,
+                                ),
+                                Text(
+                                  'Reports',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(
+                    height:
+                    4,
+                  ),
+
+                  Text(
+                    description,
+                    style: theme
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(
+                      color:
+                      status.descriptionColor(
+                        scheme,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // -------------------------------------------------------------------
-          // Bike image placeholder
-          // -------------------------------------------------------------------
+    );
+  }
+}
 
-          Container(
-            width: 92,
-            height: 92,
-            decoration: BoxDecoration(
-              color: status.placeholderColor,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Icon(
-              Icons.directions_bike_rounded,
-              size: 52,
-              color: status.iconColor,
+// =============================================================================
+// STATUS BADGE
+// =============================================================================
+
+class _BikeStatusBadge
+    extends StatelessWidget {
+  const _BikeStatusBadge({
+    required this.status,
+  });
+
+  final BikeStatus status;
+
+  @override
+  Widget build(
+      BuildContext context,
+      ) {
+    final scheme =
+        Theme.of(context)
+            .colorScheme;
+
+    return Container(
+      padding:
+      const EdgeInsets.symmetric(
+        horizontal:
+        12,
+        vertical:
+        6,
+      ),
+      decoration:
+      BoxDecoration(
+        color:
+        status.badgeBackgroundColor,
+        borderRadius:
+        BorderRadius.circular(
+          20,
+        ),
+      ),
+      child:
+      Text(
+        status.label,
+        style:
+        TextStyle(
+          color:
+          status.badgeTextColor,
+          fontSize:
+          11,
+          fontWeight:
+          FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// EMPTY STATE
+// =============================================================================
+
+class _EmptyBikeState
+    extends StatelessWidget {
+  const _EmptyBikeState({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
+
+    return Padding(
+      padding:
+      const EdgeInsets.symmetric(
+        vertical:
+        48,
+      ),
+      child:
+      Column(
+        children: [
+          Icon(
+            icon,
+            size:
+            52,
+            color: scheme
+                .onSurface
+                .withValues(
+              alpha:
+              0.4,
             ),
           ),
 
-          const SizedBox(width: 14),
+          const SizedBox(
+            height:
+            12,
+          ),
 
-          // -------------------------------------------------------------------
-          // Bike information
-          // -------------------------------------------------------------------
+          Text(
+            title,
+            style: theme
+                .textTheme
+                .titleMedium
+                ?.copyWith(
+              fontWeight:
+              FontWeight.w700,
+            ),
+          ),
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        bikeId,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
+          const SizedBox(
+            height:
+            4,
+          ),
 
-                    _BikeStatusBadge(
-                      status: status,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 5),
-
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      color: Color(0xFF6F8397),
-                      size: 23,
-                    ),
-
-                    const SizedBox(width: 5),
-
-                    Expanded(
-                      child: Text(
-                        location,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-
-                    IconButton(
-                      icon: const Icon(
-                        Icons.qr_code_2_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      tooltip: 'View QR code',
-                      onPressed: onShowQr,
-                    ),
-
-                    PopupMenuButton<BikeMenuAction>(
-                      icon: const Icon(
-                        Icons.more_horiz_rounded,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                      onSelected: (action) {
-                        switch (action) {
-                          case BikeMenuAction.details:
-                            onViewDetails();
-                            break;
-
-                          case BikeMenuAction.makeReport:
-                            onMakeReport();
-                            break;
-
-                          case BikeMenuAction.showQr:
-                            onShowQr();
-                            break;
-                        }
-                      },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem<BikeMenuAction>(
-                          value: BikeMenuAction.details,
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline_rounded,
-                              ),
-                              SizedBox(width: 10),
-                              Text('Bike details'),
-                            ],
-                          ),
-                        ),
-
-                        PopupMenuItem<BikeMenuAction>(
-                          value: BikeMenuAction.showQr,
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.qr_code_2_rounded,
-                              ),
-                              SizedBox(width: 10),
-                              Text('QR code'),
-                            ],
-                          ),
-                        ),
-
-                        PopupMenuItem<BikeMenuAction>(
-                          value: BikeMenuAction.makeReport,
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.report_outlined,
-                              ),
-                              SizedBox(width: 10),
-                              Text('Reports'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 2),
-
-                Text(
-                  description,
-                  style: TextStyle(
-                    color: status.descriptionColor,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+          Text(
+            message,
+            textAlign:
+            TextAlign.center,
+            style: theme
+                .textTheme
+                .bodySmall
+                ?.copyWith(
+              color: scheme
+                  .onSurface
+                  .withValues(
+                alpha:
+                0.6,
+              ),
             ),
           ),
         ],
@@ -786,43 +1485,43 @@ class _BikeCard extends StatelessWidget {
   }
 }
 
-// ===========================================================================
-// STATUS BADGE
-// ===========================================================================
+// =============================================================================
+// DATABASE STATUS -> UI STATUS
+// =============================================================================
 
-class _BikeStatusBadge extends StatelessWidget {
-  const _BikeStatusBadge({
-    required this.status,
-  });
+BikeStatus _bikeStatusFromDatabase(
+    String status,
+    ) {
+  switch (status.toLowerCase()) {
+    case 'available':
+      return BikeStatus.available;
 
-  final BikeStatus status;
+    case 'maintenance':
+    case 'in_service':
+    case 'in service':
+    case 'service':
+      return BikeStatus.inService;
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 15,
-        vertical: 7,
-      ),
-      decoration: BoxDecoration(
-        color: status.badgeBackgroundColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(
-          color: status.badgeTextColor,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
+    case 'reserved':
+    case 'rented':
+    case 'in_use':
+    case 'in use':
+      return BikeStatus.rented;
+
+    case 'retired':
+    case 'unavailable':
+    case 'disabled':
+    case 'lost':
+      return BikeStatus.unavailable;
+
+    default:
+      return BikeStatus.unavailable;
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // BIKE STATUS
-// ===========================================================================
+// =============================================================================
 
 enum BikeStatus {
   available,
@@ -832,62 +1531,128 @@ enum BikeStatus {
 
   String get label {
     return switch (this) {
-      available => 'Available',
-      inService => 'In service',
-      rented => 'Rented',
-      unavailable => 'Unavailable',
+      available =>
+      'Available',
+      inService =>
+      'Maintenance',
+      rented =>
+      'Rented',
+      unavailable =>
+      'Unavailable',
     };
   }
 
   Color get badgeBackgroundColor {
     return switch (this) {
-      available => const Color(0xFFE1F6EC),
-      inService => const Color(0xFFFFF3D6),
-      rented => const Color(0xFFEDE5FF),
-      unavailable => const Color(0xFFFFE5E5),
+      available =>
+      const Color(
+        0xFFDDF7E9,
+      ),
+      inService =>
+      const Color(
+        0xFFFFF3D6,
+      ),
+      rented =>
+      const Color(
+        0xFFEDE5FF,
+      ),
+      unavailable =>
+      const Color(
+        0xFFFFE5E5,
+      ),
     };
   }
 
   Color get badgeTextColor {
     return switch (this) {
-      available => const Color(0xFF12A36D),
-      inService => const Color(0xFFE6A919),
-      rented => const Color(0xFF8C5AE8),
-      unavailable => const Color(0xFFE24B4B),
+      available =>
+      const Color(
+        0xFF159A67,
+      ),
+      inService =>
+      const Color(
+        0xFFE6A919,
+      ),
+      rented =>
+      const Color(
+        0xFF8C5AE8,
+      ),
+      unavailable =>
+      const Color(
+        0xFFE24B4B,
+      ),
     };
   }
 
-  Color get descriptionColor {
+  Color descriptionColor(
+      ColorScheme scheme,
+      ) {
     return switch (this) {
-      available => Colors.white70,
-      inService => const Color(0xFFE6A919),
-      rented => Colors.white70,
-      unavailable => const Color(0xFFE24B4B),
+      available =>
+          scheme.onSurface
+              .withValues(
+            alpha:
+            0.65,
+          ),
+      inService =>
+      const Color(
+        0xFFE6A919,
+      ),
+      rented =>
+          scheme.onSurface
+              .withValues(
+            alpha:
+            0.65,
+          ),
+      unavailable =>
+      const Color(
+        0xFFE24B4B,
+      ),
     };
   }
 
-  Color get placeholderColor {
+  Color placeholderColor(
+      ColorScheme scheme,
+      ) {
     return switch (this) {
-      available => const Color(0xFFE3F3ED),
-      inService => const Color(0xFFFFF3D8),
-      rented => const Color(0xFFF2F2F2),
-      unavailable => const Color(0xFFF2F2F2),
+      available =>
+      scheme.primaryContainer,
+      inService =>
+      const Color(
+        0xFFFFF3D8,
+      ),
+      rented =>
+      scheme.secondaryContainer,
+      unavailable =>
+      scheme.surfaceContainerHighest,
     };
   }
 
-  Color get iconColor {
+  Color iconColor(
+      ColorScheme scheme,
+      ) {
     return switch (this) {
-      available => const Color(0xFF618A91),
-      inService => const Color(0xFFD8B844),
-      rented => const Color(0xFF607D8B),
-      unavailable => const Color(0xFF424242),
+      available =>
+      scheme.onPrimaryContainer,
+      inService =>
+      const Color(
+        0xFFD8B844,
+      ),
+      rented =>
+      scheme.onSecondaryContainer,
+      unavailable =>
+          scheme.onSurface
+              .withValues(
+            alpha:
+            0.65,
+          ),
     };
   }
 }
 
-// ===========================================================================
+// =============================================================================
 // BIKE CARD ACTION
-// ===========================================================================
+// =============================================================================
 
 enum BikeMenuAction {
   details,
