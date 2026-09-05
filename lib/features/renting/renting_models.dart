@@ -119,11 +119,15 @@ class RentalPaymentMethod {
     required this.id,
     required this.brand,
     required this.lastFour,
+    this.isDefault = false,
   });
 
   final String id;
   final String brand;
   final String lastFour;
+
+  /// Mirrors the backend single-default-per-user guarantee.
+  final bool isDefault;
 }
 
 class PaymentAuthorization {

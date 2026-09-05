@@ -395,6 +395,7 @@ class RentingController extends ChangeNotifier {
                 id: p.id.toString(),
                 brand: p.brand,
                 lastFour: p.lastFour,
+                isDefault: p.isDefault,
               ),
             )
             .toList();
@@ -402,6 +403,7 @@ class RentingController extends ChangeNotifier {
           list.insert(0, paypalPaymentMethod);
         }
         availablePaymentMethods = List.unmodifiable(list);
+        selectedPaymentMethod ??= _preferredPaymentMethod(list);
       } else {
         availablePaymentMethods = paymentMethods;
       }
@@ -765,6 +767,7 @@ class RentingController extends ChangeNotifier {
                 id: p.id.toString(),
                 brand: p.brand,
                 lastFour: p.lastFour,
+                isDefault: p.isDefault,
               ),
             )
             .toList();
@@ -785,21 +788,35 @@ class RentingController extends ChangeNotifier {
         if (newlySelected != null) {
           selectedPaymentMethod = newlySelected;
         } else if (selectedPaymentMethod != null) {
-          selectedPaymentMethod = list
-                  .where((m) => m.id == selectedPaymentMethod!.id)
-                  .firstOrNull ??
-              selectedPaymentMethod;
+          // Keep the current choice while it still exists; a deleted card
+          // falls back to the default card, then PayPal.
+          selectedPaymentMethod =
+              list.where((m) => m.id == selectedPaymentMethod!.id).firstOrNull ??
+                  _preferredPaymentMethod(list);
+        } else {
+          selectedPaymentMethod = _preferredPaymentMethod(list);
         }
         notifyListeners();
         return newlySelected;
       } else {
         availablePaymentMethods = paymentMethods;
+        selectedPaymentMethod = paypalPaymentMethod;
         notifyListeners();
         return null;
       }
     } catch (_) {
       return null;
     }
+  }
+
+  /// Default card first, then PayPal, then whatever is listed — mirrors the
+  /// backend single-default-per-user guarantee.
+  RentalPaymentMethod? _preferredPaymentMethod(
+    List<RentalPaymentMethod> methods,
+  ) {
+    return methods.where((m) => m.isDefault).firstOrNull ??
+        methods.where((m) => m.id == 'paypal').firstOrNull ??
+        methods.firstOrNull;
   }
 
   Future<RentalError?> verifyCurrentBikeRentable() async {
