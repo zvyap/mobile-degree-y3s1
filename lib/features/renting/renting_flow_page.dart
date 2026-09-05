@@ -100,6 +100,7 @@ class _RentingFlowPageState extends State<RentingFlowPage>
   void didUpdateWidget(covariant RentingFlowPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.pauseTracking();
       _controller.removeListener(_handleControllerChange);
       _attachController(widget.controller);
       _controller.resumeTracking();

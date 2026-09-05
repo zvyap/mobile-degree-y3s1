@@ -22,7 +22,7 @@ class AdminRentalsPage extends StatefulWidget {
   });
 
   final RentalSessionRepository repository;
-  final ValueChanged<int> onOpenDetails;
+  final FutureOr<void> Function(int) onOpenDetails;
   final bool enableTicker;
 
   @override
@@ -257,7 +257,8 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
               ...filtered.map((session) => _RentalSessionCard(
                     session: session,
                     onTap: () async {
-                      widget.onOpenDetails(session.id);
+                      await widget.onOpenDetails(session.id);
+                      if (mounted) _loadSessions();
                     },
                   )),
           ],
@@ -525,13 +526,13 @@ class _RentalSessionCard extends StatelessWidget {
     final (label, bg, fg) = switch (session.status) {
       RentalDatabaseStatus.active => (
           'IN RIDE',
-          Colors.green.withValues(alpha: 0.2),
-          Colors.green.shade700,
+          scheme.tertiaryContainer,
+          scheme.onTertiaryContainer,
         ),
       RentalDatabaseStatus.returning => (
           'RETURNING',
-          Colors.amber.withValues(alpha: 0.2),
-          Colors.amber.shade900,
+          scheme.secondaryContainer,
+          scheme.onSecondaryContainer,
         ),
       RentalDatabaseStatus.reserved ||
       RentalDatabaseStatus.pendingAuthorization ||

@@ -128,9 +128,9 @@ class _AdminRentalDetailPageState extends State<AdminRentalDetailPage> {
       await widget.repository.adminForceEndRental(widget.rentalId);
 
       // If the currently local active session in RentingController is this rental,
-      // trigger the local force end handler immediately.
+      // trigger the local force end handler immediately without alerting the admin as victim.
       if (widget.rentingController?.rentalId == widget.rentalId) {
-        widget.rentingController?.handleAdminForceEnd();
+        widget.rentingController?.handleAdminForceEnd(null, false);
       }
 
       if (!mounted) return;
@@ -144,6 +144,7 @@ class _AdminRentalDetailPageState extends State<AdminRentalDetailPage> {
 
       _tickerTimer?.cancel();
       setState(() => _isEnding = false);
+      _loadDetails();
       if (widget.onSessionEnded != null) {
         widget.onSessionEnded!();
       } else {
@@ -656,13 +657,13 @@ class _AdminRentalDetailPageState extends State<AdminRentalDetailPage> {
     final (label, bg, fg) = switch (session.status) {
       RentalDatabaseStatus.active => (
           'IN RIDE',
-          Colors.green.withValues(alpha: 0.2),
-          Colors.green.shade700,
+          scheme.tertiaryContainer,
+          scheme.onTertiaryContainer,
         ),
       RentalDatabaseStatus.returning => (
           'RETURNING',
-          Colors.amber.withValues(alpha: 0.2),
-          Colors.amber.shade900,
+          scheme.secondaryContainer,
+          scheme.onSecondaryContainer,
         ),
       RentalDatabaseStatus.reserved ||
       RentalDatabaseStatus.pendingAuthorization ||

@@ -348,16 +348,16 @@ class RentalRepository
 
   Future<AdminRentalSession> _hydrateAdminSession(RentalDatabaseRecord rental) async {
     final results = await Future.wait<Object?>([
-      _bikes.findById(rental.bikeId),
-      _stations.findById(rental.startStationId),
+      _bikes.findById(rental.bikeId).catchError((_) => null),
+      _stations.findById(rental.startStationId).catchError((_) => null),
       if (rental.endStationId == null)
         Future<StationAvailabilityRecord?>.value()
       else
-        _stations.findById(rental.endStationId!),
+        _stations.findById(rental.endStationId!).catchError((_) => null),
       if (rental.userId == null)
         Future<UserProfileRecord?>.value()
       else
-        _profiles.findById(rental.userId!),
+        _profiles.findById(rental.userId!).catchError((_) => null),
     ]);
     return AdminRentalSession(
       rental: rental,

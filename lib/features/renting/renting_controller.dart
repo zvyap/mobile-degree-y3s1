@@ -944,14 +944,20 @@ class RentingController extends ChangeNotifier {
         final isEnded = current.status == RentalDatabaseStatus.completed ||
             current.status == RentalDatabaseStatus.cancelled ||
             current.status == RentalDatabaseStatus.lost;
-        if (isEnded && current.failureReason == 'force_ended_by_admin') {
-          handleAdminForceEnd();
+        if (isEnded) {
+          if (current.failureReason == 'force_ended_by_admin') {
+            handleAdminForceEnd();
+          } else {
+            _stopClock();
+            _stopRealtimeEvents();
+            _resetLocal();
+          }
         }
       }
     } catch (_) {}
   }
 
-  void handleAdminForceEnd([String? customMessage]) {
+  void handleAdminForceEnd([String? customMessage, bool notifyVictim = true]) {
     _stopClock();
     _stopLocationTracking();
     _stopRealtimeEvents();
@@ -962,9 +968,11 @@ class RentingController extends ChangeNotifier {
     metrics = const RideMetrics(elapsedSeconds: 0, distanceKm: 0);
     _clearError();
     notifyListeners();
-    final message = customMessage ??
-        'Your renting session has been force ended by an admin.';
-    _forceEndController.add(message);
+    if (notifyVictim) {
+      final message = customMessage ??
+          'Your renting session has been force ended by an admin.';
+      _forceEndController.add(message);
+    }
   }
 
   void _listenToRealtimeEvents(int rentalId) {
@@ -994,8 +1002,11 @@ class RentingController extends ChangeNotifier {
 
   void _stopRealtimeEvents() {
     try {
-      _realtimeChannel?.unsubscribe();
+      final channel = _realtimeChannel;
       _realtimeChannel = null;
+      if (channel != null) {
+        Supabase.instance.client.removeChannel(channel);
+      }
     } catch (_) {}
   }
 
