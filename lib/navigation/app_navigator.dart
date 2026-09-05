@@ -1,6 +1,8 @@
 import 'package:bike_renting_app/bike_station/shared_map.dart';
 import 'package:bike_renting_app/bike_station/station_map.dart';
 import 'package:bike_renting_app/features/admin/admin_management_page.dart';
+import 'package:bike_renting_app/features/admin/admin_rentals_page.dart';
+import 'package:bike_renting_app/features/admin/admin_rental_detail_page.dart';
 import 'package:bike_renting_app/features/bike/pages/bike_details.dart';
 import 'package:bike_renting_app/features/bike/pages/bike_management_page.dart';
 import 'package:bike_renting_app/features/home/home_page.dart';
@@ -131,6 +133,24 @@ class AppNavigator extends StatelessWidget {
         onNavigate: onSelectRootPage,
         onOpenBikeManagement: () => onOpenPage(AppPage.bikeManagement),
         onOpenStationManagement: () => onOpenPage(AppPage.stationManagement),
+        onOpenRentingManagement: () => onOpenPage(AppPage.rentingManagement),
+      ),
+      AppPage.rentingManagement => AdminRentalsPage(
+        repository: rentingController.repository,
+        onOpenDetails: (rentalId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.rentingDetail.routeName,
+            arguments: rentalId,
+          );
+        },
+      ),
+      AppPage.rentingDetail => AdminRentalDetailPage(
+        rentalId: arguments as int,
+        repository: rentingController.repository,
+        rentingController: rentingController,
+        onSessionEnded: () {
+          navigatorKey.currentState?.pop(true);
+        },
       ),
       AppPage.addbike => const AddBike(),
       AppPage.bikeDetail => BikeDetailsPage(
