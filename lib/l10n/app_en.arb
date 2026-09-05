@@ -349,5 +349,113 @@
   "rideWarningSuspiciousActivityTitle": "Suspicious Activity Detected",
   "rideWarningSuspiciousActivityBody": "Suspicious activity detected: You are unusually far from the pickup station.",
   "rideWarningSuspiciousLegalTitle": "Suspicious Activity & Legal Action",
-  "rideWarningSuspiciousLegalBody": "Suspicious activity detected far from station and deposit time exceeded. Immediate legal action will be taken if the bike is not returned."
+  "rideWarningSuspiciousLegalBody": "Suspicious activity detected far from station and deposit time exceeded. Immediate legal action will be taken if the bike is not returned.",
+
+  "addBike": "Add Bike",
+  "editBike": "Edit Bike",
+  "bikeDetail": "Bike Detail",
+  "bikeReport": "Bike Report",
+  "transferBike": "Transfer Bike",
+  "serviceBike": "Service Bike",
+  "reportDetail": "Report Detail",
+  "pendingReports": "Pending Reports",
+  "newReport": "New Report",
+  "pendingReportDetails": "Pending Report Details",
+  "paymentMethods": "Payment Methods",
+
+  "conditionReports": "Condition reports",
+  "reviewAndResolveBikeIssues": "Review and resolve bike issues.",
+  "trackSubmittedBikeReports": "Track your submitted bike reports.",
+  "searchReportOrBikeId": "Search report or bike ID",
+
+  "pending": "Pending",
+  "approved": "Approved",
+  "rejected": "Rejected",
+  "cancelled": "Cancelled",
+  "reports": "Reports",
+  "newestFirst": "Newest first",
+
+  "cancelReport": "Cancel Report",
+  "cancelReportQuestion": "Cancel Report?",
+  "keepReport": "Keep Report",
+
+  "cancelReportConfirmation": "Cancel {reportId}? This report will no longer be reviewed by an administrator.",
+  "@cancelReportConfirmation": {
+    "placeholders": {
+      "reportId": {
+        "type": "String"
+      }
+    }
+  },
+
+  "reportCancelled": "{reportId} cancelled.",
+  "@reportCancelled": {
+    "placeholders": {
+      "reportId": {
+        "type": "String"
+      }
+    }
+  },
+
+  "failedToCancelReport": "Failed to cancel report: {error}",
+  "@failedToCancelReport": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "onlyPendingReportsCanBeCancelled": "Only pending reports can be cancelled.",
+
+  "allReports": "All {count}",
+  "@allReports": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "pendingReportsCount": "Pending {count}",
+  "@pendingReportsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "approvedReportsCount": "Approved {count}",
+  "@approvedReportsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "rejectedReportsCount": "Rejected {count}",
+  "@rejectedReportsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "cancelledReportsCount": "Cancelled {count}",
+  "@cancelledReportsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "noMatchingReports": "No matching reports",
+  "noReportsYet": "No reports yet",
+  "tryDifferentSearchTerm": "Try a different search term.",
+  "bikeConditionReportsAppearHere": "Bike condition reports will appear here."
+
 }

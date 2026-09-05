@@ -1583,6 +1583,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Suspicious activity detected far from station and deposit time exceeded. Immediate legal action will be taken if the bike is not returned.'**
   String get rideWarningSuspiciousLegalBody;
+
+  /// No description provided for @addBike.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Bike'**
+  String get addBike;
+
+  /// No description provided for @editBike.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Bike'**
+  String get editBike;
+
+  /// No description provided for @bikeDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike Detail'**
+  String get bikeDetail;
+
+  /// No description provided for @bikeReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike Report'**
+  String get bikeReport;
+
+  /// No description provided for @transferBike.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer Bike'**
+  String get transferBike;
+
+  /// No description provided for @serviceBike.
+  ///
+  /// In en, this message translates to:
+  /// **'Service Bike'**
+  String get serviceBike;
+
+  /// No description provided for @reportDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Report Detail'**
+  String get reportDetail;
+
+  /// No description provided for @pendingReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Reports'**
+  String get pendingReports;
+
+  /// No description provided for @newReport.
+  ///
+  /// In en, this message translates to:
+  /// **'New Report'**
+  String get newReport;
+
+  /// No description provided for @pendingReportDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Report Details'**
+  String get pendingReportDetails;
+
+  /// No description provided for @paymentMethods.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Methods'**
+  String get paymentMethods;
+
+  /// No description provided for @conditionReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Condition reports'**
+  String get conditionReports;
+
+  /// No description provided for @reviewAndResolveBikeIssues.
+  ///
+  /// In en, this message translates to:
+  /// **'Review and resolve bike issues.'**
+  String get reviewAndResolveBikeIssues;
+
+  /// No description provided for @trackSubmittedBikeReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Track your submitted bike reports.'**
+  String get trackSubmittedBikeReports;
+
+  /// No description provided for @searchReportOrBikeId.
+  ///
+  /// In en, this message translates to:
+  /// **'Search report or bike ID'**
+  String get searchReportOrBikeId;
+
+  /// No description provided for @pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get pending;
+
+  /// No description provided for @approved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get approved;
+
+  /// No description provided for @rejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rejected;
+
+  /// No description provided for @cancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get cancelled;
+
+  /// No description provided for @reports.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get reports;
+
+  /// No description provided for @newestFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest first'**
+  String get newestFirst;
+
+  /// No description provided for @cancelReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Report'**
+  String get cancelReport;
+
+  /// No description provided for @cancelReportQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Report?'**
+  String get cancelReportQuestion;
+
+  /// No description provided for @keepReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Report'**
+  String get keepReport;
+
+  /// No description provided for @cancelReportConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel {reportId}? This report will no longer be reviewed by an administrator.'**
+  String cancelReportConfirmation(String reportId);
+
+  /// No description provided for @reportCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'{reportId} cancelled.'**
+  String reportCancelled(String reportId);
+
+  /// No description provided for @failedToCancelReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to cancel report: {error}'**
+  String failedToCancelReport(String error);
+
+  /// No description provided for @onlyPendingReportsCanBeCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Only pending reports can be cancelled.'**
+  String get onlyPendingReportsCanBeCancelled;
+
+  /// No description provided for @allReports.
+  ///
+  /// In en, this message translates to:
+  /// **'All {count}'**
+  String allReports(int count);
+
+  /// No description provided for @pendingReportsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending {count}'**
+  String pendingReportsCount(int count);
+
+  /// No description provided for @approvedReportsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved {count}'**
+  String approvedReportsCount(int count);
+
+  /// No description provided for @rejectedReportsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected {count}'**
+  String rejectedReportsCount(int count);
+
+  /// No description provided for @cancelledReportsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled {count}'**
+  String cancelledReportsCount(int count);
+
+  /// No description provided for @noMatchingReports.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching reports'**
+  String get noMatchingReports;
+
+  /// No description provided for @noReportsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No reports yet'**
+  String get noReportsYet;
+
+  /// No description provided for @tryDifferentSearchTerm.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different search term.'**
+  String get tryDifferentSearchTerm;
+
+  /// No description provided for @bikeConditionReportsAppearHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike condition reports will appear here.'**
+  String get bikeConditionReportsAppearHere;
 }
 
 class _AppLocalizationsDelegate

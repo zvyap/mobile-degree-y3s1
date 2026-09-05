@@ -925,4 +925,133 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get rideWarningSuspiciousLegalBody =>
       'Suspicious activity detected far from station and deposit time exceeded. Immediate legal action will be taken if the bike is not returned.';
+
+  @override
+  String get addBike => 'Add Bike';
+
+  @override
+  String get editBike => 'Edit Bike';
+
+  @override
+  String get bikeDetail => 'Bike Detail';
+
+  @override
+  String get bikeReport => 'Bike Report';
+
+  @override
+  String get transferBike => 'Transfer Bike';
+
+  @override
+  String get serviceBike => 'Service Bike';
+
+  @override
+  String get reportDetail => 'Report Detail';
+
+  @override
+  String get pendingReports => 'Pending Reports';
+
+  @override
+  String get newReport => 'New Report';
+
+  @override
+  String get pendingReportDetails => 'Pending Report Details';
+
+  @override
+  String get paymentMethods => 'Payment Methods';
+
+  @override
+  String get conditionReports => 'Condition reports';
+
+  @override
+  String get reviewAndResolveBikeIssues => 'Review and resolve bike issues.';
+
+  @override
+  String get trackSubmittedBikeReports => 'Track your submitted bike reports.';
+
+  @override
+  String get searchReportOrBikeId => 'Search report or bike ID';
+
+  @override
+  String get pending => 'Pending';
+
+  @override
+  String get approved => 'Approved';
+
+  @override
+  String get rejected => 'Rejected';
+
+  @override
+  String get cancelled => 'Cancelled';
+
+  @override
+  String get reports => 'Reports';
+
+  @override
+  String get newestFirst => 'Newest first';
+
+  @override
+  String get cancelReport => 'Cancel Report';
+
+  @override
+  String get cancelReportQuestion => 'Cancel Report?';
+
+  @override
+  String get keepReport => 'Keep Report';
+
+  @override
+  String cancelReportConfirmation(String reportId) {
+    return 'Cancel $reportId? This report will no longer be reviewed by an administrator.';
+  }
+
+  @override
+  String reportCancelled(String reportId) {
+    return '$reportId cancelled.';
+  }
+
+  @override
+  String failedToCancelReport(String error) {
+    return 'Failed to cancel report: $error';
+  }
+
+  @override
+  String get onlyPendingReportsCanBeCancelled =>
+      'Only pending reports can be cancelled.';
+
+  @override
+  String allReports(int count) {
+    return 'All $count';
+  }
+
+  @override
+  String pendingReportsCount(int count) {
+    return 'Pending $count';
+  }
+
+  @override
+  String approvedReportsCount(int count) {
+    return 'Approved $count';
+  }
+
+  @override
+  String rejectedReportsCount(int count) {
+    return 'Rejected $count';
+  }
+
+  @override
+  String cancelledReportsCount(int count) {
+    return 'Cancelled $count';
+  }
+
+  @override
+  String get noMatchingReports => 'No matching reports';
+
+  @override
+  String get noReportsYet => 'No reports yet';
+
+  @override
+  String get tryDifferentSearchTerm => 'Try a different search term.';
+
+  @override
+  String get bikeConditionReportsAppearHere =>
+      'Bike condition reports will appear here.';
 }
