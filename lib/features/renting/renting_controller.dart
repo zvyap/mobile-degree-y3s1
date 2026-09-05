@@ -8,6 +8,7 @@ import 'package:bike_renting_app/data/models/rental_session_snapshot.dart';
 import 'package:bike_renting_app/data/paypal/paypal_gateway.dart';
 import 'package:bike_renting_app/data/repositories/payment_method_repository.dart';
 import 'package:bike_renting_app/data/repositories/rental_repository.dart';
+import 'package:bike_renting_app/features/renting/bike_battery_guard.dart';
 import 'package:bike_renting_app/features/renting/rental_payment_simulator.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/features/renting/rider_location.dart';
@@ -148,6 +149,14 @@ class RentingController extends ChangeNotifier {
       List.unmodifiable(_localIssueNotes);
 
   String? _scannedBikeCode;
+  int? _scannedBikeBatteryPercent;
+  int? get scannedBikeBatteryPercent => _scannedBikeBatteryPercent;
+
+  bool _hasAcknowledgedLowBatteryWarning = false;
+  bool get hasAcknowledgedLowBatteryWarning => _hasAcknowledgedLowBatteryWarning;
+  void acknowledgeLowBatteryWarning() {
+    _hasAcknowledgedLowBatteryWarning = true;
+  }
 
   String get bikeCode => bike?.id ?? _scannedBikeCode ?? demoBikeCode;
 
@@ -549,7 +558,10 @@ class RentingController extends ChangeNotifier {
     return _uuidRegex.hasMatch(trimmed) ? trimmed.toLowerCase() : null;
   }
 
-  Future<void> scanBike([String? qrToken]) async {
+  Future<void> scanBike([
+    String? qrToken,
+    Future<bool> Function(int batteryPercent, String bikeCode)? onLowBatteryWarning,
+  ]) async {
     if (isBusy || _session != null) return;
     _clearError();
     await initialize();
@@ -561,6 +573,7 @@ class RentingController extends ChangeNotifier {
     final token = await resolveQrToken(qrToken ?? demoBikeQrToken);
     if (token == null) {
       _scannedBikeCode = null;
+      _scannedBikeBatteryPercent = null;
       error = RentalError.invalidQr;
       notifyListeners();
       return;
@@ -572,6 +585,12 @@ class RentingController extends ChangeNotifier {
       final bikeRecord = await repository.findBikeByQrToken(token);
       if (bikeRecord != null) {
         _scannedBikeCode = bikeRecord.code;
+        _scannedBikeBatteryPercent = bikeRecord.batteryPercent;
+        if (BikeBatteryGuard.isTooLow(bikeRecord.batteryPercent)) {
+          error = RentalError.bikeLowBattery;
+          notifyListeners();
+          return;
+        }
         if (bikeRecord.status == BikeDatabaseStatus.maintenance) {
           error = RentalError.bikeMaintenance;
           notifyListeners();
@@ -607,6 +626,21 @@ class RentingController extends ChangeNotifier {
               return;
             }
           }
+        }
+
+        if (BikeBatteryGuard.isWarning(bikeRecord.batteryPercent) &&
+            !_hasAcknowledgedLowBatteryWarning &&
+            onLowBatteryWarning != null) {
+          final proceed = await onLowBatteryWarning(
+            bikeRecord.batteryPercent,
+            bikeRecord.code,
+          );
+          if (!proceed) {
+            _scannedBikeCode = null;
+            _scannedBikeBatteryPercent = null;
+            return;
+          }
+          _hasAcknowledgedLowBatteryWarning = true;
         }
       }
     } catch (_) {}
@@ -743,6 +777,9 @@ class RentingController extends ChangeNotifier {
     try {
       final record = await repository.getBike(bikeId);
       if (record == null) return null;
+      if (BikeBatteryGuard.isTooLow(record.batteryPercent)) {
+        return RentalError.bikeLowBattery;
+      }
       if (record.status == BikeDatabaseStatus.maintenance) {
         return RentalError.bikeMaintenance;
       }
@@ -758,6 +795,11 @@ class RentingController extends ChangeNotifier {
 
   void reviewAuthorization() {
     if (_session?.rental.status != RentalDatabaseStatus.reserved) return;
+    if (BikeBatteryGuard.isTooLow(bike?.batteryPercent)) {
+      error = RentalError.bikeLowBattery;
+      notifyListeners();
+      return;
+    }
     _clearError();
     stage = RentalStage.authorizing;
     notifyListeners();
@@ -1630,6 +1672,7 @@ class RentingController extends ChangeNotifier {
       DatabaseErrorCode.accountUnavailable => RentalError.accountSuspended,
       DatabaseErrorCode.activeRentalExists => RentalError.activeRentalExists,
       DatabaseErrorCode.bikeMaintenance => RentalError.bikeMaintenance,
+      DatabaseErrorCode.bikeLowBattery => RentalError.bikeLowBattery,
       DatabaseErrorCode.bikeUnavailable => RentalError.bikeUnavailable,
       DatabaseErrorCode.bikeReserved => RentalError.bikeReserved,
       DatabaseErrorCode.stationUnavailable => RentalError.stationMaintenance,
@@ -1687,6 +1730,7 @@ class RentingController extends ChangeNotifier {
   void _clearError() {
     error = null;
     errorStation = null;
+    _scannedBikeBatteryPercent = null;
   }
 
   void _startClock() {
@@ -1953,6 +1997,8 @@ class RentingController extends ChangeNotifier {
     _paypalOrderLocale = null;
     _paypalAuthorizationId = null;
     _scannedBikeCode = null;
+    _scannedBikeBatteryPercent = null;
+    _hasAcknowledgedLowBatteryWarning = false;
     riderLatLng = null;
     riderHeading = null;
     rideRoutePoints.clear();

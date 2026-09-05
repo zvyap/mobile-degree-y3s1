@@ -314,6 +314,24 @@
   "@errorBikeMaintenance": {"placeholders": {"bikeId": {"type": "String"}}},
   "errorBikeUnavailable": "Bike {bikeId} is currently unavailable and cannot be rented. Choose another bike and scan again.",
   "@errorBikeUnavailable": {"placeholders": {"bikeId": {"type": "String"}}},
+  "errorBikeLowBattery": "Bike {bikeId} has low battery ({percent}%) and cannot be rented. Minimum required is 10%. Choose another bike and scan again.",
+  "@errorBikeLowBattery": {
+    "placeholders": {
+      "bikeId": {"type": "String"},
+      "percent": {"type": "int"}
+    }
+  },
+  "lowBatteryWarningTitle": "Low Battery Warning",
+  "@lowBatteryWarningTitle": {},
+  "lowBatteryWarningMessage": "Bike {bikeId} battery is at {percent}%. Riding distance and motor assist may be limited. Do you want to continue?",
+  "@lowBatteryWarningMessage": {
+    "placeholders": {
+      "bikeId": {"type": "String"},
+      "percent": {"type": "int"}
+    }
+  },
+  "continueButton": "Continue",
+  "@continueButton": {},
   "bikeCannotBeRentedTitle": "Bike Cannot Be Rented",
   "@bikeCannotBeRentedTitle": {},
   "errorHoldDeclined": "The {amount} test hold was declined. Retry when ready.",

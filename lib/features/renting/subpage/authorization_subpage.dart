@@ -88,6 +88,14 @@ Future<void> _handleAuthorize(
   BuildContext context,
   RentingController controller,
 ) async {
+  final canProceed = await guardBikeBattery(
+    context,
+    controller: controller,
+    batteryPercent: controller.bike?.batteryPercent,
+    bikeCode: controller.bike?.id,
+  );
+  if (!canProceed || !context.mounted) return;
+
   if (controller.selectedPaymentMethod?.id == 'paypal') {
     // Automatically detect and use client language (e.g. Chinese -> zh-CN, English -> en-US)
     final clientLocale = PayPalLocaleService.resolveClientLocale(context);
@@ -97,7 +105,8 @@ Future<void> _handleAuthorize(
     );
     if (!context.mounted) return;
     if (controller.error == RentalError.bikeMaintenance ||
-        controller.error == RentalError.bikeUnavailable) {
+        controller.error == RentalError.bikeUnavailable ||
+        controller.error == RentalError.bikeLowBattery) {
       await showBikeCannotRentDialog(context, controller: controller);
       return;
     }
@@ -119,7 +128,8 @@ Future<void> _handleAuthorize(
       await controller.authorizePayPalOrder();
       if (context.mounted &&
           (controller.error == RentalError.bikeMaintenance ||
-              controller.error == RentalError.bikeUnavailable)) {
+              controller.error == RentalError.bikeUnavailable ||
+              controller.error == RentalError.bikeLowBattery)) {
         await showBikeCannotRentDialog(context, controller: controller);
       }
     } else if (result == PayPalCheckoutResult.timedOut) {
@@ -132,7 +142,8 @@ Future<void> _handleAuthorize(
     await controller.authorizePayment();
     if (context.mounted &&
         (controller.error == RentalError.bikeMaintenance ||
-            controller.error == RentalError.bikeUnavailable)) {
+            controller.error == RentalError.bikeUnavailable ||
+            controller.error == RentalError.bikeLowBattery)) {
       await showBikeCannotRentDialog(context, controller: controller);
     }
   }

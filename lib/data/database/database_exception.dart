@@ -5,6 +5,7 @@ enum DatabaseErrorCode {
   accountUnavailable,
   bikeUnavailable,
   bikeMaintenance,
+  bikeLowBattery,
   bikeReserved,
   activeRentalExists,
   paymentMethodNotFound,

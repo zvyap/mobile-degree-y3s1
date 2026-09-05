@@ -24,6 +24,7 @@ enum RentalError {
   bikeReserved,
   bikeMaintenance,
   bikeUnavailable,
+  bikeLowBattery,
   stationMaintenance,
   stationTerminated,
   holdDeclined,

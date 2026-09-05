@@ -180,6 +180,7 @@ class SupabaseDatabaseDataSource implements DatabaseDataSource {
       'rental_not_found' ||
       'payment_not_found' => DatabaseErrorCode.notFound,
       'bike_maintenance' => DatabaseErrorCode.bikeMaintenance,
+      'bike_low_battery' => DatabaseErrorCode.bikeLowBattery,
       'bike_unavailable' ||
       'bike_in_use' => DatabaseErrorCode.bikeUnavailable,
       'bike_reserved' => DatabaseErrorCode.bikeReserved,
