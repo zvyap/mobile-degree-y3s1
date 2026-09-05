@@ -167,6 +167,26 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<void> updatePassword({
+    required String password,
+  }) async {
+    if (isBusy) return;
+    error = null;
+
+    _beginBusy();
+
+    try {
+      await _authRepository.updatePassword(
+        password: password,
+      );
+    } catch (caught) {
+      error = UserError.passwordUpdateFailed;
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
   void _beginBusy() {
     isBusy = true;
     error = null;

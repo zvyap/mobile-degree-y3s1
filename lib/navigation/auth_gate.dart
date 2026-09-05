@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:bike_renting_app/features/user/login_page.dart';
+import 'package:bike_renting_app/features/user/reset_password_page.dart';
 import 'package:bike_renting_app/shell/bike_shell.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -21,6 +22,7 @@ class _AuthGateState extends State<AuthGate> {
   late final StreamSubscription<AuthState> _authSubscription;
 
   Session? _session;
+  bool _isPasswordRecovery = false;
 
   @override
   void initState() {
@@ -34,9 +36,9 @@ class _AuthGateState extends State<AuthGate> {
     // Listen for future login/logout changes.
     _authSubscription = client.auth.onAuthStateChange.listen((data) {
       if (!mounted) return;
-
       setState(() {
         _session = data.session;
+        _isPasswordRecovery = data.event == AuthChangeEvent.passwordRecovery;
       });
     });
   }
@@ -49,6 +51,11 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
+
+    if (_isPasswordRecovery) {
+      return const ResetPasswordPage();
+    }
+
     if (_session != null) {
       return BikeShell(
         onToggleTheme: widget.onToggleTheme,

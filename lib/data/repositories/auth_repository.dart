@@ -26,7 +26,17 @@ class AuthRepository {
   }) async {
     await _client.auth.resetPasswordForEmail(
       email.trim(),
-      redirectTo: ''
+      redirectTo: 'bike-renting://reset-password'
+    );
+  }
+
+  Future<void> updatePassword({
+    required String password,
+  }) async {
+    await _client.auth.updateUser(
+      UserAttributes(
+        password: password,
+      ),
     );
   }
 

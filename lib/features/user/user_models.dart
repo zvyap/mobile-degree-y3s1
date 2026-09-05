@@ -21,5 +21,6 @@ enum UserError { // got issue
   userDeleteFailed,
   userCreationFailed,
   icVerificationFailed,
+  passwordUpdateFailed,
 }
 
