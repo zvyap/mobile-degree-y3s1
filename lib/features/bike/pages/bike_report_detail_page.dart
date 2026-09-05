@@ -1,4 +1,6 @@
+import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/bike_report.dart';
 import '../repositories/bike_report_repository.dart';
@@ -28,6 +30,8 @@ class _BikeReportDetailPageState
 
   bool _isLoading = true;
   bool _isPhotoLoading = false;
+  bool _isCancelling = false;
+  bool _isAdmin = false;
 
   String? _error;
 
@@ -35,7 +39,52 @@ class _BikeReportDetailPageState
   void initState() {
     super.initState();
 
+    _loadCurrentUserRole();
     _loadReport();
+  }
+
+  // ===========================================================================
+  // LOAD CURRENT USER ROLE
+  // ===========================================================================
+
+  Future<void> _loadCurrentUserRole() async {
+    try {
+      final supabase =
+          Supabase.instance.client;
+
+      final user =
+          supabase.auth.currentUser;
+
+      if (user == null) {
+        if (!mounted) return;
+
+        setState(() {
+          _isAdmin = false;
+        });
+
+        return;
+      }
+
+      final profile =
+      await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+      if (!mounted) return;
+
+      setState(() {
+        _isAdmin =
+            profile['role'] == 'admin';
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _isAdmin = false;
+      });
+    }
   }
 
   // ===========================================================================
@@ -110,89 +159,261 @@ class _BikeReportDetailPageState
   }
 
   // ===========================================================================
+  // CANCEL REPORT
+  // ===========================================================================
+
+  Future<void> _cancelReport(
+      BikeReport report,
+      ) async {
+    final l10n =
+    AppLocalizations.of(context);
+
+    if (_isCancelling) {
+      return;
+    }
+
+    if (report.status != 'pending') {
+      _showSnackBar(
+        l10n.onlyPendingReportsCanBeCancelled,
+      );
+
+      return;
+    }
+
+    final confirmed =
+    await _showCancelConfirmation(
+      report,
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      setState(() {
+        _isCancelling = true;
+      });
+
+      await _reportRepository.cancelReport(
+        reportId: report.id,
+      );
+
+      if (!mounted) return;
+
+      _showSnackBar(
+        l10n.reportCancelled(
+          _formatReportId(
+            report.id,
+          ),
+        ),
+      );
+
+      await _loadReport();
+    } catch (error) {
+      if (!mounted) return;
+
+      _showSnackBar(
+        l10n.failedToCancelReport(
+          error.toString(),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCancelling = false;
+        });
+      }
+    }
+  }
+
+  Future<bool?> _showCancelConfirmation(
+      BikeReport report,
+      ) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final scheme =
+            Theme.of(
+              dialogContext,
+            ).colorScheme;
+
+        final l10n =
+        AppLocalizations.of(
+          dialogContext,
+        );
+
+        return AlertDialog(
+          icon: Icon(
+            Icons.cancel_outlined,
+            size: 42,
+            color: scheme.error,
+          ),
+          title: Text(
+            l10n.cancelReportQuestion,
+            textAlign:
+            TextAlign.center,
+          ),
+          content: Text(
+            l10n.cancelReportConfirmation(
+              _formatReportId(
+                report.id,
+              ),
+            ),
+            textAlign:
+            TextAlign.center,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(
+                  dialogContext,
+                ).pop(false);
+              },
+              child: Text(
+                l10n.keepReport,
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(
+                  dialogContext,
+                ).pop(true);
+              },
+              style:
+              FilledButton.styleFrom(
+                backgroundColor:
+                scheme.error,
+                foregroundColor:
+                scheme.onError,
+              ),
+              child: Text(
+                l10n.cancelReport,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ===========================================================================
   // HELPERS
   // ===========================================================================
 
-  String _formatReportId(int id) {
+  void _showSnackBar(
+      String message,
+      ) {
+    final messenger =
+    ScaffoldMessenger.of(context);
+
+    messenger.clearSnackBars();
+
+    messenger.showSnackBar(
+      SnackBar(
+        content:
+        Text(message),
+      ),
+    );
+  }
+
+  String _formatReportId(
+      int id,
+      ) {
     return 'RPT-${id.toString().padLeft(4, '0')}';
   }
 
-  String _categoryLabel(String category) {
+  String _categoryLabel(
+      String category,
+      AppLocalizations l10n,
+      ) {
     switch (category) {
       case 'brakes':
-        return 'Brake System';
+        return l10n.brakeSystem;
 
       case 'tyres':
-        return 'Tyres';
+        return l10n.tyres;
 
       case 'chain_gears':
-        return 'Chain & Gears';
+        return l10n.chainAndGears;
 
       case 'seat_frame':
-        return 'Seat & Frame';
+        return l10n.seatAndFrame;
 
       case 'bell_lights':
-        return 'Bell & Lights';
+        return l10n.bellAndLights;
 
       case 'qr_lock':
-        return 'QR / Lock';
+        return l10n.qrLock;
 
       case 'other':
-        return 'Other';
+        return l10n.other;
 
       default:
         return category;
     }
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(
+      String status,
+      AppLocalizations l10n,
+      ) {
     switch (status) {
       case 'pending':
-        return 'Pending';
+        return l10n.pending;
 
       case 'approved':
-        return 'Approved';
+        return l10n.approved;
 
       case 'rejected':
-        return 'Rejected';
+        return l10n.rejected;
+
+      case 'cancelled':
+        return l10n.cancelled;
 
       default:
         return status;
     }
   }
 
-  String _formatDateTime(DateTime date) {
-    final local = date.toLocal();
+  String _formatDateTime(
+      BuildContext context,
+      DateTime date,
+      ) {
+    final local =
+    date.toLocal();
 
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
+    final material =
+    MaterialLocalizations.of(
+      context,
+    );
 
-    final hour =
-    local.hour.toString().padLeft(2, '0');
+    final dateText =
+    material.formatMediumDate(
+      local,
+    );
 
-    final minute =
-    local.minute.toString().padLeft(2, '0');
+    final timeText =
+    material.formatTimeOfDay(
+      TimeOfDay.fromDateTime(
+        local,
+      ),
+      alwaysUse24HourFormat:
+      MediaQuery.alwaysUse24HourFormatOf(
+        context,
+      ),
+    );
 
-    return '${local.day} '
-        '${months[local.month - 1]} '
-        '${local.year} • $hour:$minute';
+    return '$dateText • $timeText';
   }
 
   Color _statusBackground(
+      BuildContext context,
       String status,
       ) {
+    final scheme =
+        Theme.of(context)
+            .colorScheme;
+
     switch (status) {
       case 'approved':
         return const Color(
@@ -204,6 +425,10 @@ class _BikeReportDetailPageState
           0xFFFFE5E5,
         );
 
+      case 'cancelled':
+        return scheme
+            .surfaceContainerHighest;
+
       default:
         return const Color(
           0xFFFFF3D6,
@@ -212,8 +437,13 @@ class _BikeReportDetailPageState
   }
 
   Color _statusForeground(
+      BuildContext context,
       String status,
       ) {
+    final scheme =
+        Theme.of(context)
+            .colorScheme;
+
     switch (status) {
       case 'approved':
         return const Color(
@@ -223,6 +453,12 @@ class _BikeReportDetailPageState
       case 'rejected':
         return const Color(
           0xFFE24B4B,
+        );
+
+      case 'cancelled':
+        return scheme.onSurface
+            .withValues(
+          alpha: 0.65,
         );
 
       default:
@@ -237,10 +473,15 @@ class _BikeReportDetailPageState
       ) {
     switch (status) {
       case 'approved':
-        return Icons.check_circle_outline_rounded;
+        return Icons
+            .check_circle_outline_rounded;
 
       case 'rejected':
         return Icons.cancel_outlined;
+
+      case 'cancelled':
+        return Icons
+            .block_rounded;
 
       default:
         return Icons.schedule_rounded;
@@ -252,12 +493,17 @@ class _BikeReportDetailPageState
   // ===========================================================================
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context,
+      ) {
     final theme =
     Theme.of(context);
 
     final scheme =
         theme.colorScheme;
+
+    final l10n =
+    AppLocalizations.of(context);
 
     // -------------------------------------------------------------------------
     // LOADING
@@ -265,7 +511,8 @@ class _BikeReportDetailPageState
 
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(),
+        child:
+        CircularProgressIndicator(),
       );
     }
 
@@ -277,7 +524,9 @@ class _BikeReportDetailPageState
       return Center(
         child: Padding(
           padding:
-          const EdgeInsets.all(24),
+          const EdgeInsets.all(
+            24,
+          ),
           child: Column(
             mainAxisSize:
             MainAxisSize.min,
@@ -285,7 +534,8 @@ class _BikeReportDetailPageState
               Icon(
                 Icons.error_outline_rounded,
                 size: 50,
-                color: scheme.error,
+                color:
+                scheme.error,
               ),
 
               const SizedBox(
@@ -293,7 +543,7 @@ class _BikeReportDetailPageState
               ),
 
               Text(
-                'Unable to load report',
+                l10n.unableToLoadReport,
                 style: theme
                     .textTheme
                     .titleMedium
@@ -327,8 +577,8 @@ class _BikeReportDetailPageState
                   Icons.refresh_rounded,
                 ),
                 label:
-                const Text(
-                  'Retry',
+                Text(
+                  l10n.retry,
                 ),
               ),
             ],
@@ -341,12 +591,26 @@ class _BikeReportDetailPageState
         _report;
 
     if (report == null) {
-      return const Center(
+      return Center(
         child: Text(
-          'Report not found',
+          l10n.reportNotFound,
         ),
       );
     }
+
+    final currentUser =
+        Supabase.instance.client.auth.currentUser;
+
+    final isOwner =
+        currentUser != null &&
+            report.reporterId ==
+                currentUser.id;
+
+    final canCancel =
+        !_isAdmin &&
+            isOwner &&
+            report.status ==
+                'pending';
 
     return RefreshIndicator(
       onRefresh:
@@ -374,7 +638,7 @@ class _BikeReportDetailPageState
                   CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Report details',
+                      l10n.reportDetails,
                       style: theme
                           .textTheme
                           .headlineSmall
@@ -411,13 +675,16 @@ class _BikeReportDetailPageState
               Container(
                 padding:
                 const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
+                  horizontal:
+                  12,
+                  vertical:
+                  7,
                 ),
                 decoration:
                 BoxDecoration(
                   color:
                   _statusBackground(
+                    context,
                     report.status,
                   ),
                   borderRadius:
@@ -438,22 +705,26 @@ class _BikeReportDetailPageState
                       17,
                       color:
                       _statusForeground(
+                        context,
                         report.status,
                       ),
                     ),
 
                     const SizedBox(
-                      width: 5,
+                      width:
+                      5,
                     ),
 
                     Text(
                       _statusLabel(
                         report.status,
+                        l10n,
                       ),
                       style:
                       TextStyle(
                         color:
                         _statusForeground(
+                          context,
                           report.status,
                         ),
                         fontSize:
@@ -498,7 +769,8 @@ class _BikeReportDetailPageState
                 ),
               ),
             ),
-            child: Row(
+            child:
+            Row(
               children: [
                 Container(
                   width:
@@ -525,7 +797,8 @@ class _BikeReportDetailPageState
                 ),
 
                 const SizedBox(
-                  width: 14,
+                  width:
+                  14,
                 ),
 
                 Expanded(
@@ -570,7 +843,7 @@ class _BikeReportDetailPageState
                             child:
                             Text(
                               report.stationName ??
-                                  'No station assigned',
+                                  l10n.noStationAssigned,
                               style: theme
                                   .textTheme
                                   .bodySmall
@@ -602,7 +875,7 @@ class _BikeReportDetailPageState
           // ===================================================================
 
           Text(
-            'Report information',
+            l10n.reportInformation,
             style: theme
                 .textTheme
                 .titleMedium
@@ -622,10 +895,11 @@ class _BikeReportDetailPageState
                 icon:
                 Icons.build_circle_outlined,
                 label:
-                'Problem',
+                l10n.problem,
                 value:
                 _categoryLabel(
                   report.category,
+                  l10n,
                 ),
               ),
 
@@ -637,9 +911,10 @@ class _BikeReportDetailPageState
                 icon:
                 Icons.schedule_rounded,
                 label:
-                'Reported',
+                l10n.reported,
                 value:
                 _formatDateTime(
+                  context,
                   report.createdAt,
                 ),
               ),
@@ -652,7 +927,7 @@ class _BikeReportDetailPageState
                 icon:
                 Icons.tag_rounded,
                 label:
-                'Report ID',
+                l10n.reportIdLabel,
                 value:
                 _formatReportId(
                   report.id,
@@ -670,7 +945,7 @@ class _BikeReportDetailPageState
           // ===================================================================
 
           Text(
-            'Photo',
+            l10n.photo,
             style: theme
                 .textTheme
                 .titleMedium
@@ -715,22 +990,22 @@ class _BikeReportDetailPageState
               _photoUrl!,
             )
           else if (_photoError != null)
-              const _PhotoPlaceholder(
+              _PhotoPlaceholder(
                 icon:
                 Icons.broken_image_outlined,
                 title:
-                'Photo unavailable',
+                l10n.photoUnavailable,
                 message:
-                'The report photo could not be loaded.',
+                l10n.photoCouldNotBeLoaded,
               )
             else
-              const _PhotoPlaceholder(
+              _PhotoPlaceholder(
                 icon:
                 Icons.image_not_supported_outlined,
                 title:
-                'No photo attached',
+                l10n.noPhotoAttached,
                 message:
-                'This report was submitted without a photo.',
+                l10n.reportWithoutPhoto,
               ),
 
           const SizedBox(
@@ -742,7 +1017,7 @@ class _BikeReportDetailPageState
           // ===================================================================
 
           Text(
-            'Issue description',
+            l10n.issueDescription,
             style: theme
                 .textTheme
                 .titleMedium
@@ -798,17 +1073,37 @@ class _BikeReportDetailPageState
           ),
 
           // ===================================================================
-          // REVIEW RESULT
+          // STATUS RESULT
           // ===================================================================
 
           if (report.status == 'pending')
-            const _PendingReviewCard()
+            _PendingReviewCard(
+              canCancel:
+              canCancel,
+              isCancelling:
+              _isCancelling,
+              onCancel:
+              canCancel
+                  ? () {
+                _cancelReport(
+                  report,
+                );
+              }
+                  : null,
+            )
+          else if (report.status ==
+              'cancelled')
+            const _CancelledReportCard()
           else
             _ReviewResultCard(
               report:
               report,
               formatDateTime:
-              _formatDateTime,
+                  (date) =>
+                  _formatDateTime(
+                    context,
+                    date,
+                  ),
             ),
         ],
       ),
@@ -835,6 +1130,9 @@ class _ReportPhoto extends StatelessWidget {
         Theme.of(context)
             .colorScheme;
 
+    final l10n =
+    AppLocalizations.of(context);
+
     return ClipRRect(
       borderRadius:
       BorderRadius.circular(
@@ -854,7 +1152,8 @@ class _ReportPhoto extends StatelessWidget {
             child,
             loadingProgress,
             ) {
-          if (loadingProgress == null) {
+          if (loadingProgress ==
+              null) {
             return child;
           }
 
@@ -876,13 +1175,13 @@ class _ReportPhoto extends StatelessWidget {
             error,
             stackTrace,
             ) {
-          return const _PhotoPlaceholder(
+          return _PhotoPlaceholder(
             icon:
             Icons.broken_image_outlined,
             title:
-            'Unable to display photo',
+            l10n.unableToDisplayPhoto,
             message:
-            'The attached photo could not be displayed.',
+            l10n.attachedPhotoCouldNotBeDisplayed,
           );
         },
       ),
@@ -1160,7 +1459,15 @@ class _DetailRow extends StatelessWidget {
 // =============================================================================
 
 class _PendingReviewCard extends StatelessWidget {
-  const _PendingReviewCard();
+  const _PendingReviewCard({
+    required this.canCancel,
+    required this.isCancelling,
+    this.onCancel,
+  });
+
+  final bool canCancel;
+  final bool isCancelling;
+  final VoidCallback? onCancel;
 
   @override
   Widget build(
@@ -1168,6 +1475,12 @@ class _PendingReviewCard extends StatelessWidget {
       ) {
     final theme =
     Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
+
+    final l10n =
+    AppLocalizations.of(context);
 
     return Container(
       padding:
@@ -1186,15 +1499,166 @@ class _PendingReviewCard extends StatelessWidget {
         ),
       ),
       child:
+      Column(
+        crossAxisAlignment:
+        CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment:
+            CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.schedule_rounded,
+                color:
+                Color(
+                  0xFFE6A919,
+                ),
+              ),
+
+              const SizedBox(
+                width:
+                10,
+              ),
+
+              Expanded(
+                child:
+                Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.pendingReview,
+                      style: theme
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(
+                        fontWeight:
+                        FontWeight.w800,
+                        color:
+                        const Color(
+                          0xFFE6A919,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(
+                      height:
+                      4,
+                    ),
+
+                    Text(
+                      l10n.pendingReviewDescription,
+                      style:
+                      theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          if (canCancel) ...[
+            const SizedBox(
+              height: 14,
+            ),
+
+            SizedBox(
+              width:
+              double.infinity,
+              child:
+              OutlinedButton.icon(
+                onPressed:
+                isCancelling
+                    ? null
+                    : onCancel,
+                style:
+                OutlinedButton.styleFrom(
+                  foregroundColor:
+                  scheme.error,
+                  side:
+                  BorderSide(
+                    color:
+                    scheme.error,
+                  ),
+                ),
+                icon:
+                isCancelling
+                    ? SizedBox(
+                  width:
+                  17,
+                  height:
+                  17,
+                  child:
+                  CircularProgressIndicator(
+                    strokeWidth:
+                    2,
+                    color:
+                    scheme.error,
+                  ),
+                )
+                    : const Icon(
+                  Icons.cancel_outlined,
+                ),
+                label:
+                Text(
+                  isCancelling
+                      ? l10n.pleaseWait
+                      : l10n.cancelReport,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// CANCELLED REPORT
+// =============================================================================
+
+class _CancelledReportCard extends StatelessWidget {
+  const _CancelledReportCard();
+
+  @override
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
+
+    final l10n =
+    AppLocalizations.of(context);
+
+    return Container(
+      padding:
+      const EdgeInsets.all(
+        15,
+      ),
+      decoration:
+      BoxDecoration(
+        color:
+        scheme.surfaceContainerHighest,
+        borderRadius:
+        BorderRadius.circular(
+          14,
+        ),
+      ),
+      child:
       Row(
         crossAxisAlignment:
         CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.schedule_rounded,
-            color:
-            Color(
-              0xFFE6A919,
+          Icon(
+            Icons.block_rounded,
+            color: scheme.onSurface
+                .withValues(
+              alpha:
+              0.65,
             ),
           ),
 
@@ -1210,17 +1674,13 @@ class _PendingReviewCard extends StatelessWidget {
               CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Pending review',
+                  l10n.reportCancelledStatus,
                   style: theme
                       .textTheme
                       .titleSmall
                       ?.copyWith(
                     fontWeight:
                     FontWeight.w800,
-                    color:
-                    const Color(
-                      0xFFE6A919,
-                    ),
                   ),
                 ),
 
@@ -1230,7 +1690,7 @@ class _PendingReviewCard extends StatelessWidget {
                 ),
 
                 Text(
-                  'This report has not been reviewed yet.',
+                  l10n.reportCancelledDescription,
                   style:
                   theme.textTheme.bodySmall,
                 ),
@@ -1265,8 +1725,12 @@ class _ReviewResultCard extends StatelessWidget {
     final theme =
     Theme.of(context);
 
+    final l10n =
+    AppLocalizations.of(context);
+
     final approved =
-        report.status == 'approved';
+        report.status ==
+            'approved';
 
     final background =
     approved
@@ -1288,13 +1752,15 @@ class _ReviewResultCard extends StatelessWidget {
 
     final icon =
     approved
-        ? Icons.check_circle_outline_rounded
-        : Icons.cancel_outlined;
+        ? Icons
+        .check_circle_outline_rounded
+        : Icons
+        .cancel_outlined;
 
     final title =
     approved
-        ? 'Report approved'
-        : 'Report rejected';
+        ? l10n.reportApproved
+        : l10n.reportRejected;
 
     return Container(
       padding:
@@ -1343,14 +1809,16 @@ class _ReviewResultCard extends StatelessWidget {
             ],
           ),
 
-          if (report.reviewedAt != null) ...[
+          if (report.reviewedAt !=
+              null) ...[
             const SizedBox(
               height:
               10,
             ),
 
             Text(
-              'Reviewed ${formatDateTime(report.reviewedAt!)}',
+              '${l10n.reviewed} '
+                  '${formatDateTime(report.reviewedAt!)}',
               style:
               theme.textTheme.bodySmall,
             ),
@@ -1362,7 +1830,7 @@ class _ReviewResultCard extends StatelessWidget {
           ),
 
           Text(
-            'Review note',
+            l10n.reviewNote,
             style: theme
                 .textTheme
                 .labelMedium
@@ -1378,11 +1846,12 @@ class _ReviewResultCard extends StatelessWidget {
           ),
 
           Text(
-            report.reviewNote == null ||
+            report.reviewNote ==
+                null ||
                 report.reviewNote!
                     .trim()
                     .isEmpty
-                ? 'No review note provided.'
+                ? l10n.noReviewNoteProvided
                 : report.reviewNote!,
             style:
             theme.textTheme.bodyMedium,

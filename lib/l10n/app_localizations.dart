@@ -1859,6 +1859,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Other'**
   String get other;
+
+  /// No description provided for @unableToLoadReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load report'**
+  String get unableToLoadReport;
+
+  /// No description provided for @reportNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Report not found'**
+  String get reportNotFound;
+
+  /// No description provided for @reportDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Report details'**
+  String get reportDetails;
+
+  /// No description provided for @noStationAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'No station assigned'**
+  String get noStationAssigned;
+
+  /// No description provided for @reportInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Report information'**
+  String get reportInformation;
+
+  /// No description provided for @problem.
+  ///
+  /// In en, this message translates to:
+  /// **'Problem'**
+  String get problem;
+
+  /// No description provided for @reportIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Report ID'**
+  String get reportIdLabel;
+
+  /// No description provided for @photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get photo;
+
+  /// No description provided for @photoUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo unavailable'**
+  String get photoUnavailable;
+
+  /// No description provided for @photoCouldNotBeLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'The report photo could not be loaded.'**
+  String get photoCouldNotBeLoaded;
+
+  /// No description provided for @unableToDisplayPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to display photo'**
+  String get unableToDisplayPhoto;
+
+  /// No description provided for @attachedPhotoCouldNotBeDisplayed.
+  ///
+  /// In en, this message translates to:
+  /// **'The attached photo could not be displayed.'**
+  String get attachedPhotoCouldNotBeDisplayed;
+
+  /// No description provided for @noPhotoAttached.
+  ///
+  /// In en, this message translates to:
+  /// **'No photo attached'**
+  String get noPhotoAttached;
+
+  /// No description provided for @reportWithoutPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'This report was submitted without a photo.'**
+  String get reportWithoutPhoto;
+
+  /// No description provided for @issueDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Issue description'**
+  String get issueDescription;
+
+  /// No description provided for @pendingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get pendingReview;
+
+  /// No description provided for @pendingReviewDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This report has not been reviewed yet.'**
+  String get pendingReviewDescription;
+
+  /// No description provided for @reportApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Report approved'**
+  String get reportApproved;
+
+  /// No description provided for @reportRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Report rejected'**
+  String get reportRejected;
+
+  /// No description provided for @reviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewed'**
+  String get reviewed;
+
+  /// No description provided for @reviewNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Review note'**
+  String get reviewNote;
+
+  /// No description provided for @noReviewNoteProvided.
+  ///
+  /// In en, this message translates to:
+  /// **'No review note provided.'**
+  String get noReviewNoteProvided;
+
+  /// No description provided for @reportCancelledStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Report cancelled'**
+  String get reportCancelledStatus;
+
+  /// No description provided for @reportCancelledDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You cancelled this report before it was reviewed.'**
+  String get reportCancelledDescription;
 }
 
 class _AppLocalizationsDelegate

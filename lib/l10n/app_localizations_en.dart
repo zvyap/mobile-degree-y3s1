@@ -1081,4 +1081,79 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get other => 'Other';
+
+  @override
+  String get unableToLoadReport => 'Unable to load report';
+
+  @override
+  String get reportNotFound => 'Report not found';
+
+  @override
+  String get reportDetails => 'Report details';
+
+  @override
+  String get noStationAssigned => 'No station assigned';
+
+  @override
+  String get reportInformation => 'Report information';
+
+  @override
+  String get problem => 'Problem';
+
+  @override
+  String get reportIdLabel => 'Report ID';
+
+  @override
+  String get photo => 'Photo';
+
+  @override
+  String get photoUnavailable => 'Photo unavailable';
+
+  @override
+  String get photoCouldNotBeLoaded => 'The report photo could not be loaded.';
+
+  @override
+  String get unableToDisplayPhoto => 'Unable to display photo';
+
+  @override
+  String get attachedPhotoCouldNotBeDisplayed =>
+      'The attached photo could not be displayed.';
+
+  @override
+  String get noPhotoAttached => 'No photo attached';
+
+  @override
+  String get reportWithoutPhoto => 'This report was submitted without a photo.';
+
+  @override
+  String get issueDescription => 'Issue description';
+
+  @override
+  String get pendingReview => 'Pending review';
+
+  @override
+  String get pendingReviewDescription =>
+      'This report has not been reviewed yet.';
+
+  @override
+  String get reportApproved => 'Report approved';
+
+  @override
+  String get reportRejected => 'Report rejected';
+
+  @override
+  String get reviewed => 'Reviewed';
+
+  @override
+  String get reviewNote => 'Review note';
+
+  @override
+  String get noReviewNoteProvided => 'No review note provided.';
+
+  @override
+  String get reportCancelledStatus => 'Report cancelled';
+
+  @override
+  String get reportCancelledDescription =>
+      'You cancelled this report before it was reviewed.';
 }
