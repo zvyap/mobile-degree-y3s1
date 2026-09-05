@@ -1,4 +1,5 @@
 import 'package:bike_renting_app/features/legal/legal_content.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
 
@@ -45,7 +46,7 @@ class LegalDocumentPage extends StatelessWidget {
         leading: IconButton(
           key: const ValueKey<String>('legal-back-button'),
           icon: const Icon(Icons.arrow_back_rounded),
-          tooltip: 'Back',
+          tooltip: context.l10n.back,
           onPressed: () => _handleBack(context),
         ),
         title: Text(
@@ -402,7 +403,7 @@ class _AgreementFooter extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Agreement Confirmation',
+                  context.l10n.agreementConfirmation,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: scheme.primary,
@@ -413,7 +414,7 @@ class _AgreementFooter extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'By tapping "$agreeButtonText" above or below, you acknowledge that you have reviewed and accept these $title.',
+            context.l10n.agreementNotice(agreeButtonText, title),
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.8),
               height: 1.45,
@@ -427,7 +428,7 @@ class _AgreementFooter extends StatelessWidget {
               onPressed: onAgree,
               icon: const Icon(Icons.check_rounded, size: 18),
               label: Text(
-                '$agreeButtonText & Continue',
+                context.l10n.agreeAndContinue(agreeButtonText),
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
@@ -461,7 +462,7 @@ class _InformationalFooter extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Text(
-              'Questions? Contact support@bikerent.app',
+              context.l10n.contactSupport,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.6),
                 fontWeight: FontWeight.w500,

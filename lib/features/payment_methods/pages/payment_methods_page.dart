@@ -4,6 +4,7 @@ import 'package:bike_renting_app/features/payment_methods/controllers/payment_me
 import 'package:bike_renting_app/features/payment_methods/pages/add_edit_card_page.dart';
 import 'package:bike_renting_app/features/payment_methods/widgets/card_method_tile.dart';
 import 'package:bike_renting_app/features/payment_methods/widgets/paypal_method_tile.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/shared/app_toast.dart';
 import 'package:flutter/material.dart';
 
@@ -58,14 +59,14 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove Card'),
+        title: Text(context.l10n.removeCard),
         content: Text(
-          'Are you sure you want to remove your ${card.brand} ending in ${card.lastFour}?',
+          context.l10n.removeCardConfirmation(card.brand, card.lastFour),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -73,7 +74,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
               foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Remove'),
+            child: Text(context.l10n.remove),
           ),
         ],
       ),
@@ -83,9 +84,9 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
       final success = await _controller.deleteCard(card.id);
       if (!mounted) return;
       if (success) {
-        AppToast.show(context, message: 'Card removed successfully');
+        AppToast.show(context, message: context.l10n.cardRemovedSuccess);
       } else {
-        final error = _controller.errorMessage ?? 'Failed to remove card';
+        final error = _controller.errorMessage ?? context.l10n.failedToRemoveCard;
         AppToast.show(context, message: error, variant: AppToastVariant.error);
       }
     }
@@ -95,9 +96,9 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
     final success = await _controller.setDefault(card.id);
     if (!mounted) return;
     if (success) {
-      AppToast.show(context, message: '${card.brand} set as default payment method');
+      AppToast.show(context, message: context.l10n.cardSetAsDefault(card.brand));
     } else {
-      final error = _controller.errorMessage ?? 'Failed to update default card';
+      final error = _controller.errorMessage ?? context.l10n.failedToUpdateDefaultCard;
       AppToast.show(context, message: error, variant: AppToastVariant.error);
     }
   }
@@ -123,14 +124,14 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
                 children: [
                   Text(
-                    'Payment Methods',
+                    context.l10n.paymentMethods,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Manage credit/debit cards and PayPal',
+                    context.l10n.managePaymentMethodsSubtitle,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.68),
                     ),
@@ -167,7 +168,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
 
                   // Online Payment Section (PayPal)
                   Text(
-                    'ONLINE CHECKOUT',
+                    context.l10n.onlineCheckout,
                     style: theme.textTheme.labelSmall?.copyWith(
                       letterSpacing: 1.2,
                       fontWeight: FontWeight.w700,
@@ -184,7 +185,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'SAVED CARDS',
+                        context.l10n.savedCards,
                         style: theme.textTheme.labelSmall?.copyWith(
                           letterSpacing: 1.2,
                           fontWeight: FontWeight.w700,
@@ -193,7 +194,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                       ),
                       if (cards.isNotEmpty)
                         Text(
-                          '${cards.length} saved',
+                          context.l10n.savedCardsCount(cards.length),
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.5),
                           ),
@@ -225,14 +226,14 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'No cards saved yet',
+                            context.l10n.noCardsSaved,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Add a Visa or Mastercard for quick, seamless one-tap bike rentals.',
+                            context.l10n.noCardsSavedDescription,
                             textAlign: TextAlign.center,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: scheme.onSurface.withValues(alpha: 0.65),
@@ -261,9 +262,9 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
         key: const ValueKey<String>('add-card-fab'),
         onPressed: _openAddCard,
         icon: const Icon(Icons.add_rounded),
-        label: const Text(
-          'Add Card',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        label: Text(
+          context.l10n.addCard,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
     );

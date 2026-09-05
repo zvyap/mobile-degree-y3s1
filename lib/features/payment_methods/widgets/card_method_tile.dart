@@ -1,5 +1,6 @@
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/payment_methods/models/card_brand.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class CardMethodTile extends StatelessWidget {
@@ -23,8 +24,11 @@ class CardMethodTile extends StatelessWidget {
     final brand = CardBrand.detect(card.brand.toLowerCase());
 
     final expiryText = card.expiryMonth != null && card.expiryYear != null
-        ? 'Exp ${card.expiryMonth.toString().padLeft(2, '0')}/${(card.expiryYear! % 100).toString().padLeft(2, '0')}'
-        : 'Active Card';
+        ? context.l10n.cardExpiry(
+            card.expiryMonth.toString().padLeft(2, '0'),
+            (card.expiryYear! % 100).toString().padLeft(2, '0'),
+          )
+        : context.l10n.activeCard;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -75,7 +79,7 @@ class CardMethodTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  'DEFAULT',
+                  context.l10n.defaultBadge,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: scheme.onPrimary,
                     fontWeight: FontWeight.w900,
@@ -107,7 +111,7 @@ class CardMethodTile extends StatelessWidget {
         ),
         trailing: PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert_rounded),
-          tooltip: 'Card options',
+          tooltip: context.l10n.cardOptions,
           onSelected: (value) {
             switch (value) {
               case 'default':
@@ -123,23 +127,23 @@ class CardMethodTile extends StatelessWidget {
           },
           itemBuilder: (context) => [
             if (!card.isDefault)
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
                 value: 'default',
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle_outline_rounded, size: 20),
-                    SizedBox(width: 10),
-                    Text('Set as default'),
+                    const Icon(Icons.check_circle_outline_rounded, size: 20),
+                    const SizedBox(width: 10),
+                    Text(context.l10n.setAsDefault),
                   ],
                 ),
               ),
-            const PopupMenuItem<String>(
+            PopupMenuItem<String>(
               value: 'edit',
               child: Row(
                 children: [
-                  Icon(Icons.edit_outlined, size: 20),
-                  SizedBox(width: 10),
-                  Text('Edit card'),
+                  const Icon(Icons.edit_outlined, size: 20),
+                  const SizedBox(width: 10),
+                  Text(context.l10n.editCardMenu),
                 ],
               ),
             ),
@@ -150,7 +154,7 @@ class CardMethodTile extends StatelessWidget {
                   Icon(Icons.delete_outline_rounded,
                       size: 20, color: scheme.error),
                   const SizedBox(width: 10),
-                  Text('Remove card', style: TextStyle(color: scheme.error)),
+                  Text(context.l10n.removeCardMenu, style: TextStyle(color: scheme.error)),
                 ],
               ),
             ),

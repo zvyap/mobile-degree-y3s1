@@ -136,7 +136,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get depositRefund => 'Deposit refund';
 
   @override
-  String get paymentMethod => 'Payment method';
+  String get paymentMethod => 'Payment Method';
 
   @override
   String get depositPaymentExplanation =>
@@ -1301,4 +1301,199 @@ class AppLocalizationsEn extends AppLocalizations {
   String failedToAddBike(String error) {
     return 'Failed to add bike: $error';
   }
+
+  @override
+  String get managePaymentMethodsSubtitle =>
+      'Manage credit/debit cards and PayPal';
+
+  @override
+  String get termsOfService => 'Terms of Service';
+
+  @override
+  String get termsOfServiceSubtitle =>
+      'Rental rules, safety policies, and liabilities';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get privacyPolicySubtitle =>
+      'Data protection, GPS location, and privacy rights';
+
+  @override
+  String get logOut => 'Log Out';
+
+  @override
+  String get onlineCheckout => 'ONLINE CHECKOUT';
+
+  @override
+  String get savedCards => 'SAVED CARDS';
+
+  @override
+  String savedCardsCount(int count) {
+    return '$count saved';
+  }
+
+  @override
+  String get noCardsSaved => 'No cards saved yet';
+
+  @override
+  String get noCardsSavedDescription =>
+      'Add a Visa or Mastercard for quick, seamless one-tap bike rentals.';
+
+  @override
+  String get addCard => 'Add Card';
+
+  @override
+  String get removeCard => 'Remove Card';
+
+  @override
+  String removeCardConfirmation(String brand, String lastFour) {
+    return 'Are you sure you want to remove your $brand ending in $lastFour?';
+  }
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
+  String get cardRemovedSuccess => 'Card removed successfully';
+
+  @override
+  String get failedToRemoveCard => 'Failed to remove card';
+
+  @override
+  String cardSetAsDefault(String brand) {
+    return '$brand set as default payment method';
+  }
+
+  @override
+  String get failedToUpdateDefaultCard => 'Failed to update default card';
+
+  @override
+  String get editCard => 'Edit Card';
+
+  @override
+  String get cardUpdatedSuccess => 'Card updated successfully';
+
+  @override
+  String get failedToUpdateCard => 'Failed to update card';
+
+  @override
+  String get cardAddedSuccess => 'Card added successfully';
+
+  @override
+  String get failedToAddCard => 'Failed to add card';
+
+  @override
+  String get cardNumber => 'Card Number';
+
+  @override
+  String get cardNumberHint => '4xxx xxxx xxxx xxxx';
+
+  @override
+  String get cardholderName => 'Cardholder Name';
+
+  @override
+  String get cardholderNameHint => 'e.g. John Doe';
+
+  @override
+  String get expiryDate => 'Expiry Date';
+
+  @override
+  String get expiryDateHint => 'MM/YY';
+
+  @override
+  String get cvvCvc => 'CVV / CVC';
+
+  @override
+  String get cvvHint => '•••';
+
+  @override
+  String get setAsDefaultPaymentMethod => 'Set as default payment method';
+
+  @override
+  String get automaticallyUseCard =>
+      'Automatically use this card for bike rentals';
+
+  @override
+  String get updateCard => 'Update Card';
+
+  @override
+  String cardExpiry(String month, String year) {
+    return 'Exp $month/$year';
+  }
+
+  @override
+  String get activeCard => 'Active Card';
+
+  @override
+  String get defaultBadge => 'DEFAULT';
+
+  @override
+  String get cardOptions => 'Card options';
+
+  @override
+  String get setAsDefault => 'Set as default';
+
+  @override
+  String get editCardMenu => 'Edit card';
+
+  @override
+  String get removeCardMenu => 'Remove card';
+
+  @override
+  String get payPal => 'PayPal';
+
+  @override
+  String get payPalBuiltIn => 'Built-in';
+
+  @override
+  String get payPalSubtitle => 'Webview checkout · Always available';
+
+  @override
+  String get payPalInformation => 'PayPal information';
+
+  @override
+  String get payPalIntegration => 'PayPal Integration';
+
+  @override
+  String get payPalAlwaysAvailable => 'Always available payment option';
+
+  @override
+  String get payPalDescription =>
+      'PayPal checkout is processed on-demand through a secure in-app webview during bike rental authorization. It does not require storing credit or debit card details, so it cannot be edited or removed.';
+
+  @override
+  String get gotIt => 'Got it';
+
+  @override
+  String get cardholderPreview => 'CARDHOLDER';
+
+  @override
+  String get cardholderNamePreview => 'CARDHOLDER NAME';
+
+  @override
+  String get expiresPreview => 'EXPIRES';
+
+  @override
+  String get agree => 'Agree';
+
+  @override
+  String get agreementConfirmation => 'Agreement Confirmation';
+
+  @override
+  String agreementNotice(String buttonText, String title) {
+    return 'By tapping \"$buttonText\" above or below, you acknowledge that you have reviewed and accept these $title.';
+  }
+
+  @override
+  String agreeAndContinue(String buttonText) {
+    return '$buttonText & Continue';
+  }
+
+  @override
+  String get contactSupport => 'Questions? Contact support@bikerent.app';
 }

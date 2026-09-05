@@ -3,6 +3,7 @@ import 'package:bike_renting_app/features/payment_methods/controllers/payment_me
 import 'package:bike_renting_app/features/payment_methods/models/card_brand.dart';
 import 'package:bike_renting_app/features/payment_methods/validators/card_validator.dart';
 import 'package:bike_renting_app/features/payment_methods/widgets/credit_card_preview.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/shared/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -108,10 +109,10 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
       if (!mounted) return;
 
       if (success) {
-        AppToast.show(context, message: 'Card updated successfully');
+        AppToast.show(context, message: context.l10n.cardUpdatedSuccess);
         Navigator.of(context).pop();
       } else {
-        final error = widget.controller.errorMessage ?? 'Failed to update card';
+        final error = widget.controller.errorMessage ?? context.l10n.failedToUpdateCard;
         AppToast.show(context, message: error, variant: AppToastVariant.error);
       }
     } else {
@@ -135,10 +136,10 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
       if (!mounted) return;
 
       if (success) {
-        AppToast.show(context, message: 'Card added successfully');
+        AppToast.show(context, message: context.l10n.cardAddedSuccess);
         Navigator.of(context).pop();
       } else {
-        final error = widget.controller.errorMessage ?? 'Failed to add card';
+        final error = widget.controller.errorMessage ?? context.l10n.failedToAddCard;
         AppToast.show(context, message: error, variant: AppToastVariant.error);
       }
     }
@@ -152,7 +153,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Card' : 'Add Card'),
+        title: Text(isEditing ? context.l10n.editCard : context.l10n.addCard),
       ),
       body: SafeArea(
         child: ListenableBuilder(
@@ -180,7 +181,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
 
                     // Card Number field (Read-only on edit)
                     Text(
-                      'Card Number',
+                      context.l10n.cardNumber,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -196,7 +197,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                         CardNumberInputFormatter(),
                       ],
                       decoration: InputDecoration(
-                        hintText: '4xxx xxxx xxxx xxxx',
+                        hintText: context.l10n.cardNumberHint,
                         prefixIcon: Icon(_detectedBrand.icon),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -212,7 +213,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
 
                     // Cardholder Name field
                     Text(
-                      'Cardholder Name',
+                      context.l10n.cardholderName,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -225,7 +226,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                       textCapitalization: TextCapitalization.words,
                       keyboardType: TextInputType.name,
                       decoration: InputDecoration(
-                        hintText: 'e.g. John Doe',
+                        hintText: context.l10n.cardholderNameHint,
                         prefixIcon: const Icon(Icons.person_outline_rounded),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -247,7 +248,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Expiry Date',
+                                context.l10n.expiryDate,
                                 style: theme.textTheme.titleSmall?.copyWith(
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -263,7 +264,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                                   CardExpiryInputFormatter(),
                                 ],
                                 decoration: InputDecoration(
-                                  hintText: 'MM/YY',
+                                  hintText: context.l10n.expiryDateHint,
                                   prefixIcon: const Icon(Icons.calendar_today_outlined),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
@@ -285,7 +286,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'CVV / CVC',
+                                  context.l10n.cvvCvc,
                                   style: theme.textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -302,7 +303,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                                     LengthLimitingTextInputFormatter(3),
                                   ],
                                   decoration: InputDecoration(
-                                    hintText: '•••',
+                                    hintText: context.l10n.cvvHint,
                                     prefixIcon: const Icon(Icons.lock_outline_rounded),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(10),
@@ -335,13 +336,13 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                             ? null
                             : (val) => setState(() => _isDefault = val),
                         title: Text(
-                          'Set as default payment method',
+                          context.l10n.setAsDefaultPaymentMethod,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         subtitle: Text(
-                          'Automatically use this card for bike rentals',
+                          context.l10n.automaticallyUseCard,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.7),
                           ),
@@ -373,7 +374,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                                 ),
                               )
                             : Text(
-                                isEditing ? 'Update Card' : 'Add Card',
+                                isEditing ? context.l10n.updateCard : context.l10n.addCard,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,

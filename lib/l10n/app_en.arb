@@ -50,7 +50,7 @@
   "depositRefunded": "Remaining deposit refunded",
   "totalPaid": "Total paid",
   "depositRefund": "Deposit refund",
-  "paymentMethod": "Payment method",
+  "paymentMethod": "Payment Method",
   "depositPaymentExplanation": "The ride fare was taken from the deposit. The remaining deposit was refunded to the same payment method.",
   "profileDescription": "Profile, wallet, permissions, and ride history.",
   "fleetDescription": "Fleet health, battery status, and maintenance queue.",
@@ -555,6 +555,122 @@
         "type": "String"
       }
     }
-  }
+  },
 
+  "managePaymentMethodsSubtitle": "Manage credit/debit cards and PayPal",
+  "termsOfService": "Terms of Service",
+  "termsOfServiceSubtitle": "Rental rules, safety policies, and liabilities",
+  "privacyPolicy": "Privacy Policy",
+  "privacyPolicySubtitle": "Data protection, GPS location, and privacy rights",
+  "logOut": "Log Out",
+
+  "onlineCheckout": "ONLINE CHECKOUT",
+  "savedCards": "SAVED CARDS",
+  "savedCardsCount": "{count} saved",
+  "@savedCardsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noCardsSaved": "No cards saved yet",
+  "noCardsSavedDescription": "Add a Visa or Mastercard for quick, seamless one-tap bike rentals.",
+  "addCard": "Add Card",
+  "removeCard": "Remove Card",
+  "removeCardConfirmation": "Are you sure you want to remove your {brand} ending in {lastFour}?",
+  "@removeCardConfirmation": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      },
+      "lastFour": {
+        "type": "String"
+      }
+    }
+  },
+  "cancel": "Cancel",
+  "remove": "Remove",
+  "cardRemovedSuccess": "Card removed successfully",
+  "failedToRemoveCard": "Failed to remove card",
+  "cardSetAsDefault": "{brand} set as default payment method",
+  "@cardSetAsDefault": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToUpdateDefaultCard": "Failed to update default card",
+
+  "editCard": "Edit Card",
+  "cardUpdatedSuccess": "Card updated successfully",
+  "failedToUpdateCard": "Failed to update card",
+  "cardAddedSuccess": "Card added successfully",
+  "failedToAddCard": "Failed to add card",
+  "cardNumber": "Card Number",
+  "cardNumberHint": "4xxx xxxx xxxx xxxx",
+  "cardholderName": "Cardholder Name",
+  "cardholderNameHint": "e.g. John Doe",
+  "expiryDate": "Expiry Date",
+  "expiryDateHint": "MM/YY",
+  "cvvCvc": "CVV / CVC",
+  "cvvHint": "•••",
+  "setAsDefaultPaymentMethod": "Set as default payment method",
+  "automaticallyUseCard": "Automatically use this card for bike rentals",
+  "updateCard": "Update Card",
+
+  "cardExpiry": "Exp {month}/{year}",
+  "@cardExpiry": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "activeCard": "Active Card",
+  "defaultBadge": "DEFAULT",
+  "cardOptions": "Card options",
+  "setAsDefault": "Set as default",
+  "editCardMenu": "Edit card",
+  "removeCardMenu": "Remove card",
+
+  "payPal": "PayPal",
+  "payPalBuiltIn": "Built-in",
+  "payPalSubtitle": "Webview checkout · Always available",
+  "payPalInformation": "PayPal information",
+  "payPalIntegration": "PayPal Integration",
+  "payPalAlwaysAvailable": "Always available payment option",
+  "payPalDescription": "PayPal checkout is processed on-demand through a secure in-app webview during bike rental authorization. It does not require storing credit or debit card details, so it cannot be edited or removed.",
+  "gotIt": "Got it",
+
+  "cardholderPreview": "CARDHOLDER",
+  "cardholderNamePreview": "CARDHOLDER NAME",
+  "expiresPreview": "EXPIRES",
+
+  "agree": "Agree",
+  "agreementConfirmation": "Agreement Confirmation",
+  "agreementNotice": "By tapping \"{buttonText}\" above or below, you acknowledge that you have reviewed and accept these {title}.",
+  "@agreementNotice": {
+    "placeholders": {
+      "buttonText": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agreeAndContinue": "{buttonText} & Continue",
+  "@agreeAndContinue": {
+    "placeholders": {
+      "buttonText": {
+        "type": "String"
+      }
+    }
+  },
+  "contactSupport": "Questions? Contact support@bikerent.app"
 }
