@@ -197,7 +197,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     }
   }
 
-  // 🔴 Soft-delete station: prompts confirmation dialog and sets is_active = false
   Future<void> _removeStationFromSupabase() async {
     if (widget.stationData == null || widget.stationData!['id'] == null) return;
 
@@ -579,33 +578,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     ),
                     const SizedBox(height: 40),
 
-                    if (widget.isViewOnly)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: colorScheme.primary,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                          ),
-                          icon: const Icon(Icons.directions_bike_rounded, color: Colors.white),
-                          label: const Text(
-                            "View Bikes at Station",
-                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => StationBikesScreen(
-                                  stationData: widget.stationData,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      )
-                    else ...[
+                    // 🟢 ADMIN ONLY ACTIONS
+                    if (!widget.isViewOnly) ...[
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -630,8 +604,35 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                           ),
                         ),
                       ),
-                      // 🔴 Remove Station button (only visible when editing an existing station)
                       if (isEditMode) ...[
+                        const SizedBox(height: 12),
+                        // 🟢 View Bikes at Station is only accessible by Admin
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: colorScheme.primary,
+                              side: BorderSide(color: colorScheme.primary, width: 1.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                            ),
+                            icon: const Icon(Icons.directions_bike_rounded),
+                            label: const Text(
+                              "View Bikes at Station",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => StationBikesScreen(
+                                    stationData: widget.stationData,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,

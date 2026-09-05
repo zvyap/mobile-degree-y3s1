@@ -4,7 +4,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Import your standalone station details file
 import 'package:bike_renting_app/bike_station/station_details.dart';
 
 // ============================================================================
@@ -19,18 +18,43 @@ class AdminStationMapScreen extends StatefulWidget {
 
 class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
-  final GlobalKey<_SharedBikeMapState> _mapTileKey = GlobalKey<_SharedBikeMapState>();
+  final GlobalKey<SharedBikeMapState> _mapTileKey = GlobalKey<SharedBikeMapState>();
+
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   List<Map<String, dynamic>> stations = [];
+  List<Map<String, dynamic>> filteredStations = [];
   bool isLoading = true;
+  bool isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _fetchStations();
+
+    _searchFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {
+          isSearching = _searchFocusNode.hasFocus || _searchController.text.trim().isNotEmpty;
+        });
+      }
+    });
   }
 
-  // Fetch active stations from Supabase
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  static double? _toDouble(dynamic val) {
+    if (val == null) return null;
+    if (val is num) return val.toDouble();
+    return double.tryParse(val.toString());
+  }
+
   Future<void> _fetchStations() async {
     setState(() => isLoading = true);
     try {
@@ -40,10 +64,15 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
           .eq('is_active', true)
           .order('id', ascending: true);
 
-      setState(() {
-        stations = List<Map<String, dynamic>>.from(response);
-        isLoading = false;
-      });
+      final fetched = List<Map<String, dynamic>>.from(response);
+
+      if (mounted) {
+        setState(() {
+          stations = fetched;
+          filteredStations = fetched;
+          isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() => isLoading = false);
@@ -54,6 +83,48 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
     }
   }
 
+  void _filterStations(String query) {
+    final trimmed = query.trim().toLowerCase();
+    setState(() {
+      if (trimmed.isEmpty) {
+        filteredStations = stations;
+      } else {
+        filteredStations = stations.where((s) {
+          final name = (s['name'] ?? '').toString().toLowerCase();
+          final address = (s['address'] ?? '').toString().toLowerCase();
+          final code = (s['code'] ?? '').toString().toLowerCase();
+          return name.contains(trimmed) || address.contains(trimmed) || code.contains(trimmed);
+        }).toList();
+      }
+      isSearching = true;
+    });
+  }
+
+  void _openAdminEditStation(Map<String, dynamic> station) async {
+    _searchFocusNode.unfocus();
+    setState(() => isSearching = false);
+
+    final double? lat = _toDouble(station['latitude'] ?? station['lat']);
+    final double? lng = _toDouble(station['longitude'] ?? station['lng']);
+    if (lat != null && lng != null) {
+      _mapTileKey.currentState?.moveCameraToLocation(LatLng(lat, lng));
+    }
+
+    final isSaved = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StationDetailScreen(
+          stationData: station,
+          isViewOnly: false,
+        ),
+      ),
+    );
+
+    if (isSaved == true) {
+      _fetchStations();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -61,105 +132,225 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: Stack(
-        children: [
-          // 1. Shared Map Layer
-          Positioned.fill(
-            child: SharedBikeMap(
-              key: _mapTileKey,
-              stations: stations,
-              isAdminMode: true,
-              // LONG PRESS TO ADD NEW STATION
-              onMapLongPress: (LatLng point) async {
-                final isSaved = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => StationDetailScreen(
-                      initialLat: point.latitude,
-                      initialLng: point.longitude,
-                      isViewOnly: false, // Opens in Admin Add Mode
+      body: GestureDetector(
+        onTap: () {
+          _searchFocusNode.unfocus();
+          setState(() => isSearching = false);
+        },
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: SharedBikeMap(
+                key: _mapTileKey,
+                stations: stations,
+                isAdminMode: true,
+                onMapLongPress: (LatLng point) async {
+                  final isSaved = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => StationDetailScreen(
+                        initialLat: point.latitude,
+                        initialLng: point.longitude,
+                        isViewOnly: false,
+                      ),
                     ),
-                  ),
-                );
+                  );
 
-                if (isSaved == true) {
-                  _fetchStations(); // Refresh markers from Supabase
-                }
-              },
-              // TAP MARKER TO EDIT EXISTING STATION
-              onStationTap: (stationId) async {
-                final selectedStation = stations.firstWhere(
-                      (s) => s['id'].toString() == stationId,
-                );
-
-                final isSaved = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => StationDetailScreen(
-                      stationData: selectedStation,
-                      isViewOnly: false, // Opens in Admin Edit Mode
-                    ),
-                  ),
-                );
-
-                if (isSaved == true) {
-                  _fetchStations();
-                }
-              },
-            ),
-          ),
-
-          // 2. Top Navigation Bar
-          Positioned(
-            top: 50.0,
-            left: 16.0,
-            right: 16.0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
-                ],
+                  if (isSaved == true) {
+                    _fetchStations();
+                  }
+                },
+                onStationTap: (stationId) {
+                  final selectedStation = stations.firstWhere(
+                        (s) => s['id'].toString() == stationId,
+                    orElse: () => {},
+                  );
+                  if (selectedStation.isNotEmpty) {
+                    _openAdminEditStation(selectedStation);
+                  }
+                },
               ),
-              child: Row(
+            ),
+
+            Positioned(
+              top: 50.0,
+              left: 16.0,
+              right: 16.0,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.admin_panel_settings, color: colorScheme.primary),
-                  const SizedBox(width: 12),
-                  Text(
-                    "Long-press map to add station",
-                    style: TextStyle(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                  Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: colorScheme.outline.withValues(alpha: 0.5)),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      onChanged: _filterStations,
+                      style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'Search station code, name or address...',
+                        hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13),
+                        prefixIcon: Icon(Icons.search, color: colorScheme.primary, size: 20),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                          icon: Icon(Icons.clear, color: colorScheme.onSurface.withValues(alpha: 0.5), size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            _filterStations('');
+                          },
+                        )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.touch_app, color: colorScheme.primary, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          "Long-press map to add new station",
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
 
-          // 3. Current Location Floating Action Button
-          Positioned(
-            right: 16.0,
-            bottom: 30.0,
-            child: FloatingActionButton(
-              backgroundColor: colorScheme.surfaceContainerHighest,
-              onPressed: () {
-                _fetchStations();
-                _mapTileKey.currentState?.recenterToGps();
-              },
-              child: isLoading
-                  ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-                  : Icon(Icons.my_location, color: colorScheme.onSurface),
+            if (isSearching && _searchController.text.trim().isNotEmpty)
+              Positioned(
+                top: 106.0,
+                left: 16.0,
+                right: 16.0,
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 12, offset: Offset(0, 6))],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: filteredStations.isEmpty
+                        ? Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Text(
+                        "No matching stations found.",
+                        style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                        : ListView.separated(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      itemCount: filteredStations.length,
+                      separatorBuilder: (context, index) => Divider(color: colorScheme.outline.withValues(alpha: 0.2), height: 1),
+                      itemBuilder: (context, index) {
+                        final station = filteredStations[index];
+                        final String status = station['status']?.toString() ?? 'Normal';
+                        final String code = station['code']?.toString() ?? '';
+
+                        Color statusColor = const Color(0xFF10B981);
+                        if (status == 'Under Maintenance') {
+                          statusColor = const Color(0xFFF97316);
+                        } else if (status == 'Terminated') {
+                          statusColor = const Color(0xFFDC2626);
+                        }
+
+                        return ListTile(
+                          leading: Icon(Icons.edit_location_alt, color: statusColor),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  station['name'] ?? 'Unnamed Station',
+                                  style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 14),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (code.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  code,
+                                  style: TextStyle(color: colorScheme.primary, fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ],
+                          ),
+                          subtitle: Text(
+                            station['address'] ?? 'No address',
+                            style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 12),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: statusColor, width: 1),
+                            ),
+                            child: Text(
+                              status,
+                              style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          onTap: () => _openAdminEditStation(station),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
+            Positioned(
+              right: 16.0,
+              bottom: 30.0,
+              child: FloatingActionButton(
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                onPressed: () {
+                  _fetchStations();
+                  _mapTileKey.currentState?.recenterToGps();
+                },
+                child: isLoading
+                    ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                    : Icon(Icons.my_location, color: colorScheme.onSurface),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -176,6 +367,8 @@ class SharedBikeMap extends StatefulWidget {
   final LatLng? initialCenter;
   final double initialZoom;
   final String? selectedStationId;
+  final String? originStationId;
+  final String? destinationStationId;
   final LatLng? riderLocation;
   final double? geofenceRadiusMeters;
   final List<LatLng>? routePoints;
@@ -189,16 +382,18 @@ class SharedBikeMap extends StatefulWidget {
     this.initialCenter,
     this.initialZoom = 14.0,
     this.selectedStationId,
+    this.originStationId,
+    this.destinationStationId,
     this.riderLocation,
     this.geofenceRadiusMeters,
     this.routePoints,
   });
 
   @override
-  State<SharedBikeMap> createState() => _SharedBikeMapState();
+  State<SharedBikeMap> createState() => SharedBikeMapState();
 }
 
-class _SharedBikeMapState extends State<SharedBikeMap> {
+class SharedBikeMapState extends State<SharedBikeMap> {
   final MapController _mapController = MapController();
   LatLng? _currentGpsLocation;
 
@@ -210,7 +405,60 @@ class _SharedBikeMapState extends State<SharedBikeMap> {
     }
   }
 
-  // 🟢 Public method called by FAB to center on user location
+  void moveCameraToLocation(LatLng location, {double? zoom}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        _mapController.move(location, zoom ?? widget.initialZoom);
+      } catch (e) {
+        debugPrint("Map camera move error: $e");
+      }
+    });
+  }
+
+  void fitBounds(List<LatLng> points, {EdgeInsets? padding}) {
+    if (points.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final bounds = LatLngBounds.fromPoints(points);
+        _mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: bounds,
+            padding: padding ??
+                const EdgeInsets.only(
+                  top: 120.0,
+                  bottom: 280.0,
+                  left: 60.0,
+                  right: 60.0,
+                ),
+          ),
+        );
+      } catch (e) {
+        debugPrint("Map fitBounds error: $e");
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant SharedBikeMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedStationId != oldWidget.selectedStationId && widget.selectedStationId != null) {
+      _centerOnSelectedStation(widget.selectedStationId!);
+    }
+  }
+
+  void _centerOnSelectedStation(String stationId) {
+    for (final s in widget.stations) {
+      if (s['id']?.toString() == stationId || s['code']?.toString() == stationId) {
+        final double? lat = _toDouble(s['latitude'] ?? s['lat']);
+        final double? lng = _toDouble(s['longitude'] ?? s['lng']);
+        if (lat != null && lng != null) {
+          moveCameraToLocation(LatLng(lat, lng));
+          break;
+        }
+      }
+    }
+  }
+
   Future<void> recenterToGps() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return;
@@ -234,7 +482,7 @@ class _SharedBikeMapState extends State<SharedBikeMap> {
         setState(() {
           _currentGpsLocation = userLatLng;
         });
-        _mapController.move(userLatLng, widget.initialZoom);
+        moveCameraToLocation(userLatLng);
       }
     } catch (e) {
       debugPrint("GPS location fetch error: $e");
@@ -263,7 +511,7 @@ class _SharedBikeMapState extends State<SharedBikeMap> {
       if (lat != null && lng != null) return LatLng(lat, lng);
     }
 
-    return const LatLng(5.4643, 100.2841); // Default fallback (Tanjung Bungah)
+    return const LatLng(5.4643, 100.2841);
   }
 
   static double? _toDouble(dynamic val) {
@@ -382,21 +630,38 @@ class _SharedBikeMapState extends State<SharedBikeMap> {
       if (lat == null || lng == null) continue;
 
       final String stationId = station['id']?.toString() ?? '';
+      final String stationCode = station['code']?.toString() ?? '';
       final String status = station['status']?.toString() ?? 'Normal';
-      final bool isSelected = widget.selectedStationId != null &&
-          (stationId == widget.selectedStationId ||
-              station['code']?.toString() == widget.selectedStationId);
 
-      Color markerColor = colorScheme.primary;
-      if (isSelected) {
-        markerColor = colorScheme.secondary;
-      } else if (status == 'Under Maintenance') {
-        markerColor = colorScheme.tertiary;
+      final bool isOrigin = widget.originStationId != null &&
+          widget.originStationId!.isNotEmpty &&
+          (stationId == widget.originStationId || stationCode == widget.originStationId);
+
+      final bool isDestination = widget.destinationStationId != null &&
+          widget.destinationStationId!.isNotEmpty &&
+          (stationId == widget.destinationStationId || stationCode == widget.destinationStationId);
+
+      final bool isSelected = (widget.selectedStationId != null &&
+          (stationId == widget.selectedStationId || stationCode == widget.selectedStationId)) ||
+          isOrigin ||
+          isDestination;
+
+      // Base status color calculation
+      Color markerColor = const Color(0xFF10B981);
+      if (status == 'Under Maintenance') {
+        markerColor = const Color(0xFFF97316);
       } else if (status == 'Terminated' || (widget.isAdminMode && status != 'Normal')) {
         markerColor = const Color(0xFFDC2626);
       }
 
-      final double effectiveSize = isSelected ? markerSize * 1.2 : markerSize;
+      // 🟢 Hard OVERRIDE for active route planner selection: Origin = Emerald Green, Destination = Royal Blue
+      if (isOrigin) {
+        markerColor = const Color(0xFF10B981); // Emerald Green
+      } else if (isDestination) {
+        markerColor = const Color(0xFF2563EB); // Royal Blue
+      }
+
+      final double effectiveSize = isSelected ? markerSize * 1.25 : markerSize;
 
       markers.add(
         Marker(
@@ -430,9 +695,11 @@ class _SharedBikeMapState extends State<SharedBikeMap> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.check,
+                        isOrigin
+                            ? Icons.check
+                            : (isDestination ? Icons.flag : Icons.check),
                         size: effectiveSize * 0.28,
-                        color: colorScheme.secondary,
+                        color: markerColor,
                       ),
                     ),
                   ),

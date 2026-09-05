@@ -245,6 +245,32 @@ class BikeReportRepository {
         .eq('id', reportId);
   }
 
+  // ===========================================================================
+// CANCEL REPORT
+// Rider can cancel only their own pending report.
+// Database security is enforced by cancel_bike_report RPC.
+// ===========================================================================
+
+  Future<void> cancelReport({
+    required int reportId,
+  }) async {
+    final user =
+        _supabase.auth.currentUser;
+
+    if (user == null) {
+      throw Exception(
+        'You must be signed in to cancel a report.',
+      );
+    }
+
+    await _supabase.rpc(
+      'cancel_bike_report',
+      params: {
+        'p_report_id': reportId,
+      },
+    );
+  }
+
   Future<List<BikeReport>> getReportsForBike(
       int bikeId,
       ) async {
