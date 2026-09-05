@@ -321,7 +321,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
         context,
         message: 'User deleted successfully.',
         variant: AppToastVariant.success,
-      );;
+      );
     }
   }
 

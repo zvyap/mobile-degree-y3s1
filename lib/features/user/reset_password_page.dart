@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:bike_renting_app/features/user/auth_controller.dart';
+import 'package:bike_renting_app/features/user/user_models.dart';
 import 'package:bike_renting_app/data/repositories/auth_repository.dart';
+
+import 'package:bike_renting_app/shared/app_toast.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({
@@ -19,6 +22,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _authController = AuthController(AuthRepository());
+  }
 
   @override
   void dispose() {
@@ -54,22 +63,38 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     if (!mounted) return;
 
     if (_authController.error == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password updated successfully.'),
-        ),
+      AppToast.show(
+        context,
+        message: 'Password updated successfully.',
+        variant: AppToastVariant.success,
       );
 
-      Navigator.of(context).pop();
+      _handleClose();
+    } else {
+      _showError(_mapError(_authController.error));
     }
   }
 
+  String _mapError(UserError? error) => switch (error) {
+        UserError.passwordRequired => 'Please enter a password.',
+        UserError.weakPassword => 'Password is too weak.',
+        UserError.passwordUpdateFailed =>
+          'Failed to update password. Please try again.',
+        _ => 'Failed to update password.',
+      };
+
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
+    AppToast.show(
+      context,
+      message: message,
+      variant: AppToastVariant.error,
     );
+  }
+
+  void _handleClose() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -81,7 +106,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => Navigator.of(context).pop(),
+          onPressed: _handleClose,
         ),
       ),
       body: SafeArea(

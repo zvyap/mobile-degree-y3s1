@@ -105,7 +105,6 @@ class _EditUserPageState extends State<EditUserPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
 
     return AnimatedBuilder(
         animation: widget.userCTRL,

@@ -11,6 +11,7 @@ import 'package:bike_renting_app/navigation/app_navigator.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/navigation/bike_bottom_nav_bar.dart';
 import 'package:bike_renting_app/shell/app_header.dart';
+import 'package:bike_renting_app/navigation/deep_link_manager.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -43,6 +44,7 @@ class _BikeShellState extends State<BikeShell> {
   AppPage _selectedRootPage = AppPage.home;
 
   StreamSubscription<String?>? _forceEndSubscription;
+  StreamSubscription<String>? _deepLinkQrSubscription;
 
   bool get _isAdmin =>
       _profileController.profile?.role == AppUserRole.admin;
@@ -64,6 +66,19 @@ class _BikeShellState extends State<BikeShell> {
         _showGlobalForceEndAlert(message);
       });
     });
+    _deepLinkQrSubscription =
+        AppDeepLinkManager.instance.onBikeQr.listen((token) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleDeepLinkBikeQr(token);
+      });
+    });
+    final pendingToken =
+        AppDeepLinkManager.instance.consumePendingBikeQrToken();
+    if (pendingToken != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleDeepLinkBikeQr(pendingToken);
+      });
+    }
     _profileController = ProfileController(repositories.profiles)
       ..addListener(_handleProfileChanged)
       ..loadProfile();
@@ -74,6 +89,12 @@ class _BikeShellState extends State<BikeShell> {
       onDetach: _handleAppLifecycleExit,
       onHide: _handleAppLifecycleExit,
     );
+  }
+
+  void _handleDeepLinkBikeQr(String token) {
+    if (!mounted) return;
+    _selectRootPage(AppPage.scan);
+    unawaited(_rentingController.scanBike(token));
   }
 
   Future<void> _showGlobalForceEndAlert(String? message) async {
@@ -133,6 +154,7 @@ class _BikeShellState extends State<BikeShell> {
   @override
   void dispose() {
     _forceEndSubscription?.cancel();
+    _deepLinkQrSubscription?.cancel();
     _lifecycleListener.dispose();
     _profileController.removeListener(_handleProfileChanged);
     _profileController.dispose();

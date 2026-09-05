@@ -524,6 +524,9 @@ class RentingController extends ChangeNotifier {
         final parsed = await resolveQrToken(param);
         if (parsed != null) return parsed;
       }
+      if (_uuidRegex.hasMatch(uri.host)) {
+        return uri.host.toLowerCase();
+      }
       for (final segment in uri.pathSegments) {
         if (_uuidRegex.hasMatch(segment)) {
           return segment.toLowerCase();

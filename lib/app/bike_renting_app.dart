@@ -1,6 +1,7 @@
 import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/features/splash/cold_boot_loading_page.dart';
+import 'package:bike_renting_app/navigation/deep_link_manager.dart';
 import 'package:bike_renting_app/shared/app_toast.dart';
 import 'package:bike_renting_app/shared/connection_service.dart';
 import 'package:bike_renting_app/shared/location_safeguard.dart';
@@ -31,6 +32,12 @@ class _BikeRentingAppState extends State<BikeRentingApp> {
   ThemeMode _themeMode = ThemeMode.system;
   late Locale? _locale = widget.initialLocale ?? const Locale('en');
 
+  @override
+  void initState() {
+    super.initState();
+    AppDeepLinkManager.instance.initialize();
+  }
+
   void _toggleTheme(Brightness currentBrightness) {
     setState(() {
       _themeMode = currentBrightness == Brightness.dark
@@ -48,6 +55,7 @@ class _BikeRentingAppState extends State<BikeRentingApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: AppDeepLinkManager.rootNavigatorKey,
       debugShowCheckedModeBanner: false,
       onGenerateTitle: (context) => context.l10n.appName,
       localizationsDelegates: AppLocalizations.localizationsDelegates,

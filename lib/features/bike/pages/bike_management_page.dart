@@ -1357,10 +1357,6 @@ class _BikeStatusBadge
   Widget build(
       BuildContext context,
       ) {
-    final scheme =
-        Theme.of(context)
-            .colorScheme;
-
     return Container(
       padding:
       const EdgeInsets.symmetric(

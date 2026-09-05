@@ -1,15 +1,16 @@
 import 'dart:ui' as ui;
 
+import 'package:bike_renting_app/shared/app_toast.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:gal/gal.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 /// Modal dialog that displays a scannable QR code for a specific bike.
 ///
 /// Features:
 /// - High-contrast QR code rendering with high error correction (Level H)
-/// - Left button: "Export" to save QR badge to gallery
+/// - Left button: "Export" to save QR badge via system file selector
 /// - Right button: "Close" to dismiss
 /// - Material 3 theme styling with accessible 48dp touch targets
 class BikeQrModal extends StatefulWidget {
@@ -54,80 +55,75 @@ class _BikeQrModalState extends State<BikeQrModal> {
   final GlobalKey _repaintBoundaryKey = GlobalKey();
   bool _isExporting = false;
 
-  String get _qrPayload =>
-      widget.qrToken.isNotEmpty ? widget.qrToken : widget.bikeCode;
+  String get _qrPayload {
+    final token = widget.qrToken.isNotEmpty ? widget.qrToken : widget.bikeCode;
+    return 'bike-renting://bike?qr=${Uri.encodeComponent(token)}&code=${Uri.encodeComponent(widget.bikeCode)}';
+  }
 
-  Future<void> _exportToGallery() async {
+  Future<void> _exportQrCode() async {
     if (_isExporting) return;
     setState(() => _isExporting = true);
 
-    final messenger = ScaffoldMessenger.of(context);
-    final errorColor = Theme.of(context).colorScheme.error;
-
     try {
-      // 1. Check or request gallery permission
-      final hasAccess = await Gal.hasAccess(toAlbum: true);
-      if (!hasAccess) {
-        final granted = await Gal.requestAccess(toAlbum: true);
-        if (!granted) {
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Gallery permission is required to export QR code'),
-            ),
-          );
-          return;
-        }
-      }
-
-      // 2. Render repaint boundary into image bytes
+      // 1. Render repaint boundary into image bytes
       final boundary = _repaintBoundaryKey.currentContext?.findRenderObject()
           as RenderRepaintBoundary?;
       if (boundary == null) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Failed to capture QR code image')),
-        );
+        if (mounted) {
+          AppToast.show(
+            context,
+            message: 'Failed to capture QR code image',
+            variant: AppToastVariant.error,
+          );
+        }
         return;
       }
 
       final image = await boundary.toImage(pixelRatio: 3.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Failed to encode QR image')),
-        );
+        if (mounted) {
+          AppToast.show(
+            context,
+            message: 'Failed to encode QR image',
+            variant: AppToastVariant.error,
+          );
+        }
         return;
       }
 
       final pngBytes = byteData.buffer.asUint8List();
+      final defaultFileName =
+          'bike_qr_${widget.bikeCode.toLowerCase().replaceAll(' ', '_')}.png';
 
-      // 3. Save to gallery via Gal
-      await Gal.putImageBytes(
-        pngBytes,
-        name: 'bike_qr_${widget.bikeCode.toLowerCase().replaceAll(' ', '_')}',
+      // 2. Fire up file selector for user to choose where to export
+      final selectedUri = await FilePicker.saveFile(
+        dialogTitle: 'Export Bike QR Code',
+        fileName: defaultFileName,
+        mimeType: 'image/png',
+        bytes: pngBytes,
       );
 
-      messenger.showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text('QR code for ${widget.bikeCode} exported to gallery!'),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF0E9F6E),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (selectedUri == null) {
+        // User cancelled file picker
+        return;
+      }
+
+      if (mounted) {
+        AppToast.show(
+          context,
+          message: 'QR code for ${widget.bikeCode} exported successfully!',
+          variant: AppToastVariant.success,
+        );
+      }
     } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Failed to export: $e'),
-          backgroundColor: errorColor,
-        ),
-      );
+      if (mounted) {
+        AppToast.show(
+          context,
+          message: 'Failed to export: $e',
+          variant: AppToastVariant.error,
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isExporting = false);
@@ -332,11 +328,11 @@ class _BikeQrModalState extends State<BikeQrModal> {
               // -------------------------------------------------------------
               Row(
                 children: [
-                  // Left button: Export to gallery
+                  // Left button: Export with file selector
                   Expanded(
                     child: FilledButton.icon(
                       key: const ValueKey('bike-qr-export-button'),
-                      onPressed: _isExporting ? null : _exportToGallery,
+                      onPressed: _isExporting ? null : _exportQrCode,
                       icon: _isExporting
                           ? SizedBox(
                               width: 18,
