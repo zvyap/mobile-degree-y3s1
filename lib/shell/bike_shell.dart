@@ -5,6 +5,7 @@ import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/features/user/profile_controller.dart';
+import 'package:bike_renting_app/features/user/user_controller.dart';
 import 'package:bike_renting_app/navigation/app_navigator.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/navigation/bike_bottom_nav_bar.dart';
@@ -27,6 +28,7 @@ class _BikeShellState extends State<BikeShell> {
   late final AppNavigatorObserver _navigatorObserver;
   late final RentingController _rentingController;
   late final ProfileController _profileController;
+  late final UserController _userController;
   late final AppLifecycleListener _lifecycleListener;
 
   AppPage _currentPage = AppPage.home;
@@ -172,7 +174,8 @@ class _BikeShellState extends State<BikeShell> {
                     navigatorKey: _navigatorKey,
                     observer: _navigatorObserver,
                     rentingController: _rentingController,
-                    userController: _profileController,
+                    profileController: _profileController,
+                    userController: _userController,
                     onSelectRootPage: _selectRootPage,
                     onOpenPage: _openPage,
                     onToggleTheme: widget.onToggleTheme,

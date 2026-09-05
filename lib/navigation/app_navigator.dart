@@ -12,6 +12,8 @@ import 'package:bike_renting_app/features/history/ride_history_page.dart';
 import 'package:bike_renting_app/features/qr/qr_scan_page.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/settings/settings_page.dart';
+import 'package:bike_renting_app/features/user/user_controller.dart';
+import 'package:bike_renting_app/features/user/user_management_page.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +36,7 @@ class AppNavigator extends StatelessWidget {
     required this.navigatorKey,
     required this.observer,
     required this.rentingController,
+    required this.profileController,
     required this.userController,
     required this.onSelectRootPage,
     required this.onOpenPage,
@@ -43,7 +46,8 @@ class AppNavigator extends StatelessWidget {
   final GlobalKey<NavigatorState> navigatorKey;
   final NavigatorObserver observer;
   final RentingController rentingController;
-  final ProfileController userController;
+  final ProfileController profileController;
+  final UserController userController;
   final ValueChanged<AppPage> onSelectRootPage;
   final ValueChanged<AppPage> onOpenPage;
   final ValueChanged<Brightness> onToggleTheme;
@@ -125,10 +129,11 @@ class AppNavigator extends StatelessWidget {
         ride: (arguments as RideDetailsRouteArguments).ride,
       ),
       AppPage.profile => ProfilePage(
-        userCTRL: userController,
+        profileCTRL: profileController,
       ),
       AppPage.admin => AdminManagementPage(
         onNavigate: onSelectRootPage,
+        onOpenUserManagement: () => onOpenPage(AppPage.userManagement),
         onOpenBikeManagement: () => onOpenPage(AppPage.bikeManagement),
         onOpenStationManagement: () => onOpenPage(AppPage.stationManagement),
       ),
@@ -225,6 +230,9 @@ class AppNavigator extends StatelessWidget {
             arguments: bikeId,
           );
         },
+      ),
+      AppPage.userManagement => UserManagementPage(
+        userCTRL: userController,
       ),
 
 

@@ -6,11 +6,13 @@ class AdminManagementPage extends StatelessWidget {
   const AdminManagementPage({
     super.key,
     required this.onNavigate,
+    required this.onOpenUserManagement,
     required this.onOpenBikeManagement,
     this.onOpenStationManagement,
   });
 
   final ValueChanged<AppPage> onNavigate;
+  final VoidCallback onOpenUserManagement;
   final VoidCallback onOpenBikeManagement;
   final VoidCallback? onOpenStationManagement;
 
@@ -56,7 +58,7 @@ class AdminManagementPage extends StatelessWidget {
           icon: Icons.manage_accounts_rounded,
           title: context.l10n.userManagement,
           subtitle: context.l10n.userManagementDescription,
-          onTap: () => onNavigate(AppPage.profile),
+          onTap: onOpenUserManagement ?? () => onNavigate(AppPage.userManagement),
         ),
       ],
     );

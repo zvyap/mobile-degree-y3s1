@@ -15,9 +15,11 @@ enum UserError { // got issue
   profileLoadFailed,
   displayNameRequired,
   profileUpdateFailed,
+
+  usersLoadFailed,
+  userUpdateFailed,
+  userDeleteFailed,
+  userCreationFailed,
+  icVerificationFailed,
 }
-
-enum AppUserRole { rider, admin }
-
-enum AccountStatus { active, suspended }
 
