@@ -524,6 +524,14 @@ class SharedBikeMapState extends State<SharedBikeMap> {
   }
 
   Future<void> recenterToGps() async {
+    if (widget.riderLocation != null) {
+      moveCameraToLocation(widget.riderLocation!);
+      return;
+    }
+    if (_currentGpsLocation != null) {
+      moveCameraToLocation(_currentGpsLocation!);
+    }
+
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return;
 
@@ -536,17 +544,26 @@ class SharedBikeMapState extends State<SharedBikeMap> {
     if (permission == LocationPermission.deniedForever) return;
 
     try {
-      final Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 4),
+          ),
+        );
+      } catch (_) {
+        position = await Geolocator.getLastKnownPosition();
+      }
+      position ??= await Geolocator.getLastKnownPosition();
 
-      final userLatLng = LatLng(position.latitude, position.longitude);
-
-      if (mounted) {
+      final resolvedPos = position;
+      if (resolvedPos != null && mounted) {
+        final userLatLng = LatLng(resolvedPos.latitude, resolvedPos.longitude);
         setState(() {
           _currentGpsLocation = userLatLng;
-          if (position.heading != 0.0) {
-            _currentGpsHeading = position.heading;
+          if (resolvedPos.heading != 0.0) {
+            _currentGpsHeading = resolvedPos.heading;
           }
         });
         moveCameraToLocation(userLatLng);

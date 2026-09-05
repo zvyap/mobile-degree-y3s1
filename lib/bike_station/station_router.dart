@@ -99,6 +99,35 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
     }
   }
 
+  Future<void> _recenterToUser() async {
+    if (userPosition != null) {
+      _mapTileKey.currentState?.moveCameraToLocation(
+        LatLng(userPosition!.latitude, userPosition!.longitude),
+      );
+      return;
+    }
+    try {
+      Position? pos;
+      try {
+        pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 4),
+          ),
+        );
+      } catch (_) {
+        pos = await Geolocator.getLastKnownPosition();
+      }
+      pos ??= await Geolocator.getLastKnownPosition();
+      if (pos != null && mounted) {
+        setState(() => userPosition = pos);
+        _mapTileKey.currentState?.moveCameraToLocation(
+          LatLng(pos.latitude, pos.longitude),
+        );
+      }
+    } catch (_) {}
+  }
+
   Future<void> _calculateRoute() async {
     if (originStation == null || destinationStation == null) return;
 
@@ -317,7 +346,7 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
                   ),
                   child: IconButton(
                     icon: Icon(Icons.my_location, color: colorScheme.onSurface),
-                    onPressed: _calculateRoute,
+                    onPressed: _recenterToUser,
                   ),
                 ),
               ),

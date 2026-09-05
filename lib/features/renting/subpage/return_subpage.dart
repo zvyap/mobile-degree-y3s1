@@ -121,6 +121,13 @@ class _ReturnStage extends StatelessWidget {
                             controller.selectedStation!.name,
                           ),
                   ),
+                ] else if (!controller.isAtStation) ...[
+                  const SizedBox(height: 18),
+                  _ErrorPanel(
+                    message: controller.stationDistanceMeters != null
+                        ? '${context.l10n.errorOutsideReturnZone} (${context.l10n.stationDistance(controller.stationDistanceMeters!)})'
+                        : context.l10n.errorOutsideReturnZone,
+                  ),
                 ],
                 const SizedBox(height: 16),
                 _ActionButton(
@@ -128,7 +135,7 @@ class _ReturnStage extends StatelessWidget {
                   label: context.l10n.confirmBikeDocked,
                   icon: Icons.lock_rounded,
                   busy: controller.isBusy,
-                  onPressed: (cannotReturnHere || controller.isBusy)
+                  onPressed: (cannotReturnHere || controller.isBusy || !controller.isAtStation)
                       ? null
                       : () => controller.confirmDock(),
                 ),

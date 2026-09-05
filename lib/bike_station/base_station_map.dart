@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:bike_renting_app/bike_station/osrm_service.dart';
 import 'package:bike_renting_app/bike_station/shared_map.dart';
+import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 
 export 'package:bike_renting_app/bike_station/osrm_service.dart';
@@ -199,27 +200,44 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
 
   /// Request GPS permission and fetch user location
   Future<LatLng?> getUserLocation() async {
+    if (widget.riderLocation != null) {
+      return widget.riderLocation;
+    }
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return null;
+      if (!serviceEnabled) return userLocation;
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return null;
+        if (permission == LocationPermission.denied) return userLocation;
       }
-      if (permission == LocationPermission.deniedForever) return null;
+      if (permission == LocationPermission.deniedForever) return userLocation;
 
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-      if (position.heading != 0.0) {
-        userHeading = position.heading;
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 4),
+          ),
+        );
+      } catch (_) {
+        position = await Geolocator.getLastKnownPosition();
       }
-      return LatLng(position.latitude, position.longitude);
+      position ??= await Geolocator.getLastKnownPosition();
+
+      final resolvedPosition = position;
+      if (resolvedPosition != null) {
+        if (resolvedPosition.heading != 0.0) {
+          userHeading = resolvedPosition.heading;
+        }
+        return LatLng(resolvedPosition.latitude, resolvedPosition.longitude);
+      }
+      return userLocation;
     } catch (e) {
       debugPrint("Location retrieval error: $e");
-      return null;
+      return userLocation;
     }
   }
 
@@ -340,7 +358,12 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
 
   /// Recenter GPS position, move map camera, and update stations
   Future<void> recenterToGps() async {
-    final pos = await getUserLocation();
+    final immediatePos = widget.riderLocation ?? userLocation;
+    if (immediatePos != null && mounted) {
+      mapTileKey.currentState?.moveCameraToLocation(immediatePos);
+    }
+
+    final pos = await getUserLocation() ?? immediatePos ?? widget.initialCenter;
     if (pos != null && mounted) {
       setState(() => userLocation = pos);
       mapTileKey.currentState?.moveCameraToLocation(pos);
@@ -477,7 +500,8 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
 class StationPlaceholderRow extends StatelessWidget {
   final Map<String, dynamic>? station;
   final bool isOrigin;
-  final VoidCallback onEdit;
+  final VoidCallback? onEdit;
+  final bool showEdit;
   final String? defaultTitle;
   final String? defaultSubtitle;
 
@@ -485,7 +509,8 @@ class StationPlaceholderRow extends StatelessWidget {
     super.key,
     required this.station,
     required this.isOrigin,
-    required this.onEdit,
+    this.onEdit,
+    this.showEdit = true,
     this.defaultTitle,
     this.defaultSubtitle,
   });
@@ -494,9 +519,10 @@ class StationPlaceholderRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isMaintenance = station?['status']?.toString().trim().toLowerCase() == 'under maintenance';
+    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations);
 
-    final String resolvedTitle = defaultTitle ?? (isOrigin ? context.l10n.stationA : context.l10n.stationB);
-    final String resolvedSubtitle = defaultSubtitle ?? (isOrigin ? context.l10n.selectOriginStation : context.l10n.selectDestinationStation);
+    final String resolvedTitle = defaultTitle ?? (isOrigin ? (l10n?.stationA ?? 'Station A') : (l10n?.stationB ?? 'Station B'));
+    final String resolvedSubtitle = defaultSubtitle ?? (isOrigin ? (l10n?.selectOriginStation ?? 'Select origin station') : (l10n?.selectDestinationStation ?? 'Select destination station'));
 
     return Row(
       children: [
@@ -545,7 +571,7 @@ class StationPlaceholderRow extends StatelessWidget {
                         border: Border.all(color: const Color(0xFFF97316), width: 1),
                       ),
                       child: Text(
-                        context.l10n.underMaintenance,
+                        l10n?.underMaintenance ?? 'Under Maintenance',
                         style: const TextStyle(
                           color: Color(0xFFF97316),
                           fontWeight: FontWeight.w700,
@@ -568,10 +594,11 @@ class StationPlaceholderRow extends StatelessWidget {
             ],
           ),
         ),
-        IconButton(
-          icon: Icon(Icons.edit_square, color: colorScheme.onSurface.withValues(alpha: 0.7)),
-          onPressed: onEdit,
-        ),
+        if (showEdit && onEdit != null)
+          IconButton(
+            icon: Icon(Icons.edit_square, color: colorScheme.onSurface.withValues(alpha: 0.7)),
+            onPressed: onEdit,
+          ),
       ],
     );
   }
@@ -603,6 +630,7 @@ class StationRouteDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations);
 
     if (isCalculating) {
       return const Center(child: CircularProgressIndicator.adaptive());
@@ -614,38 +642,18 @@ class StationRouteDisplay extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            context.l10n.selectedStationTooFar,
+            l10n?.selectedStationTooFar ?? 'Selected Station are too far away',
             style: const TextStyle(
               color: Color(0xFFDC2626),
               fontWeight: FontWeight.bold,
               fontSize: 15,
             ),
           ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Text(
-                "${context.l10n.etaLabel} ",
-                style: TextStyle(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                "__:__",
-                style: TextStyle(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
           if (routeResult != null) ...[
             const SizedBox(height: 6),
             Text(
-              context.l10n.totalDistanceKm(routeResult!.distanceKm.toStringAsFixed(2)),
+              l10n?.totalDistanceKm(routeResult!.distanceKm.toStringAsFixed(2)) ??
+                  'Total Distance: ${routeResult!.distanceKm.toStringAsFixed(2)} km',
               style: TextStyle(
                 color: colorScheme.onSurface.withValues(alpha: 0.8),
                 fontWeight: FontWeight.bold,
@@ -663,7 +671,7 @@ class StationRouteDisplay extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            context.l10n.estimatedArrivalTime,
+            l10n?.estimatedArrivalTime ?? 'Estimated Arrival Time (ETA)',
             style: TextStyle(
               color: colorScheme.onSurface,
               fontWeight: FontWeight.bold,
@@ -680,7 +688,8 @@ class StationRouteDisplay extends StatelessWidget {
             ),
           ),
           Text(
-            context.l10n.durationInMinutes(routeResult!.durationMinutes),
+            l10n?.durationInMinutes(routeResult!.durationMinutes) ??
+                '${routeResult!.durationMinutes} minutes',
             style: TextStyle(
               color: colorScheme.onSurface.withValues(alpha: 0.6),
               fontSize: 12,
@@ -688,7 +697,8 @@ class StationRouteDisplay extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            context.l10n.totalDistanceKm(routeResult!.distanceKm.toStringAsFixed(2)),
+            l10n?.totalDistanceKm(routeResult!.distanceKm.toStringAsFixed(2)) ??
+                'Total Distance: ${routeResult!.distanceKm.toStringAsFixed(2)} km',
             style: TextStyle(
               color: colorScheme.onSurface,
               fontWeight: FontWeight.bold,
@@ -700,7 +710,8 @@ class StationRouteDisplay extends StatelessWidget {
     }
 
     return Text(
-      context.l10n.selectStationsToCalculateRoutePrompt,
+      l10n?.selectStationsToCalculateRoutePrompt ??
+          'Select Station A & Station B to calculate route.',
       style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
     );
   }

@@ -7,7 +7,6 @@ class _StationStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final cannotReturnHere =
         controller.selectedStation?.isUnderMaintenance == true ||
             controller.selectedStation?.isTerminated == true;
@@ -66,49 +65,14 @@ class _StationStage extends StatelessWidget {
                       ),
               ),
             ],
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              key: const ValueKey('rent-confirm-arrival'),
-              onPressed: (controller.isBusy || cannotReturnHere)
-                  ? null
-                  : controller.checkArrival,
-              icon: controller.isBusy
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(
-                      controller.isAtStation
-                          ? Icons.check_circle_rounded
-                          : Icons.near_me_rounded,
-                    ),
-              label: Text(
-                controller.isAtStation
-                    ? context.l10n.withinReturnZone
-                    : context.l10n.confirmArrival,
-              ),
-              style: controller.isAtStation
-                  ? OutlinedButton.styleFrom(
-                      foregroundColor: scheme.secondary,
-                      minimumSize: const Size(double.infinity, 48),
-                    )
-                  : OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                    ),
-            ),
-            if (controller.stationDistanceMeters != null &&
-                !controller.isAtStation) ...[
-              const SizedBox(height: 6),
-              Text(
-                context.l10n.stationDistance(controller.stationDistanceMeters!),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.error,
-                      fontWeight: FontWeight.w600,
-                    ),
+            if (!controller.isAtStation) ...[
+              const SizedBox(height: 8),
+              _ErrorPanel(
+                message: controller.stationDistanceMeters != null
+                    ? '${context.l10n.errorOutsideReturnZone} (${context.l10n.stationDistance(controller.stationDistanceMeters!)})'
+                    : context.l10n.errorOutsideReturnZone,
               ),
             ],
-
             const SizedBox(height: 12),
             _ActionButton(
               key: const ValueKey('rent-begin-return'),
@@ -116,15 +80,10 @@ class _StationStage extends StatelessWidget {
                   ? context.l10n.continueToDock
                   : context.l10n.returnAtStation(controller.selectedStation!.name),
               icon: Icons.keyboard_double_arrow_down_rounded,
-              onPressed: (controller.isBusy || cannotReturnHere)
+              busy: controller.isBusy,
+              onPressed: (controller.isBusy || cannotReturnHere || !controller.isAtStation)
                   ? null
-                  : () async {
-                      if (!controller.isAtStation) {
-                        await controller.checkArrival();
-                        if (!controller.isAtStation) return;
-                      }
-                      await controller.beginReturn();
-                    },
+                  : () => controller.beginReturn(),
             ),
           ],
         ],

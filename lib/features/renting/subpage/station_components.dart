@@ -18,7 +18,6 @@ class _StationTile extends StatelessWidget {
     final isMaintenance = station.isUnderMaintenance;
     final available = station.canAcceptReturn;
     final selectable = available;
-    final highlighted = selected || (selectable && !isMaintenance);
     final selectionLabel = isMaintenance
         ? context.l10n.stationUnderMaintenance
         : (selected
@@ -66,14 +65,12 @@ class _StationTile extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 64),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              border: Border.all(
-                color: isMaintenance
-                    ? const Color(0xFFF97316)
-                    : (highlighted
-                        ? scheme.secondary
-                        : scheme.outline.withValues(alpha: 0.6)),
-                width: isMaintenance ? 2 : (highlighted ? 2 : 1),
-              ),
+              border: selected
+                  ? Border.all(
+                      color: scheme.secondary,
+                      width: 2,
+                    )
+                  : null,
               borderRadius: BorderRadius.circular(9),
             ),
             child: Row(
@@ -211,8 +208,6 @@ class _ReturnStationMap extends BaseStationMapView {
 
 class _ReturnStationMapState
     extends BaseStationMapViewState<_ReturnStationMap> {
-  final GlobalKey<SharedBikeMapState> _mapTileKey =
-      GlobalKey<SharedBikeMapState>();
   OsrmRouteResult? routeResult;
   bool isCalculating = false;
   bool isRouteTooFar = false;
@@ -346,13 +341,22 @@ class _ReturnStationMapState
       });
 
       if (!checkTooFar && result.polylinePoints.isNotEmpty) {
-        _mapTileKey.currentState?.fitBounds(
+        mapTileKey.currentState?.fitBounds(
           result.polylinePoints,
           padding: const EdgeInsets.all(28.0),
         );
       }
     } finally {
       _routeInFlight = false;
+    }
+  }
+
+  @override
+  Future<void> recenterToGps() async {
+    final pos = widget.riderLocation ?? userLocation ?? await getUserLocation();
+    if (pos != null && mounted) {
+      setState(() => userLocation = pos);
+      mapTileKey.currentState?.moveCameraToLocation(pos);
     }
   }
 
@@ -369,7 +373,7 @@ class _ReturnStationMapState
   @override
   Widget buildMapLayer(BuildContext context) {
     return SharedBikeMap(
-      key: _mapTileKey,
+      key: mapTileKey,
       stations: stations,
       riderLocation: widget.riderLocation ?? userLocation,
       riderHeading: widget.riderHeading ?? userHeading,
@@ -436,9 +440,9 @@ class _ReturnStationMapState
         StationPlaceholderRow(
           station: null,
           isOrigin: true,
+          showEdit: false,
           defaultTitle: context.l10n.currentLocation,
           defaultSubtitle: context.l10n.yourGpsPosition,
-          onEdit: recenterToGps,
         ),
         Padding(
           padding: const EdgeInsets.only(left: 12.0, top: 4.0, bottom: 4.0),
@@ -452,9 +456,9 @@ class _ReturnStationMapState
           key: const ValueKey<String>('rent-return-station-placeholder'),
           station: selectedStationMap,
           isOrigin: false,
+          showEdit: false,
           defaultTitle: context.l10n.nearestReturnStation,
           defaultSubtitle: context.l10n.chooseReturnStationDescription,
-          onEdit: () {},
         ),
         const SizedBox(height: 10),
         Container(

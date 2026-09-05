@@ -133,9 +133,9 @@ class _RideStage extends StatelessWidget {
               'status': controller.startStation!.status,
             },
             isOrigin: true,
+            showEdit: false,
             defaultTitle: context.l10n.originStation,
             defaultSubtitle: context.l10n.tripStartedHere,
-            onEdit: () {},
           ),
           Padding(
             padding: const EdgeInsets.only(left: 12.0, top: 4.0, bottom: 4.0),
@@ -161,9 +161,9 @@ class _RideStage extends StatelessWidget {
                 }
               : null,
           isOrigin: false,
+          showEdit: false,
           defaultTitle: context.l10n.nearestReturnStation,
           defaultSubtitle: context.l10n.chooseReturnStationDescription,
-          onEdit: controller.findReturnStation,
         ),
         const SizedBox(height: 8),
         Align(

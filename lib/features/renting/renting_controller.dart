@@ -1294,7 +1294,7 @@ class RentingController extends ChangeNotifier {
     selectedStation = station;
     stationQrToken = station.qrToken.isNotEmpty ? station.qrToken : null;
     isAtStation = false;
-    stationDistanceMeters = null;
+    stationDistanceMeters = station.distanceMeters;
     _arrivalPosition = null;
     _clearError();
     notifyListeners();
@@ -1413,6 +1413,19 @@ class RentingController extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (_arrivalPosition == null) {
+      if (bypassGeofence) {
+        _arrivalPosition = RiderPosition(
+          latitude: station.latitude,
+          longitude: station.longitude,
+        );
+      } else if (_lastGpsPosition != null) {
+        _arrivalPosition = RiderPosition(
+          latitude: _lastGpsPosition!.latitude,
+          longitude: _lastGpsPosition!.longitude,
+        );
+      }
+    }
     final position = _arrivalPosition;
     if (position == null) {
       error = RentalError.gpsLost;
@@ -1464,6 +1477,11 @@ class RentingController extends ChangeNotifier {
     if (selectedStation?.isTerminated == true) {
       error = RentalError.stationTerminated;
       errorStation = selectedStation;
+      notifyListeners();
+      return;
+    }
+    if (!bypassGeofence && !isAtStation) {
+      error = RentalError.outsideReturnZone;
       notifyListeners();
       return;
     }
