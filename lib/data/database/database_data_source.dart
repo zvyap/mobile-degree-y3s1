@@ -179,7 +179,10 @@ class SupabaseDatabaseDataSource implements DatabaseDataSource {
       'bike_not_found' ||
       'rental_not_found' ||
       'payment_not_found' => DatabaseErrorCode.notFound,
-      'bike_unavailable' => DatabaseErrorCode.bikeUnavailable,
+      'bike_maintenance' => DatabaseErrorCode.bikeMaintenance,
+      'bike_unavailable' ||
+      'bike_in_use' => DatabaseErrorCode.bikeUnavailable,
+      'bike_reserved' => DatabaseErrorCode.bikeReserved,
       'active_rental_exists' => DatabaseErrorCode.activeRentalExists,
       'payment_method_not_found' => DatabaseErrorCode.paymentMethodNotFound,
       'payment_method_in_use' => DatabaseErrorCode.paymentMethodInUse,

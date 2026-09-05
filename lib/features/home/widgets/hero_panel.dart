@@ -9,18 +9,21 @@ class HeroPanel extends StatelessWidget {
     required this.onScan,
     required this.onFindStation,
     required this.onViewHistory,
+    this.availableBikes,
+    this.totalStations,
   });
 
   final VoidCallback onScan;
   final VoidCallback onFindStation;
   final VoidCallback onViewHistory;
+  final int? availableBikes;
+  final int? totalStations;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    // TODO: Load bike and station availability from their services.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -43,7 +46,10 @@ class HeroPanel extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          context.l10n.bikeAvailability(128, 9),
+          context.l10n.bikeAvailability(
+            availableBikes ?? 0,
+            totalStations ?? 0,
+          ),
           style: theme.textTheme.bodyMedium?.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.68),
             height: 1.35,

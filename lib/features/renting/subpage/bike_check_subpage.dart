@@ -102,7 +102,13 @@ class _BikeCheckStage extends StatelessWidget {
               _FareCalculationPanel(controller: controller),
               const SizedBox(height: 12),
               _DepositSummaryTile(controller: controller),
-              const SizedBox(height: 18),
+              if (controller.error != null) ...[
+                const SizedBox(height: 14),
+                _ErrorPanel(message: _rentalError(context, controller)),
+              ],
+              const SizedBox(height: 14),
+              const _TermsAndPrivacyNotice(),
+              const SizedBox(height: 14),
               _ActionButton(
                 key: const ValueKey('rent-review-hold'),
                 label: context.l10n.reviewHold(
@@ -125,6 +131,80 @@ class _BikeCheckStage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TermsAndPrivacyNotice extends StatefulWidget {
+  const _TermsAndPrivacyNotice();
+
+  @override
+  State<_TermsAndPrivacyNotice> createState() => _TermsAndPrivacyNoticeState();
+}
+
+class _TermsAndPrivacyNoticeState extends State<_TermsAndPrivacyNotice> {
+  late final TapGestureRecognizer _tosRecognizer;
+  late final TapGestureRecognizer _ppRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _tosRecognizer = TapGestureRecognizer()
+      ..onTap = () {
+        TermsOfServicePage.open(context);
+      };
+    _ppRecognizer = TapGestureRecognizer()
+      ..onTap = () {
+        PrivacyPolicyPage.open(context);
+      };
+  }
+
+  @override
+  void dispose() {
+    _tosRecognizer.dispose();
+    _ppRecognizer.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final colorScheme = theme.colorScheme;
+    final linkStyle = textTheme.bodySmall?.copyWith(
+      color: colorScheme.primary,
+      fontWeight: FontWeight.bold,
+      decoration: TextDecoration.underline,
+      decorationColor: colorScheme.primary,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text.rich(
+        TextSpan(
+          text:
+              'By proceeding with the renting process, you are considered to accept and clear the ',
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+            height: 1.35,
+          ),
+          children: [
+            TextSpan(
+              text: 'Terms & Condition',
+              style: linkStyle,
+              recognizer: _tosRecognizer,
+            ),
+            const TextSpan(text: ' and '),
+            TextSpan(
+              text: 'Privacy Policy',
+              style: linkStyle,
+              recognizer: _ppRecognizer,
+            ),
+            const TextSpan(text: ' of the app.'),
+          ],
+        ),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }

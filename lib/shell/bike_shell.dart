@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bike_renting_app/data/app_repositories.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
+import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/features/user/profile_controller.dart';
 import 'package:bike_renting_app/navigation/app_navigator.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
@@ -88,6 +89,12 @@ class _BikeShellState extends State<BikeShell> {
 
     if (_selectedRootPage == page && _currentPage == page) return;
 
+    if (_currentPage == AppPage.scan &&
+        (_rentingController.stage == RentalStage.bikeCheck ||
+            _rentingController.stage == RentalStage.authorizing)) {
+      unawaited(_rentingController.cancelReservation());
+    }
+
     setState(() => _selectedRootPage = page);
     _navigatorKey.currentState?.pushNamedAndRemoveUntil(
       page.routeName,
@@ -103,6 +110,12 @@ class _BikeShellState extends State<BikeShell> {
   void _openUtilityPage(AppPage page) {
     if (_currentPage == page) return;
 
+    if (_currentPage == AppPage.scan &&
+        (_rentingController.stage == RentalStage.bikeCheck ||
+            _rentingController.stage == RentalStage.authorizing)) {
+      unawaited(_rentingController.cancelReservation());
+    }
+
     final navigator = _navigatorKey.currentState;
     if (navigator == null) return;
 
@@ -116,6 +129,11 @@ class _BikeShellState extends State<BikeShell> {
     final navigator = _navigatorKey.currentState;
     if (navigator?.canPop() ?? false) {
       navigator!.pop();
+      return;
+    }
+
+    if (!_currentPage.isNavigationRoot) {
+      _selectRootPage(AppPage.home);
     }
   }
 
@@ -127,9 +145,17 @@ class _BikeShellState extends State<BikeShell> {
         final showRentalBack =
             _currentPage == AppPage.scan && _rentingController.canGoBack;
         final showBackButton = !_currentPage.isNavigationRoot || showRentalBack;
+        final canGoBack =
+            showBackButton || (_navigatorKey.currentState?.canPop() ?? false);
 
-        return Scaffold(
-          body: SafeArea(
+        return PopScope(
+          canPop: !canGoBack,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            _handleBack();
+          },
+          child: Scaffold(
+            body: SafeArea(
             bottom: false,
             child: Column(
               children: [
@@ -162,6 +188,7 @@ class _BikeShellState extends State<BikeShell> {
                   rideActive: _rentingController.isRideActive,
                   onSelected: _selectRootPage,
                 ),
+          ),
         );
       },
     );

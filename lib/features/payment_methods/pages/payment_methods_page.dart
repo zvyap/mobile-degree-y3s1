@@ -108,9 +108,6 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
     final scheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Payment Methods'),
-      ),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: _controller,
@@ -125,6 +122,20 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
                 children: [
+                  Text(
+                    'Payment Methods',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Manage credit/debit cards and PayPal',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.68),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   if (errorMessage != null) ...[
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),

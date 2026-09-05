@@ -72,11 +72,14 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
     try {
       final stationId = station['id'];
 
-      await supabase.from('stations').update({
-        'is_active': false,
-        'status': 'Terminated',
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', stationId);
+      final client = supabase;
+      if (client != null) {
+        await client.from('stations').update({
+          'is_active': false,
+          'status': 'Terminated',
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', stationId);
+      }
 
       setState(() {
         if (selectedStation?['id'] == stationId) {

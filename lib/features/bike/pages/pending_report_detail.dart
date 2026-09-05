@@ -26,8 +26,12 @@ class _PendingReportDetailState
 
   BikeReport? _report;
 
+  String? _photoUrl;
+  String? _photoError;
+
   bool _isLoading = true;
   bool _isSubmitting = false;
+  bool _isPhotoLoading = false;
 
   String? _error;
 
@@ -54,6 +58,7 @@ class _PendingReportDetailState
       setState(() {
         _isLoading = true;
         _error = null;
+        _photoError = null;
       });
 
       final report =
@@ -65,16 +70,60 @@ class _PendingReportDetailState
 
       setState(() {
         _report = report;
+
         _reviewNoteController.text =
             report.reviewNote ?? '';
+
         _isLoading = false;
       });
+
+      // Load photo separately so a Storage error
+      // does not prevent the report itself from loading.
+      await _loadPhoto(report);
     } catch (error) {
       if (!mounted) return;
 
       setState(() {
         _error = error.toString();
         _isLoading = false;
+      });
+    }
+  }
+
+  // ===========================================================================
+  // LOAD PHOTO
+  // ===========================================================================
+
+  Future<void> _loadPhoto(
+      BikeReport report,
+      ) async {
+    try {
+      setState(() {
+        _isPhotoLoading = true;
+        _photoUrl = null;
+        _photoError = null;
+      });
+
+      final photoUrl =
+      await _reportRepository.getReportPhotoUrl(
+        reportId: report.id,
+        reporterId: report.reporterId,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _photoUrl = photoUrl;
+        _isPhotoLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _photoError =
+            error.toString();
+
+        _isPhotoLoading = false;
       });
     }
   }
@@ -95,6 +144,7 @@ class _PendingReportDetailState
       _showSnackBar(
         'This report has already been reviewed.',
       );
+
       return;
     }
 
@@ -102,7 +152,8 @@ class _PendingReportDetailState
     await _showConfirmationDialog(
       title: 'Approve Report?',
       message:
-      'Approve ${_formatReportId(report.id)} for ${report.bikeCode ?? 'this bike'}?',
+      'Approve ${_formatReportId(report.id)} for '
+          '${report.bikeCode ?? 'this bike'}?',
       confirmLabel: 'Approve',
       approve: true,
     );
@@ -158,6 +209,7 @@ class _PendingReportDetailState
       _showSnackBar(
         'This report has already been reviewed.',
       );
+
       return;
     }
 
@@ -224,27 +276,30 @@ class _PendingReportDetailState
         final scheme =
             theme.colorScheme;
 
-        final actionColor = approve
-            ? const Color(0xFF18A877)
+        final actionColor =
+        approve
+            ? const Color(
+          0xFF18A877,
+        )
             : scheme.error;
 
         return AlertDialog(
           icon: Icon(
             approve
-                ? Icons
-                .check_circle_outline_rounded
-                : Icons
-                .cancel_outlined,
+                ? Icons.check_circle_outline_rounded
+                : Icons.cancel_outlined,
             size: 42,
             color: actionColor,
           ),
           title: Text(
             title,
-            textAlign: TextAlign.center,
+            textAlign:
+            TextAlign.center,
           ),
           content: Text(
             message,
-            textAlign: TextAlign.center,
+            textAlign:
+            TextAlign.center,
           ),
           actions: [
             TextButton(
@@ -253,7 +308,8 @@ class _PendingReportDetailState
                   dialogContext,
                 ).pop(false);
               },
-              child: const Text(
+              child:
+              const Text(
                 'Cancel',
               ),
             ),
@@ -292,12 +348,15 @@ class _PendingReportDetailState
 
     messenger.showSnackBar(
       SnackBar(
-        content: Text(message),
+        content:
+        Text(message),
       ),
     );
   }
 
-  String _formatReportId(int id) {
+  String _formatReportId(
+      int id,
+      ) {
     return 'RPT-${id.toString().padLeft(4, '0')}';
   }
 
@@ -334,7 +393,8 @@ class _PendingReportDetailState
   String _formatDateTime(
       DateTime date,
       ) {
-    final local = date.toLocal();
+    final local =
+    date.toLocal();
 
     const months = [
       'Jan',
@@ -372,7 +432,9 @@ class _PendingReportDetailState
   // ===========================================================================
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context,
+      ) {
     final theme =
     Theme.of(context);
 
@@ -398,16 +460,18 @@ class _PendingReportDetailState
       return Center(
         child: Padding(
           padding:
-          const EdgeInsets.all(24),
+          const EdgeInsets.all(
+            24,
+          ),
           child: Column(
             mainAxisSize:
             MainAxisSize.min,
             children: [
               Icon(
-                Icons
-                    .error_outline_rounded,
+                Icons.error_outline_rounded,
                 size: 48,
-                color: scheme.error,
+                color:
+                scheme.error,
               ),
 
               const SizedBox(
@@ -442,11 +506,12 @@ class _PendingReportDetailState
               OutlinedButton.icon(
                 onPressed:
                 _loadReport,
-                icon: const Icon(
-                  Icons
-                      .refresh_rounded,
+                icon:
+                const Icon(
+                  Icons.refresh_rounded,
                 ),
-                label: const Text(
+                label:
+                const Text(
                   'Retry',
                 ),
               ),
@@ -456,7 +521,8 @@ class _PendingReportDetailState
       );
     }
 
-    final report = _report;
+    final report =
+        _report;
 
     if (report == null) {
       return const Center(
@@ -467,7 +533,8 @@ class _PendingReportDetailState
     }
 
     return RefreshIndicator(
-      onRefresh: _loadReport,
+      onRefresh:
+      _loadReport,
       child: ListView(
         physics:
         const AlwaysScrollableScrollPhysics(),
@@ -526,52 +593,57 @@ class _PendingReportDetailState
             ),
             decoration:
             BoxDecoration(
-              color: scheme
-                  .surfaceContainer,
+              color:
+              scheme.surfaceContainer,
               borderRadius:
               BorderRadius.circular(
                 16,
               ),
-              border: Border.all(
+              border:
+              Border.all(
                 color: scheme.outline
                     .withValues(
                   alpha: 0.7,
                 ),
               ),
             ),
-            child: Row(
+            child:
+            Row(
               children: [
                 Container(
-                  width: 62,
-                  height: 62,
+                  width:
+                  62,
+                  height:
+                  62,
                   decoration:
                   BoxDecoration(
                     color: scheme
                         .primaryContainer,
                     borderRadius:
-                    BorderRadius
-                        .circular(
+                    BorderRadius.circular(
                       10,
                     ),
                   ),
-                  child: Icon(
-                    Icons
-                        .directions_bike_rounded,
-                    size: 40,
+                  child:
+                  Icon(
+                    Icons.directions_bike_rounded,
+                    size:
+                    40,
                     color: scheme
                         .onPrimaryContainer,
                   ),
                 ),
 
                 const SizedBox(
-                  width: 14,
+                  width:
+                  14,
                 ),
 
                 Expanded(
-                  child: Column(
+                  child:
+                  Column(
                     crossAxisAlignment:
-                    CrossAxisAlignment
-                        .start,
+                    CrossAxisAlignment.start,
                     children: [
                       Text(
                         '${_formatReportId(report.id)} • '
@@ -581,13 +653,13 @@ class _PendingReportDetailState
                             .bodyMedium
                             ?.copyWith(
                           fontWeight:
-                          FontWeight
-                              .w800,
+                          FontWeight.w800,
                         ),
                       ),
 
                       const SizedBox(
-                        height: 5,
+                        height:
+                        5,
                       ),
 
                       Text(
@@ -599,23 +671,22 @@ class _PendingReportDetailState
                             .bodyMedium
                             ?.copyWith(
                           fontWeight:
-                          FontWeight
-                              .w700,
+                          FontWeight.w700,
                         ),
                       ),
 
                       const SizedBox(
-                        height: 7,
+                        height:
+                        7,
                       ),
 
                       Row(
                         children: [
                           Icon(
-                            Icons
-                                .location_on_outlined,
-                            size: 17,
-                            color: scheme
-                                .onSurface
+                            Icons.location_on_outlined,
+                            size:
+                            17,
+                            color: scheme.onSurface
                                 .withValues(
                               alpha:
                               0.6,
@@ -623,16 +694,17 @@ class _PendingReportDetailState
                           ),
 
                           const SizedBox(
-                            width: 4,
+                            width:
+                            4,
                           ),
 
                           Expanded(
-                            child: Text(
+                            child:
+                            Text(
                               report.stationName ??
                                   'No station assigned',
-                              style: theme
-                                  .textTheme
-                                  .bodySmall,
+                              style:
+                              theme.textTheme.bodySmall,
                             ),
                           ),
                         ],
@@ -643,10 +715,11 @@ class _PendingReportDetailState
 
                 Container(
                   padding:
-                  const EdgeInsets
-                      .symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                  const EdgeInsets.symmetric(
+                    horizontal:
+                    12,
+                    vertical:
+                    6,
                   ),
                   decoration:
                   BoxDecoration(
@@ -655,8 +728,7 @@ class _PendingReportDetailState
                       0xFFFFF3D6,
                     ),
                     borderRadius:
-                    BorderRadius
-                        .circular(
+                    BorderRadius.circular(
                       20,
                     ),
                   ),
@@ -665,13 +737,14 @@ class _PendingReportDetailState
                     'Pending',
                     style:
                     TextStyle(
-                      color: Color(
+                      color:
+                      Color(
                         0xFFE6A919,
                       ),
-                      fontSize: 11,
+                      fontSize:
+                      11,
                       fontWeight:
-                      FontWeight
-                          .w700,
+                      FontWeight.w700,
                     ),
                   ),
                 ),
@@ -705,14 +778,136 @@ class _PendingReportDetailState
           Align(
             alignment:
             Alignment.centerLeft,
-            child: _ProblemBadge(
+            child:
+            _ProblemBadge(
               label:
               _categoryLabel(
                 report.category,
               ),
-              selected: true,
+              selected:
+              true,
             ),
           ),
+
+          const SizedBox(
+            height: 24,
+          ),
+
+          // ===================================================================
+          // PHOTO
+          // ===================================================================
+
+          Text(
+            'Photo',
+            style: theme
+                .textTheme
+                .titleSmall
+                ?.copyWith(
+              fontWeight:
+              FontWeight.w800,
+            ),
+          ),
+
+          const SizedBox(
+            height: 10,
+          ),
+
+          if (_isPhotoLoading)
+            Container(
+              width:
+              double.infinity,
+              height:
+              180,
+              alignment:
+              Alignment.center,
+              decoration:
+              BoxDecoration(
+                color: scheme
+                    .surfaceContainer,
+                borderRadius:
+                BorderRadius.circular(
+                  14,
+                ),
+                border:
+                Border.all(
+                  color: scheme
+                      .outline,
+                ),
+              ),
+              child:
+              const CircularProgressIndicator(),
+            )
+          else if (_photoUrl != null)
+            ClipRRect(
+              borderRadius:
+              BorderRadius.circular(
+                14,
+              ),
+              child:
+              Image.network(
+                _photoUrl!,
+                width:
+                double.infinity,
+                height:
+                240,
+                fit:
+                BoxFit.cover,
+                loadingBuilder: (
+                    context,
+                    child,
+                    loadingProgress,
+                    ) {
+                  if (loadingProgress == null) {
+                    return child;
+                  }
+
+                  return Container(
+                    width:
+                    double.infinity,
+                    height:
+                    240,
+                    alignment:
+                    Alignment.center,
+                    color: scheme
+                        .surfaceContainer,
+                    child:
+                    const CircularProgressIndicator(),
+                  );
+                },
+                errorBuilder: (
+                    context,
+                    error,
+                    stackTrace,
+                    ) {
+                  return _PhotoPlaceholder(
+                    icon:
+                    Icons.broken_image_outlined,
+                    title:
+                    'Unable to display photo',
+                    message:
+                    'The attached photo could not be loaded.',
+                  );
+                },
+              ),
+            )
+          else if (_photoError != null)
+              _PhotoPlaceholder(
+                icon:
+                Icons.broken_image_outlined,
+                title:
+                'Photo unavailable',
+                message:
+                'The report photo could not be loaded.',
+              )
+            else
+              const _PhotoPlaceholder(
+                icon:
+                Icons.image_not_supported_outlined,
+                title:
+                'No photo attached',
+                message:
+                'This report was submitted without a photo.',
+              ),
 
           const SizedBox(
             height: 24,
@@ -738,10 +933,12 @@ class _PendingReportDetailState
           ),
 
           Container(
-            width: double.infinity,
+            width:
+            double.infinity,
             constraints:
             const BoxConstraints(
-              minHeight: 100,
+              minHeight:
+              100,
             ),
             padding:
             const EdgeInsets.all(
@@ -749,26 +946,29 @@ class _PendingReportDetailState
             ),
             decoration:
             BoxDecoration(
-              color: scheme
-                  .surfaceContainer,
+              color:
+              scheme.surfaceContainer,
               borderRadius:
               BorderRadius.circular(
                 10,
               ),
-              border: Border.all(
+              border:
+              Border.all(
                 color: scheme.outline
                     .withValues(
                   alpha: 0.7,
                 ),
               ),
             ),
-            child: Text(
+            child:
+            Text(
               report.description,
               style: theme
                   .textTheme
                   .bodyMedium
                   ?.copyWith(
-                height: 1.5,
+                height:
+                1.5,
               ),
             ),
           ),
@@ -803,14 +1003,15 @@ class _PendingReportDetailState
             ),
             decoration:
             BoxDecoration(
-              color: scheme
-                  .surfaceContainer,
+              color:
+              scheme.surfaceContainer,
               borderRadius:
               BorderRadius.circular(
                 12,
               ),
             ),
-            child: Column(
+            child:
+            Column(
               children: [
                 _InformationRow(
                   label:
@@ -896,7 +1097,8 @@ class _PendingReportDetailState
                 ?.copyWith(
               color: scheme.onSurface
                   .withValues(
-                alpha: 0.65,
+                alpha:
+                0.65,
               ),
             ),
           ),
@@ -908,9 +1110,12 @@ class _PendingReportDetailState
           TextField(
             controller:
             _reviewNoteController,
-            minLines: 3,
-            maxLines: 5,
-            maxLength: 250,
+            minLines:
+            3,
+            maxLines:
+            5,
+            maxLength:
+            250,
             decoration:
             const InputDecoration(
               hintText:
@@ -927,14 +1132,16 @@ class _PendingReportDetailState
           ),
 
           // ===================================================================
-          // DECLINE / APPROVE
+          // ACTIONS
           // ===================================================================
 
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 48,
+                child:
+                SizedBox(
+                  height:
+                  48,
                   child:
                   OutlinedButton(
                     onPressed:
@@ -942,14 +1149,13 @@ class _PendingReportDetailState
                         ? null
                         : _rejectReport,
                     style:
-                    OutlinedButton
-                        .styleFrom(
+                    OutlinedButton.styleFrom(
                       foregroundColor:
                       scheme.error,
                       side:
                       BorderSide(
-                        color: scheme
-                            .error,
+                        color:
+                        scheme.error,
                       ),
                     ),
                     child:
@@ -958,8 +1164,7 @@ class _PendingReportDetailState
                       style:
                       TextStyle(
                         fontWeight:
-                        FontWeight
-                            .w700,
+                        FontWeight.w700,
                       ),
                     ),
                   ),
@@ -967,13 +1172,17 @@ class _PendingReportDetailState
               ),
 
               const SizedBox(
-                width: 16,
+                width:
+                16,
               ),
 
               Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: FilledButton(
+                child:
+                SizedBox(
+                  height:
+                  48,
+                  child:
+                  FilledButton(
                     onPressed:
                     _isSubmitting
                         ? null
@@ -996,8 +1205,7 @@ class _PendingReportDetailState
                       style:
                       TextStyle(
                         fontWeight:
-                        FontWeight
-                            .w700,
+                        FontWeight.w700,
                       ),
                     ),
                   ),
@@ -1012,11 +1220,119 @@ class _PendingReportDetailState
 }
 
 // =============================================================================
+// PHOTO PLACEHOLDER
+// =============================================================================
+
+class _PhotoPlaceholder extends StatelessWidget {
+  const _PhotoPlaceholder({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
+
+    return Container(
+      width:
+      double.infinity,
+      height:
+      180,
+      padding:
+      const EdgeInsets.all(
+        20,
+      ),
+      decoration:
+      BoxDecoration(
+        color:
+        scheme.surfaceContainer,
+        borderRadius:
+        BorderRadius.circular(
+          14,
+        ),
+        border:
+        Border.all(
+          color: scheme.outline
+              .withValues(
+            alpha:
+            0.7,
+          ),
+        ),
+      ),
+      child:
+      Column(
+        mainAxisAlignment:
+        MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size:
+            38,
+            color: scheme.onSurface
+                .withValues(
+              alpha:
+              0.45,
+            ),
+          ),
+
+          const SizedBox(
+            height:
+            8,
+          ),
+
+          Text(
+            title,
+            style: theme
+                .textTheme
+                .bodyMedium
+                ?.copyWith(
+              fontWeight:
+              FontWeight.w700,
+            ),
+          ),
+
+          const SizedBox(
+            height:
+            4,
+          ),
+
+          Text(
+            message,
+            textAlign:
+            TextAlign.center,
+            style: theme
+                .textTheme
+                .bodySmall
+                ?.copyWith(
+              color: scheme.onSurface
+                  .withValues(
+                alpha:
+                0.6,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
 // PROBLEM BADGE
 // =============================================================================
 
-class _ProblemBadge
-    extends StatelessWidget {
+class _ProblemBadge extends StatelessWidget {
   const _ProblemBadge({
     required this.label,
     this.selected = false,
@@ -1036,15 +1352,19 @@ class _ProblemBadge
     return Container(
       padding:
       const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 10,
+        horizontal:
+        18,
+        vertical:
+        10,
       ),
       decoration:
       BoxDecoration(
-        color: selected
+        color:
+        selected
             ? scheme.primary
             .withValues(
-          alpha: 0.20,
+          alpha:
+          0.20,
         )
             : scheme
             .surfaceContainer,
@@ -1052,16 +1372,21 @@ class _ProblemBadge
         BorderRadius.circular(
           10,
         ),
-        border: Border.all(
-          color: selected
+        border:
+        Border.all(
+          color:
+          selected
               ? scheme.primary
               : scheme.outline,
         ),
       ),
-      child: Text(
+      child:
+      Text(
         label,
-        style: TextStyle(
-          color: selected
+        style:
+        TextStyle(
+          color:
+          selected
               ? scheme.primary
               : scheme.onSurface,
           fontWeight:
@@ -1076,8 +1401,7 @@ class _ProblemBadge
 // INFORMATION ROW
 // =============================================================================
 
-class _InformationRow
-    extends StatelessWidget {
+class _InformationRow extends StatelessWidget {
   const _InformationRow({
     required this.label,
     required this.value,
@@ -1096,14 +1420,17 @@ class _InformationRow
     return Padding(
       padding:
       const EdgeInsets.symmetric(
-        vertical: 7,
+        vertical:
+        7,
       ),
-      child: Row(
+      child:
+      Row(
         crossAxisAlignment:
         CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(
+            child:
+            Text(
               label,
               style:
               theme.textTheme.bodySmall,
@@ -1111,11 +1438,13 @@ class _InformationRow
           ),
 
           const SizedBox(
-            width: 12,
+            width:
+            12,
           ),
 
           Flexible(
-            child: Text(
+            child:
+            Text(
               value,
               textAlign:
               TextAlign.right,

@@ -2,6 +2,7 @@ import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/features/splash/cold_boot_loading_page.dart';
 import 'package:bike_renting_app/shared/app_toast.dart';
+import 'package:bike_renting_app/shared/location_safeguard.dart';
 import 'package:bike_renting_app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -33,7 +34,9 @@ class _BikeRentingAppState extends State<BikeRentingApp> {
       themeMode: _themeMode,
       theme: AppTheme.build(Brightness.light),
       darkTheme: AppTheme.build(Brightness.dark),
-      builder: (context, child) => AppToastHost(child: child!),
+      builder: (context, child) => AppToastHost(
+        child: LocationSafeguard(child: child!),
+      ),
       home: ColdBootLoadingPage(onToggleTheme: _toggleTheme),
     );
   }

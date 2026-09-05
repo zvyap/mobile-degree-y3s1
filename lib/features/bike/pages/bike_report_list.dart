@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/bike_report.dart';
 import '../repositories/bike_report_repository.dart';
@@ -13,7 +14,7 @@ class BikeReportPage extends StatefulWidget {
 
   final ValueChanged<int> onOpenReportDetail;
   final VoidCallback onOpenPendingReports;
-  final VoidCallback onAddReport;
+  final ValueChanged<int?> onAddReport;
 
   @override
   State<BikeReportPage> createState() =>
@@ -30,6 +31,11 @@ class _BikeReportPageState extends State<BikeReportPage> {
   List<BikeReport> _reports = [];
 
   bool _isLoading = true;
+  bool _isAdmin = false;
+  bool _isCancelling = false;
+
+  int? _cancellingReportId;
+
   String? _error;
 
   String _selectedFilter = 'all';
@@ -39,6 +45,7 @@ class _BikeReportPageState extends State<BikeReportPage> {
     super.initState();
 
     _loadReports();
+    _loadCurrentUserRole();
 
     _searchController.addListener(() {
       setState(() {});
@@ -50,6 +57,50 @@ class _BikeReportPageState extends State<BikeReportPage> {
     _searchController.dispose();
 
     super.dispose();
+  }
+
+  // ===========================================================================
+  // LOAD CURRENT USER ROLE
+  // ===========================================================================
+
+  Future<void> _loadCurrentUserRole() async {
+    try {
+      final supabase =
+          Supabase.instance.client;
+
+      final user =
+          supabase.auth.currentUser;
+
+      if (user == null) {
+        if (!mounted) return;
+
+        setState(() {
+          _isAdmin = false;
+        });
+
+        return;
+      }
+
+      final profile =
+      await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+      if (!mounted) return;
+
+      setState(() {
+        _isAdmin =
+            profile['role'] == 'admin';
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _isAdmin = false;
+      });
+    }
   }
 
   // ===========================================================================
@@ -83,51 +134,179 @@ class _BikeReportPageState extends State<BikeReportPage> {
   }
 
   // ===========================================================================
+  // CANCEL REPORT
+  // ===========================================================================
+
+  Future<void> _cancelReport(
+      BikeReport report,
+      ) async {
+    if (_isCancelling) {
+      return;
+    }
+
+    if (report.status != 'pending') {
+      _showSnackBar(
+        'Only pending reports can be cancelled.',
+      );
+      return;
+    }
+
+    final confirmed =
+    await _showCancelConfirmation(
+      report,
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      setState(() {
+        _isCancelling = true;
+        _cancellingReportId = report.id;
+      });
+
+      await _reportRepository.cancelReport(
+        reportId: report.id,
+      );
+
+      if (!mounted) return;
+
+      _showSnackBar(
+        '${_formatReportId(report.id)} cancelled.',
+      );
+
+      await _loadReports();
+    } catch (error) {
+      if (!mounted) return;
+
+      _showSnackBar(
+        'Failed to cancel report: $error',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCancelling = false;
+          _cancellingReportId = null;
+        });
+      }
+    }
+  }
+
+  Future<bool?> _showCancelConfirmation(
+      BikeReport report,
+      ) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final scheme =
+            Theme.of(dialogContext)
+                .colorScheme;
+
+        return AlertDialog(
+          icon: Icon(
+            Icons.cancel_outlined,
+            size: 42,
+            color: scheme.error,
+          ),
+          title: const Text(
+            'Cancel Report?',
+            textAlign:
+            TextAlign.center,
+          ),
+          content: Text(
+            'Cancel ${_formatReportId(report.id)}? '
+                'This report will no longer be reviewed by an administrator.',
+            textAlign:
+            TextAlign.center,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(
+                  dialogContext,
+                ).pop(false);
+              },
+              child:
+              const Text(
+                'Keep Report',
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(
+                  dialogContext,
+                ).pop(true);
+              },
+              style:
+              FilledButton.styleFrom(
+                backgroundColor:
+                scheme.error,
+                foregroundColor:
+                scheme.onError,
+              ),
+              child:
+              const Text(
+                'Cancel Report',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ===========================================================================
   // FILTERED REPORTS
   // ===========================================================================
 
   List<BikeReport> get _filteredReports {
     final query =
-    _searchController.text.trim().toLowerCase();
+    _searchController.text
+        .trim()
+        .toLowerCase();
 
     return _reports.where((report) {
-      // -----------------------------------------------------------------------
-      // Status filter
-      // -----------------------------------------------------------------------
-
       final matchesStatus =
           _selectedFilter == 'all' ||
-              report.status == _selectedFilter;
+              report.status ==
+                  _selectedFilter;
 
       if (!matchesStatus) {
         return false;
       }
-
-      // -----------------------------------------------------------------------
-      // Search
-      // -----------------------------------------------------------------------
 
       if (query.isEmpty) {
         return true;
       }
 
       final reportNumber =
-      _formatReportId(report.id).toLowerCase();
+      _formatReportId(
+        report.id,
+      ).toLowerCase();
 
       final bikeCode =
-          report.bikeCode?.toLowerCase() ?? '';
+          report.bikeCode
+              ?.toLowerCase() ??
+              '';
 
       final category =
-      _categoryLabel(report.category)
-          .toLowerCase();
+      _categoryLabel(
+        report.category,
+      ).toLowerCase();
 
       final description =
-      report.description.toLowerCase();
+      report.description
+          .toLowerCase();
 
-      return reportNumber.contains(query) ||
-          bikeCode.contains(query) ||
-          category.contains(query) ||
-          description.contains(query);
+      return reportNumber
+          .contains(query) ||
+          bikeCode
+              .contains(query) ||
+          category
+              .contains(query) ||
+          description
+              .contains(query);
     }).toList();
   }
 
@@ -139,7 +318,8 @@ class _BikeReportPageState extends State<BikeReportPage> {
     return _reports
         .where(
           (report) =>
-      report.status == 'pending',
+      report.status ==
+          'pending',
     )
         .length;
   }
@@ -148,7 +328,8 @@ class _BikeReportPageState extends State<BikeReportPage> {
     return _reports
         .where(
           (report) =>
-      report.status == 'approved',
+      report.status ==
+          'approved',
     )
         .length;
   }
@@ -157,7 +338,18 @@ class _BikeReportPageState extends State<BikeReportPage> {
     return _reports
         .where(
           (report) =>
-      report.status == 'rejected',
+      report.status ==
+          'rejected',
+    )
+        .length;
+  }
+
+  int get _cancelledCount {
+    return _reports
+        .where(
+          (report) =>
+      report.status ==
+          'cancelled',
     )
         .length;
   }
@@ -166,11 +358,29 @@ class _BikeReportPageState extends State<BikeReportPage> {
   // HELPERS
   // ===========================================================================
 
+  void _showSnackBar(
+      String message,
+      ) {
+    final messenger =
+    ScaffoldMessenger.of(context);
+
+    messenger.clearSnackBars();
+
+    messenger.showSnackBar(
+      SnackBar(
+        content:
+        Text(message),
+      ),
+    );
+  }
+
   String _formatReportId(int id) {
     return 'RPT-${id.toString().padLeft(4, '0')}';
   }
 
-  String _categoryLabel(String category) {
+  String _categoryLabel(
+      String category,
+      ) {
     switch (category) {
       case 'brakes':
         return 'Brake System';
@@ -198,7 +408,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
     }
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(
+      String status,
+      ) {
     switch (status) {
       case 'pending':
         return 'Pending';
@@ -209,13 +421,19 @@ class _BikeReportPageState extends State<BikeReportPage> {
       case 'rejected':
         return 'Rejected';
 
+      case 'cancelled':
+        return 'Cancelled';
+
       default:
         return status;
     }
   }
 
-  String _formatDateTime(DateTime date) {
-    final local = date.toLocal();
+  String _formatDateTime(
+      DateTime date,
+      ) {
+    final local =
+    date.toLocal();
 
     const months = [
       'Jan',
@@ -233,14 +451,25 @@ class _BikeReportPageState extends State<BikeReportPage> {
     ];
 
     final hour =
-    local.hour.toString().padLeft(2, '0');
+    local.hour
+        .toString()
+        .padLeft(
+      2,
+      '0',
+    );
 
     final minute =
-    local.minute.toString().padLeft(2, '0');
+    local.minute
+        .toString()
+        .padLeft(
+      2,
+      '0',
+    );
 
     return '${local.day} '
         '${months[local.month - 1]} '
-        '${local.year} • $hour:$minute';
+        '${local.year} • '
+        '$hour:$minute';
   }
 
   // ===========================================================================
@@ -248,62 +477,77 @@ class _BikeReportPageState extends State<BikeReportPage> {
   // ===========================================================================
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
 
-    // -------------------------------------------------------------------------
-    // Loading
-    // -------------------------------------------------------------------------
+    final scheme =
+        theme.colorScheme;
 
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(),
+        child:
+        CircularProgressIndicator(),
       );
     }
-
-    // -------------------------------------------------------------------------
-    // Error
-    // -------------------------------------------------------------------------
 
     if (_error != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding:
+          const EdgeInsets.all(
+            24,
+          ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize:
+            MainAxisSize.min,
             children: [
               Icon(
                 Icons.error_outline_rounded,
                 size: 48,
-                color: scheme.error,
+                color:
+                scheme.error,
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(
+                height: 12,
+              ),
 
               const Text(
                 'Unable to load reports',
-                style: TextStyle(
+                style:
+                TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w700,
+                  fontWeight:
+                  FontWeight.w700,
                 ),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(
+                height: 8,
+              ),
 
               Text(
                 _error!,
-                textAlign: TextAlign.center,
+                textAlign:
+                TextAlign.center,
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(
+                height: 16,
+              ),
 
               OutlinedButton.icon(
-                onPressed: _loadReports,
-                icon: const Icon(
+                onPressed:
+                _loadReports,
+                icon:
+                const Icon(
                   Icons.refresh_rounded,
                 ),
-                label: const Text(
+                label:
+                const Text(
                   'Retry',
                 ),
               ),
@@ -313,16 +557,19 @@ class _BikeReportPageState extends State<BikeReportPage> {
       );
     }
 
-    final reports = _filteredReports;
+    final reports =
+        _filteredReports;
 
     return Stack(
       children: [
         RefreshIndicator(
-          onRefresh: _loadReports,
+          onRefresh:
+          _loadReports,
           child: ListView(
             physics:
             const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
+            padding:
+            const EdgeInsets.fromLTRB(
               18,
               16,
               18,
@@ -336,7 +583,8 @@ class _BikeReportPageState extends State<BikeReportPage> {
               Row(
                 children: [
                   Expanded(
-                    child: Column(
+                    child:
+                    Column(
                       crossAxisAlignment:
                       CrossAxisAlignment.start,
                       children: [
@@ -351,17 +599,23 @@ class _BikeReportPageState extends State<BikeReportPage> {
                           ),
                         ),
 
-                        const SizedBox(height: 2),
+                        const SizedBox(
+                          height:
+                          2,
+                        ),
 
                         Text(
-                          'Review and resolve bike issues.',
+                          _isAdmin
+                              ? 'Review and resolve bike issues.'
+                              : 'Track your submitted bike reports.',
                           style: theme
                               .textTheme
                               .bodySmall
                               ?.copyWith(
                             color: scheme.onSurface
                                 .withValues(
-                              alpha: 0.7,
+                              alpha:
+                              0.7,
                             ),
                           ),
                         ),
@@ -369,121 +623,154 @@ class _BikeReportPageState extends State<BikeReportPage> {
                     ),
                   ),
 
-                  // -----------------------------------------------------------
-                  // Pending reports
-                  // -----------------------------------------------------------
-
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      FilledButton(
-                        onPressed:
-                        widget.onOpenPendingReports,
-                        child: const Text(
-                          'Pending Reports',
+                  if (_isAdmin)
+                    Stack(
+                      clipBehavior:
+                      Clip.none,
+                      children: [
+                        FilledButton(
+                          onPressed:
+                          widget
+                              .onOpenPendingReports,
+                          child:
+                          const Text(
+                            'Pending Reports',
+                          ),
                         ),
-                      ),
 
-                      if (_pendingCount > 0)
-                        Positioned(
-                          right: -5,
-                          top: -8,
-                          child: Container(
-                            constraints:
-                            const BoxConstraints(
-                              minWidth: 22,
-                              minHeight: 22,
-                            ),
-                            padding:
-                            const EdgeInsets.symmetric(
-                              horizontal: 5,
-                            ),
-                            alignment:
-                            Alignment.center,
-                            decoration:
-                            BoxDecoration(
-                              color: scheme.error,
-                              shape:
-                              BoxShape.circle,
-                            ),
-                            child: Text(
-                              _pendingCount > 99
-                                  ? '99+'
-                                  : '$_pendingCount',
-                              style: TextStyle(
+                        if (_pendingCount >
+                            0)
+                          Positioned(
+                            right:
+                            -5,
+                            top:
+                            -8,
+                            child:
+                            Container(
+                              constraints:
+                              const BoxConstraints(
+                                minWidth:
+                                22,
+                                minHeight:
+                                22,
+                              ),
+                              padding:
+                              const EdgeInsets.symmetric(
+                                horizontal:
+                                5,
+                              ),
+                              alignment:
+                              Alignment.center,
+                              decoration:
+                              BoxDecoration(
                                 color:
-                                scheme.onError,
-                                fontSize: 10,
-                                fontWeight:
-                                FontWeight.w700,
+                                scheme.error,
+                                shape:
+                                BoxShape.circle,
+                              ),
+                              child:
+                              Text(
+                                _pendingCount >
+                                    99
+                                    ? '99+'
+                                    : '$_pendingCount',
+                                style:
+                                TextStyle(
+                                  color:
+                                  scheme.onError,
+                                  fontSize:
+                                  10,
+                                  fontWeight:
+                                  FontWeight.w700,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
+                      ],
+                    ),
                 ],
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(
+                height: 18,
+              ),
 
               // ===============================================================
               // SEARCH
               // ===============================================================
 
               TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
+                controller:
+                _searchController,
+                decoration:
+                InputDecoration(
                   hintText:
                   'Search report or bike ID',
-                  prefixIcon: const Icon(
+                  prefixIcon:
+                  const Icon(
                     Icons.search_rounded,
                   ),
                   suffixIcon:
-                  _searchController.text.isEmpty
+                  _searchController
+                      .text
+                      .isEmpty
                       ? null
                       : IconButton(
-                    onPressed: () {
+                    onPressed:
+                        () {
                       _searchController
                           .clear();
                     },
-                    icon: const Icon(
+                    icon:
+                    const Icon(
                       Icons.close_rounded,
                     ),
                   ),
-                  filled: true,
+                  filled:
+                  true,
                   fillColor:
                   scheme.surfaceContainer,
-                  border: OutlineInputBorder(
+                  border:
+                  OutlineInputBorder(
                     borderRadius:
-                    BorderRadius.circular(14),
+                    BorderRadius.circular(
+                      14,
+                    ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(
+                height: 12,
+              ),
 
               // ===============================================================
               // FILTERS
               // ===============================================================
 
               SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
+                scrollDirection:
+                Axis.horizontal,
                 child: Row(
                   children: [
                     _ReportFilterChip(
                       label:
                       'All ${_reports.length}',
                       selected:
-                      _selectedFilter == 'all',
-                      onTap: () {
+                      _selectedFilter ==
+                          'all',
+                      onTap:
+                          () {
                         setState(() {
-                          _selectedFilter = 'all';
+                          _selectedFilter =
+                          'all';
                         });
                       },
                     ),
 
-                    const SizedBox(width: 8),
+                    const SizedBox(
+                      width: 8,
+                    ),
 
                     _ReportFilterChip(
                       label:
@@ -491,7 +778,8 @@ class _BikeReportPageState extends State<BikeReportPage> {
                       selected:
                       _selectedFilter ==
                           'pending',
-                      onTap: () {
+                      onTap:
+                          () {
                         setState(() {
                           _selectedFilter =
                           'pending';
@@ -499,7 +787,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
                       },
                     ),
 
-                    const SizedBox(width: 8),
+                    const SizedBox(
+                      width: 8,
+                    ),
 
                     _ReportFilterChip(
                       label:
@@ -507,7 +797,8 @@ class _BikeReportPageState extends State<BikeReportPage> {
                       selected:
                       _selectedFilter ==
                           'approved',
-                      onTap: () {
+                      onTap:
+                          () {
                         setState(() {
                           _selectedFilter =
                           'approved';
@@ -515,7 +806,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
                       },
                     ),
 
-                    const SizedBox(width: 8),
+                    const SizedBox(
+                      width: 8,
+                    ),
 
                     _ReportFilterChip(
                       label:
@@ -523,10 +816,30 @@ class _BikeReportPageState extends State<BikeReportPage> {
                       selected:
                       _selectedFilter ==
                           'rejected',
-                      onTap: () {
+                      onTap:
+                          () {
                         setState(() {
                           _selectedFilter =
                           'rejected';
+                        });
+                      },
+                    ),
+
+                    const SizedBox(
+                      width: 8,
+                    ),
+
+                    _ReportFilterChip(
+                      label:
+                      'Cancelled $_cancelledCount',
+                      selected:
+                      _selectedFilter ==
+                          'cancelled',
+                      onTap:
+                          () {
+                        setState(() {
+                          _selectedFilter =
+                          'cancelled';
                         });
                       },
                     ),
@@ -534,7 +847,9 @@ class _BikeReportPageState extends State<BikeReportPage> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(
+                height: 20,
+              ),
 
               // ===============================================================
               // HEADER
@@ -542,12 +857,14 @@ class _BikeReportPageState extends State<BikeReportPage> {
 
               Row(
                 mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
+                MainAxisAlignment
+                    .spaceBetween,
                 children: [
                   Text(
-                    _selectedFilter == 'pending'
-                        ? 'Pending reports'
-                        : 'Reports',
+                    _selectedFilter ==
+                        'all'
+                        ? 'Reports'
+                        : '${_statusLabel(_selectedFilter)} reports',
                     style: theme
                         .textTheme
                         .titleMedium
@@ -570,10 +887,12 @@ class _BikeReportPageState extends State<BikeReportPage> {
                 ],
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(
+                height: 14,
+              ),
 
               // ===============================================================
-              // EMPTY
+              // REPORT LIST
               // ===============================================================
 
               if (reports.isEmpty)
@@ -586,44 +905,68 @@ class _BikeReportPageState extends State<BikeReportPage> {
                 )
               else
                 ...reports.map(
-                      (report) => Padding(
-                    padding:
-                    const EdgeInsets.only(
-                      bottom: 12,
-                    ),
-                    child: _ReportCard(
-                      reportId:
-                      _formatReportId(
+                      (report) {
+                    final canCancel =
+                        !_isAdmin &&
+                            report.status ==
+                                'pending';
+
+                    final cancellingThisReport =
+                        _isCancelling &&
+                            _cancellingReportId ==
+                                report.id;
+
+                    return Padding(
+                      padding:
+                      const EdgeInsets.only(
+                        bottom: 12,
+                      ),
+                      child:
+                      _ReportCard(
+                        reportId:
                         report.id,
+                        bikeId:
+                        report.bikeCode ??
+                            'Bike #${report.bikeId}',
+                        issue:
+                        _categoryLabel(
+                          report.category,
+                        ),
+                        description:
+                        report.description,
+                        location:
+                        report.stationName ??
+                            'No station assigned',
+                        status:
+                        _statusLabel(
+                          report.status,
+                        ),
+                        reportedTime:
+                        _formatDateTime(
+                          report.createdAt,
+                        ),
+                        canCancel:
+                        canCancel,
+                        isCancelling:
+                        cancellingThisReport,
+                        onCancel:
+                        canCancel
+                            ? () {
+                          _cancelReport(
+                            report,
+                          );
+                        }
+                            : null,
+                        onOpenDetail:
+                            () {
+                          widget
+                              .onOpenReportDetail(
+                            report.id,
+                          );
+                        },
                       ),
-                      bikeId:
-                      report.bikeCode ??
-                          'Bike #${report.bikeId}',
-                      issue:
-                      _categoryLabel(
-                        report.category,
-                      ),
-                      description:
-                      report.description,
-                      location:
-                      report.stationName ??
-                          'No station assigned',
-                      status:
-                      _statusLabel(
-                        report.status,
-                      ),
-                      reportedTime:
-                      _formatDateTime(
-                        report.createdAt,
-                      ),
-                      onOpenDetail: () {
-                        widget
-                            .onOpenReportDetail(
-                          report.id,
-                        );
-                      },
-                    ),
-                  ),
+                    );
+                  },
                 ),
             ],
           ),
@@ -634,13 +977,23 @@ class _BikeReportPageState extends State<BikeReportPage> {
         // =====================================================================
 
         Positioned(
-          right: 22,
-          bottom: 24,
-          child: FloatingActionButton(
-            onPressed: widget.onAddReport,
-            child: const Icon(
+          right:
+          22,
+          bottom:
+          24,
+          child:
+          FloatingActionButton(
+            onPressed:
+                () {
+              widget.onAddReport(
+                null,
+              );
+            },
+            child:
+            const Icon(
               Icons.add_rounded,
-              size: 34,
+              size:
+              34,
             ),
           ),
         ),
@@ -663,21 +1016,41 @@ class _ReportCard extends StatelessWidget {
     required this.status,
     required this.reportedTime,
     required this.onOpenDetail,
+    required this.canCancel,
+    required this.isCancelling,
+    this.onCancel,
   });
 
-  final String reportId;
+  final int reportId;
   final String bikeId;
   final String issue;
   final String description;
   final String location;
   final String status;
   final String reportedTime;
+
   final VoidCallback onOpenDetail;
 
+  final bool canCancel;
+  final bool isCancelling;
+
+  final VoidCallback? onCancel;
+
+  String _formatReportId(
+      int id,
+      ) {
+    return 'RPT-${id.toString().padLeft(4, '0')}';
+  }
+
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
 
     Color backgroundColor;
     Color textColor;
@@ -685,42 +1058,86 @@ class _ReportCard extends StatelessWidget {
     switch (status) {
       case 'Approved':
         backgroundColor =
-        const Color(0xFFDDF7E9);
+        const Color(
+          0xFFDDF7E9,
+        );
+
         textColor =
-        const Color(0xFF159A67);
+        const Color(
+          0xFF159A67,
+        );
+
         break;
 
       case 'Rejected':
         backgroundColor =
-        const Color(0xFFFFE5E5);
+        const Color(
+          0xFFFFE5E5,
+        );
+
         textColor =
-        const Color(0xFFE24B4B);
+        const Color(
+          0xFFE24B4B,
+        );
+
+        break;
+
+      case 'Cancelled':
+        backgroundColor =
+            scheme.surfaceContainerHighest;
+
+        textColor =
+            scheme.onSurface.withValues(
+              alpha:
+              0.65,
+            );
+
         break;
 
       default:
         backgroundColor =
-        const Color(0xFFFFF3D6);
+        const Color(
+          0xFFFFF3D6,
+        );
+
         textColor =
-        const Color(0xFFE6A919);
+        const Color(
+          0xFFE6A919,
+        );
     }
 
     return InkWell(
-      onTap: onOpenDetail,
+      onTap:
+      onOpenDetail,
       borderRadius:
-      BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainer,
+      BorderRadius.circular(
+        16,
+      ),
+      child:
+      Container(
+        padding:
+        const EdgeInsets.all(
+          12,
+        ),
+        decoration:
+        BoxDecoration(
+          color:
+          scheme.surfaceContainer,
           borderRadius:
-          BorderRadius.circular(16),
-          border: Border.all(
-            color: scheme.outline.withValues(
-              alpha: 0.8,
+          BorderRadius.circular(
+            16,
+          ),
+          border:
+          Border.all(
+            color: scheme.outline
+                .withValues(
+              alpha:
+              0.8,
             ),
           ),
         ),
-        child: Column(
+        child:
+        Column(
           crossAxisAlignment:
           CrossAxisAlignment.start,
           children: [
@@ -729,33 +1146,44 @@ class _ReportCard extends StatelessWidget {
               CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color:
-                    scheme.primaryContainer,
+                  width:
+                  46,
+                  height:
+                  46,
+                  decoration:
+                  BoxDecoration(
+                    color: scheme
+                        .primaryContainer,
                     borderRadius:
-                    BorderRadius.circular(9),
+                    BorderRadius.circular(
+                      9,
+                    ),
                   ),
-                  child: Icon(
-                    Icons
-                        .directions_bike_rounded,
+                  child:
+                  Icon(
+                    Icons.directions_bike_rounded,
                     color: scheme
                         .onPrimaryContainer,
                   ),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(
+                  width:
+                  12,
+                ),
 
                 Expanded(
-                  child: Column(
+                  child:
+                  Column(
                     crossAxisAlignment:
                     CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
                           Text(
-                            reportId,
+                            _formatReportId(
+                              reportId,
+                            ),
                             style: theme
                                 .textTheme
                                 .labelMedium
@@ -768,13 +1196,15 @@ class _ReportCard extends StatelessWidget {
                           const Spacer(),
 
                           const Icon(
-                            Icons
-                                .chevron_right_rounded,
+                            Icons.chevron_right_rounded,
                           ),
                         ],
                       ),
 
-                      const SizedBox(height: 4),
+                      const SizedBox(
+                        height:
+                        4,
+                      ),
 
                       Text(
                         '$bikeId • $issue',
@@ -787,37 +1217,47 @@ class _ReportCard extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 5),
+                      const SizedBox(
+                        height:
+                        5,
+                      ),
 
                       Text(
                         description,
-                        maxLines: 2,
+                        maxLines:
+                        2,
                         overflow:
                         TextOverflow.ellipsis,
                         style:
                         theme.textTheme.bodySmall,
                       ),
 
-                      const SizedBox(height: 6),
+                      const SizedBox(
+                        height:
+                        6,
+                      ),
 
                       Row(
                         children: [
                           Icon(
-                            Icons
-                                .location_on_outlined,
-                            size: 15,
+                            Icons.location_on_outlined,
+                            size:
+                            15,
                             color:
                             scheme.primary,
                           ),
 
-                          const SizedBox(width: 3),
+                          const SizedBox(
+                            width:
+                            3,
+                          ),
 
                           Expanded(
-                            child: Text(
+                            child:
+                            Text(
                               location,
-                              style: theme
-                                  .textTheme
-                                  .bodySmall,
+                              style:
+                              theme.textTheme.bodySmall,
                             ),
                           ),
                         ],
@@ -828,45 +1268,63 @@ class _ReportCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(
+              height:
+              12,
+            ),
 
             Divider(
-              height: 1,
-              color:
-              scheme.outline.withValues(
-                alpha: 0.6,
+              height:
+              1,
+              color: scheme.outline
+                  .withValues(
+                alpha:
+                0.6,
               ),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(
+              height:
+              10,
+            ),
 
             Row(
               children: [
                 Expanded(
-                  child: Text(
+                  child:
+                  Text(
                     'Reported $reportedTime',
-                    style: theme
-                        .textTheme
-                        .labelSmall,
+                    style:
+                    theme.textTheme.labelSmall,
                   ),
                 ),
 
                 Container(
                   padding:
                   const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                    horizontal:
+                    12,
+                    vertical:
+                    6,
                   ),
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
+                  decoration:
+                  BoxDecoration(
+                    color:
+                    backgroundColor,
                     borderRadius:
-                    BorderRadius.circular(20),
+                    BorderRadius.circular(
+                      20,
+                    ),
                   ),
-                  child: Text(
+                  child:
+                  Text(
                     status,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 11,
+                    style:
+                    TextStyle(
+                      color:
+                      textColor,
+                      fontSize:
+                      11,
                       fontWeight:
                       FontWeight.w700,
                     ),
@@ -874,6 +1332,65 @@ class _ReportCard extends StatelessWidget {
                 ),
               ],
             ),
+
+            // ---------------------------------------------------------------
+            // RIDER CANCEL ACTION
+            // ---------------------------------------------------------------
+
+            if (canCancel) ...[
+              const SizedBox(
+                height:
+                10,
+              ),
+
+              Align(
+                alignment:
+                Alignment.centerRight,
+                child:
+                TextButton.icon(
+                  onPressed:
+                  isCancelling
+                      ? null
+                      : onCancel,
+                  style:
+                  TextButton.styleFrom(
+                    foregroundColor:
+                    scheme.error,
+                  ),
+                  icon:
+                  isCancelling
+                      ? SizedBox(
+                    width:
+                    16,
+                    height:
+                    16,
+                    child:
+                    CircularProgressIndicator(
+                      strokeWidth:
+                      2,
+                      color:
+                      scheme.error,
+                    ),
+                  )
+                      : const Icon(
+                    Icons.cancel_outlined,
+                    size:
+                    18,
+                  ),
+                  label:
+                  Text(
+                    isCancelling
+                        ? 'Cancelling...'
+                        : 'Cancel Report',
+                    style:
+                    const TextStyle(
+                      fontWeight:
+                      FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -897,38 +1414,58 @@ class _ReportFilterChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context,
+      ) {
     final scheme =
-        Theme.of(context).colorScheme;
+        Theme.of(context)
+            .colorScheme;
 
     return InkWell(
-      onTap: onTap,
+      onTap:
+      onTap,
       borderRadius:
-      BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 7,
+      BorderRadius.circular(
+        20,
+      ),
+      child:
+      Container(
+        padding:
+        const EdgeInsets.symmetric(
+          horizontal:
+          14,
+          vertical:
+          7,
         ),
-        decoration: BoxDecoration(
-          color: selected
+        decoration:
+        BoxDecoration(
+          color:
+          selected
               ? scheme.primary
               : scheme.surface,
           borderRadius:
-          BorderRadius.circular(20),
-          border: selected
+          BorderRadius.circular(
+            20,
+          ),
+          border:
+          selected
               ? null
               : Border.all(
-            color: scheme.outline,
+            color:
+            scheme.outline,
           ),
         ),
-        child: Text(
+        child:
+        Text(
           label,
-          style: TextStyle(
-            color: selected
+          style:
+          TextStyle(
+            color:
+            selected
                 ? scheme.onPrimary
                 : scheme.onSurface,
-            fontSize: 11,
+            fontSize:
+            11,
             fontWeight:
             FontWeight.w700,
           ),
@@ -950,52 +1487,76 @@ class _EmptyReports extends StatelessWidget {
   final bool hasSearch;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+  Widget build(
+      BuildContext context,
+      ) {
+    final theme =
+    Theme.of(context);
+
+    final scheme =
+        theme.colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 48,
+      padding:
+      const EdgeInsets.symmetric(
+        vertical:
+        48,
       ),
-      child: Column(
+      child:
+      Column(
         children: [
           Icon(
             hasSearch
                 ? Icons.search_off_rounded
                 : Icons.report_outlined,
-            size: 52,
-            color:
-            scheme.onSurface.withValues(
-              alpha: 0.4,
+            size:
+            52,
+            color: scheme
+                .onSurface
+                .withValues(
+              alpha:
+              0.4,
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(
+            height:
+            12,
+          ),
 
           Text(
             hasSearch
                 ? 'No matching reports'
                 : 'No reports yet',
-            style:
-            theme.textTheme.titleMedium?.copyWith(
+            style: theme
+                .textTheme
+                .titleMedium
+                ?.copyWith(
               fontWeight:
               FontWeight.w700,
             ),
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(
+            height:
+            4,
+          ),
 
           Text(
             hasSearch
                 ? 'Try a different search term.'
                 : 'Bike condition reports will appear here.',
-            textAlign: TextAlign.center,
-            style:
-            theme.textTheme.bodySmall?.copyWith(
-              color:
-              scheme.onSurface.withValues(
-                alpha: 0.6,
+            textAlign:
+            TextAlign.center,
+            style: theme
+                .textTheme
+                .bodySmall
+                ?.copyWith(
+              color: scheme
+                  .onSurface
+                  .withValues(
+                alpha:
+                0.6,
               ),
             ),
           ),

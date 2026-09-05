@@ -714,6 +714,30 @@ abstract class AppLocalizations {
   /// **'Camera ready'**
   String get cameraReady;
 
+  /// No description provided for @cameraNoPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'No Permission'**
+  String get cameraNoPermission;
+
+  /// No description provided for @cameraPermissionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission is required to scan the bike QR code. Tap below to allow access.'**
+  String get cameraPermissionDescription;
+
+  /// No description provided for @grantPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Grant Permission'**
+  String get grantPermission;
+
+  /// No description provided for @cameraPermissionSettingsPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission is required. Enable camera in device settings.'**
+  String get cameraPermissionSettingsPrompt;
+
   /// No description provided for @pointCamera.
   ///
   /// In en, this message translates to:
@@ -1374,6 +1398,24 @@ abstract class AppLocalizations {
   /// **'Bike {bikeId} is already reserved. Choose another bike and scan again.'**
   String errorBikeReserved(String bikeId);
 
+  /// No description provided for @errorBikeMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike {bikeId} is currently under maintenance and cannot be rented. Choose another bike and scan again.'**
+  String errorBikeMaintenance(String bikeId);
+
+  /// No description provided for @errorBikeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike {bikeId} is currently unavailable and cannot be rented. Choose another bike and scan again.'**
+  String errorBikeUnavailable(String bikeId);
+
+  /// No description provided for @bikeCannotBeRentedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bike Cannot Be Rented'**
+  String get bikeCannotBeRentedTitle;
+
   /// No description provided for @errorHoldDeclined.
   ///
   /// In en, this message translates to:
@@ -1493,6 +1535,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The rental state changed on the server. Retry to restore it.'**
   String get errorInvalidRentalTransition;
+
+  /// No description provided for @rideWarningDepositExceededTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit Time Exceeded'**
+  String get rideWarningDepositExceededTitle;
+
+  /// No description provided for @rideWarningDepositExceededBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You have borrowed the bike longer than the deposit time. Additional rental charges apply.'**
+  String get rideWarningDepositExceededBody;
+
+  /// No description provided for @rideWarningLegalActionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal Action Warning'**
+  String get rideWarningLegalActionTitle;
+
+  /// No description provided for @rideWarningLegalActionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental duration exceeded 2x the deposit time. Immediate legal action will be initiated if the bike is not returned.'**
+  String get rideWarningLegalActionBody;
+
+  /// No description provided for @rideWarningSuspiciousActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspicious Activity Detected'**
+  String get rideWarningSuspiciousActivityTitle;
+
+  /// No description provided for @rideWarningSuspiciousActivityBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspicious activity detected: You are unusually far from the pickup station.'**
+  String get rideWarningSuspiciousActivityBody;
+
+  /// No description provided for @rideWarningSuspiciousLegalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspicious Activity & Legal Action'**
+  String get rideWarningSuspiciousLegalTitle;
+
+  /// No description provided for @rideWarningSuspiciousLegalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspicious activity detected far from station and deposit time exceeded. Immediate legal action will be taken if the bike is not returned.'**
+  String get rideWarningSuspiciousLegalBody;
 }
 
 class _AppLocalizationsDelegate

@@ -391,6 +391,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cameraReady => 'Camera ready';
 
   @override
+  String get cameraNoPermission => 'No Permission';
+
+  @override
+  String get cameraPermissionDescription =>
+      'Camera permission is required to scan the bike QR code. Tap below to allow access.';
+
+  @override
+  String get grantPermission => 'Grant Permission';
+
+  @override
+  String get cameraPermissionSettingsPrompt =>
+      'Camera permission is required. Enable camera in device settings.';
+
+  @override
   String get pointCamera => 'Point the camera at the QR code on the bike frame';
 
   @override
@@ -789,6 +803,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String errorBikeMaintenance(String bikeId) {
+    return 'Bike $bikeId is currently under maintenance and cannot be rented. Choose another bike and scan again.';
+  }
+
+  @override
+  String errorBikeUnavailable(String bikeId) {
+    return 'Bike $bikeId is currently unavailable and cannot be rented. Choose another bike and scan again.';
+  }
+
+  @override
+  String get bikeCannotBeRentedTitle => 'Bike Cannot Be Rented';
+
+  @override
   String errorHoldDeclined(String amount) {
     return 'The $amount test hold was declined. Retry when ready.';
   }
@@ -868,4 +895,34 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorInvalidRentalTransition =>
       'The rental state changed on the server. Retry to restore it.';
+
+  @override
+  String get rideWarningDepositExceededTitle => 'Deposit Time Exceeded';
+
+  @override
+  String get rideWarningDepositExceededBody =>
+      'You have borrowed the bike longer than the deposit time. Additional rental charges apply.';
+
+  @override
+  String get rideWarningLegalActionTitle => 'Legal Action Warning';
+
+  @override
+  String get rideWarningLegalActionBody =>
+      'Rental duration exceeded 2x the deposit time. Immediate legal action will be initiated if the bike is not returned.';
+
+  @override
+  String get rideWarningSuspiciousActivityTitle =>
+      'Suspicious Activity Detected';
+
+  @override
+  String get rideWarningSuspiciousActivityBody =>
+      'Suspicious activity detected: You are unusually far from the pickup station.';
+
+  @override
+  String get rideWarningSuspiciousLegalTitle =>
+      'Suspicious Activity & Legal Action';
+
+  @override
+  String get rideWarningSuspiciousLegalBody =>
+      'Suspicious activity detected far from station and deposit time exceeded. Immediate legal action will be taken if the bike is not returned.';
 }

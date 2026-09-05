@@ -50,7 +50,13 @@ abstract class BaseStationMapView extends StatefulWidget {
 }
 
 abstract class BaseStationMapViewState<T extends BaseStationMapView> extends State<T> {
-  final SupabaseClient supabase = Supabase.instance.client;
+  SupabaseClient? get supabase {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
   final TextEditingController searchController = TextEditingController();
   final FocusNode searchFocusNode = FocusNode();
 
@@ -85,18 +91,18 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
         stations = List<Map<String, dynamic>>.from(widget.initialStations!);
         filteredStations = stations;
         if (widget.selectedStationId != null) {
-          selectedStation = stations.firstWhere(
-            (s) => s['id']?.toString() == widget.selectedStationId,
-            orElse: () => {},
-          );
+          selectedStation = stations
+              .where((s) => s['id']?.toString() == widget.selectedStationId)
+              .firstOrNull;
         }
       });
-    } else if (widget.selectedStationId != oldWidget.selectedStationId && widget.selectedStationId != null) {
+    } else if (widget.selectedStationId != oldWidget.selectedStationId) {
       setState(() {
-        selectedStation = stations.firstWhere(
-          (s) => s['id']?.toString() == widget.selectedStationId,
-          orElse: () => {},
-        );
+        selectedStation = widget.selectedStationId != null
+            ? stations
+                .where((s) => s['id']?.toString() == widget.selectedStationId)
+                .firstOrNull
+            : null;
       });
     }
   }
@@ -145,10 +151,9 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
         filteredStations = stations;
         isLoading = false;
         if (widget.selectedStationId != null) {
-          selectedStation = stations.firstWhere(
-            (s) => s['id']?.toString() == widget.selectedStationId,
-            orElse: () => {},
-          );
+          selectedStation = stations
+              .where((s) => s['id']?.toString() == widget.selectedStationId)
+              .firstOrNull;
         }
       });
       final pos = widget.riderLocation ?? await getUserLocation();
@@ -167,7 +172,13 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
       final userPos = await getUserLocation();
       if (mounted) setState(() => userLocation = userPos);
 
-      final response = await supabase
+      final client = supabase;
+      if (client == null) {
+        if (mounted) setState(() => isLoading = false);
+        return;
+      }
+
+      final response = await client
           .from('stations')
           .select()
           .eq('is_active', true);
@@ -253,11 +264,10 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
     if (widget.onStationTap != null) {
       widget.onStationTap!(stationId);
     } else {
-      final station = stations.firstWhere(
-        (s) => s['id']?.toString() == stationId,
-        orElse: () => {},
-      );
-      if (station.isNotEmpty && mounted) {
+      final station = stations
+          .where((s) => s['id']?.toString() == stationId)
+          .firstOrNull;
+      if (station != null && mounted) {
         setState(() => selectedStation = station);
       }
     }

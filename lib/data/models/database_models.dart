@@ -4,7 +4,7 @@ enum AppUserRole { rider, admin }
 
 enum AccountStatus { active, suspended }
 
-enum BikeDatabaseStatus { available, reserved, inUse, maintenance, retired, lost }
+enum BikeDatabaseStatus { available, reserved, inUse, maintenance, retired, lost, unavailable }
 
 enum RentalDatabaseStatus {
   reserved,

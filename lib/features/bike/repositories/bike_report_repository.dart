@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'dart:typed_data';
 import '../models/bike_report.dart';
 
 class BikeReportRepository {
@@ -9,27 +9,75 @@ class BikeReportRepository {
     SupabaseClient? supabase,
   }) : _supabase = supabase ?? Supabase.instance.client;
 
+  Future<String?> getReportPhotoUrl({
+    required int reportId,
+    required String? reporterId,
+  }) async {
+    if (reporterId == null ||
+        reporterId.trim().isEmpty) {
+      return null;
+    }
+
+    final folderPath =
+        '$reporterId/$reportId';
+
+    final files = await _supabase.storage
+        .from('bike-report-photos')
+        .list(
+      path: folderPath,
+    );
+
+    final hasPhoto = files.any(
+          (file) => file.name == 'report.webp',
+    );
+
+    if (!hasPhoto) {
+      return null;
+    }
+
+    final filePath =
+        '$folderPath/report.webp';
+
+    return await _supabase.storage
+        .from('bike-report-photos')
+        .createSignedUrl(
+      filePath,
+      3600,
+    );
+  }
+
   // ===========================================================================
   // CREATE REPORT
   // ===========================================================================
 
-  Future<void> createReport({
+  Future<int> createReport({
     required int bikeId,
     required String category,
     required String description,
   }) async {
-    final user = _supabase.auth.currentUser;
+    final user =
+        _supabase.auth.currentUser;
 
     if (user == null) {
-      throw Exception('User is not authenticated');
+      throw Exception(
+        'You must be signed in to submit a report.',
+      );
     }
 
-    await _supabase.from('bike_reports').insert({
+    final response =
+    await _supabase
+        .from('bike_reports')
+        .insert({
       'bike_id': bikeId,
       'reporter_id': user.id,
       'category': category,
-      'description': description.trim(),
-    });
+      'description':
+      description.trim(),
+    })
+        .select('id')
+        .single();
+
+    return response['id'] as int;
   }
 
   // ===========================================================================
@@ -197,6 +245,32 @@ class BikeReportRepository {
         .eq('id', reportId);
   }
 
+  // ===========================================================================
+// CANCEL REPORT
+// Rider can cancel only their own pending report.
+// Database security is enforced by cancel_bike_report RPC.
+// ===========================================================================
+
+  Future<void> cancelReport({
+    required int reportId,
+  }) async {
+    final user =
+        _supabase.auth.currentUser;
+
+    if (user == null) {
+      throw Exception(
+        'You must be signed in to cancel a report.',
+      );
+    }
+
+    await _supabase.rpc(
+      'cancel_bike_report',
+      params: {
+        'p_report_id': reportId,
+      },
+    );
+  }
+
   Future<List<BikeReport>> getReportsForBike(
       int bikeId,
       ) async {
@@ -233,4 +307,36 @@ class BikeReportRepository {
     )
         .toList();
   }
+
+  Future<void> uploadReportPhoto({
+    required int reportId,
+    required Uint8List webpBytes,
+  }) async {
+    final user =
+        _supabase.auth.currentUser;
+
+    if (user == null) {
+      throw Exception(
+        'You must be signed in to upload a photo.',
+      );
+    }
+
+    final path =
+        '${user.id}/$reportId/report.webp';
+
+    await _supabase.storage
+        .from('bike-report-photos')
+        .uploadBinary(
+      path,
+      webpBytes,
+      fileOptions:
+      const FileOptions(
+        contentType:
+        'image/webp',
+        upsert:
+        true,
+      ),
+    );
+  }
+
 }

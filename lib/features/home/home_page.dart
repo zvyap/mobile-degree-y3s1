@@ -4,6 +4,7 @@ import 'package:bike_renting_app/features/home/widgets/home_cards.dart';
 import 'package:bike_renting_app/features/home/widgets/ride_conditions_panel.dart';
 import 'package:bike_renting_app/features/home/widgets/station_preview.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
+import 'package:bike_renting_app/features/renting/widgets/ride_warning_banner.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
@@ -68,6 +69,14 @@ class _HomePageState extends State<HomePage> {
                 20,
               ),
               children: [
+                if (widget.rentingController.activeRideWarning != null) ...[
+                  RideWarningBanner(
+                    key: const ValueKey<String>('home-ride-warning-banner'),
+                    warning: widget.rentingController.activeRideWarning!,
+                    onTap: () => widget.onNavigate(AppPage.scan),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 Entrance(
                   child: rideActive
                       ? ActiveRideHome(
@@ -78,11 +87,28 @@ class _HomePageState extends State<HomePage> {
                           onScan: () => widget.onNavigate(AppPage.scan),
                           onFindStation: () => widget.onNavigate(AppPage.stations),
                           onViewHistory: () => widget.onNavigate(AppPage.history),
+                          availableBikes: widget.rentingController.isInitialized
+                              ? widget.rentingController.totalAvailableBikes
+                              : null,
+                          totalStations: widget.rentingController.isInitialized
+                              ? widget.rentingController.totalStations
+                              : null,
                         ),
                 ),
                 if (!rideActive) ...[
                   const SizedBox(height: 18),
-                  const NetworkSummary(),
+                  NetworkSummary(
+                    bikesCount: widget.rentingController.isInitialized
+                        ? widget.rentingController.totalAvailableBikes
+                        : null,
+                    openDocksCount: widget.rentingController.isInitialized
+                        ? widget.rentingController.totalAvailableDocks
+                        : null,
+                    stationsCount: widget.rentingController.isInitialized
+                        ? widget.rentingController.totalStations
+                        : null,
+                    isLoading: !widget.rentingController.isInitialized,
+                  ),
                 ],
                 const SizedBox(height: 18),
                 RideConditionsPanel(key: _weatherPanelKey),
@@ -94,6 +120,8 @@ class _HomePageState extends State<HomePage> {
                   )
                 else
                   StationPreview(
+                    stations: widget.rentingController.stations,
+                    isLoading: !widget.rentingController.isInitialized,
                     onViewAll: () => widget.onNavigate(AppPage.stations),
                   ),
               ],

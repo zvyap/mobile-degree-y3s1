@@ -12,6 +12,8 @@ import 'package:bike_renting_app/features/renting/rental_payment_simulator.dart'
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/features/renting/rider_location.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RentingController extends ChangeNotifier {
@@ -68,7 +70,12 @@ class RentingController extends ChangeNotifier {
   final PayPalPaymentGateway _paypalGateway;
   final bool _ownsPayPalGateway;
   PayPalAuthorizationOrder? _paypalOrder;
+  String? _paypalOrderLocale;
   String? _paypalAuthorizationId;
+
+  final StreamController<void> _timeoutController =
+      StreamController<void>.broadcast();
+  Stream<void> get onRentalTimeout => _timeoutController.stream;
 
   String? get paypalAuthorizationId => _paypalAuthorizationId;
   Uri? get paypalApprovalUrl => _paypalOrder?.approvalUrl;
@@ -113,6 +120,18 @@ class RentingController extends ChangeNotifier {
   String? stationQrToken;
   int? stationDistanceMeters;
   RiderPosition? _arrivalPosition;
+
+  LatLng? riderLatLng;
+  final List<LatLng> rideRoutePoints = [];
+  bool isTrackingPaused = false;
+  StreamSubscription<Position>? _positionSubscription;
+  Position? _lastGpsPosition;
+
+  static const defaultSuspiciousDistanceMeters = 5000;
+  Duration? _depositDurationOverride;
+  int? _suspiciousDistanceMetersOverride;
+  bool? _isSuspiciousDistanceOverride;
+  int? _distanceFromStartStationOverride;
 
   int? get rentalId => _session?.rental.id;
 
@@ -186,8 +205,147 @@ class RentingController extends ChangeNotifier {
     return deadline.difference(_now());
   }
 
+  Duration get depositDuration {
+    if (_depositDurationOverride != null) {
+      return _depositDurationOverride!;
+    }
+    if (perMinuteRate > 0 && holdAmount > unlockFee) {
+      final minutes = (holdAmount - unlockFee) / perMinuteRate;
+      return Duration(seconds: (minutes * 60).round());
+    }
+    final started = _session?.rental.startedAt;
+    final deadline = rideDeadlineAt;
+    if (started != null && deadline != null && deadline.isAfter(started)) {
+      return deadline.difference(started);
+    }
+    return const Duration(hours: 3, minutes: 15);
+  }
+
+  int get suspiciousDistanceMeters =>
+      _suspiciousDistanceMetersOverride ?? defaultSuspiciousDistanceMeters;
+
+  int? get distanceFromStartStationMeters {
+    if (_distanceFromStartStationOverride != null) {
+      return _distanceFromStartStationOverride;
+    }
+    final station = startStation ??
+        stations
+            .where((s) => s.backendId == _session?.rental.startStationId)
+            .firstOrNull;
+    if (station == null) return null;
+    final pos = riderLatLng;
+    if (pos == null) return null;
+    if (station.latitude == 0 && station.longitude == 0) return null;
+
+    return Geolocator.distanceBetween(
+      pos.latitude,
+      pos.longitude,
+      station.latitude,
+      station.longitude,
+    ).round();
+  }
+
+  bool get isSuspiciousDistance {
+    if (_isSuspiciousDistanceOverride != null) {
+      return _isSuspiciousDistanceOverride!;
+    }
+    final distance = distanceFromStartStationMeters;
+    if (distance != null) {
+      return distance >= suspiciousDistanceMeters;
+    }
+    if (metrics.distanceKm * 1000 >= suspiciousDistanceMeters) {
+      return true;
+    }
+    return false;
+  }
+
+  ActiveRideWarning? get activeRideWarning {
+    if (!isRideActive) return null;
+
+    final deposit = depositDuration;
+    final elapsed = Duration(seconds: metrics.elapsedSeconds);
+    final isFar = isSuspiciousDistance;
+    final isOverDeposit = elapsed >= deposit;
+    final isOverDoubleDeposit = elapsed >= deposit * 2;
+
+    if (isFar && isOverDeposit) {
+      return const ActiveRideWarning(
+        type: RideWarningType.suspiciousLegalAction,
+        severity: RideWarningSeverity.critical,
+        title: 'Suspicious Activity & Legal Action',
+        message:
+            'Suspicious activity detected far from station and deposit time exceeded. Immediate legal action will be taken if the bike is not returned.',
+      );
+    }
+
+    if (isOverDoubleDeposit) {
+      return const ActiveRideWarning(
+        type: RideWarningType.doubleDepositLegalAction,
+        severity: RideWarningSeverity.critical,
+        title: 'Legal Action Warning',
+        message:
+            'Rental duration exceeded 2x the deposit time. Immediate legal action will be initiated if the bike is not returned.',
+      );
+    }
+
+    if (isFar) {
+      return const ActiveRideWarning(
+        type: RideWarningType.suspiciousActivity,
+        severity: RideWarningSeverity.warning,
+        title: 'Suspicious Activity Detected',
+        message:
+            'Suspicious activity detected: You are unusually far from the pickup station.',
+      );
+    }
+
+    if (isOverDeposit) {
+      return const ActiveRideWarning(
+        type: RideWarningType.depositExceeded,
+        severity: RideWarningSeverity.warning,
+        title: 'Deposit Time Exceeded',
+        message:
+            'You have borrowed the bike longer than the deposit time. Additional rental charges apply.',
+      );
+    }
+
+    return null;
+  }
+
+  void setDepositDurationOverride(Duration? duration) {
+    _depositDurationOverride = duration;
+    notifyListeners();
+  }
+
+  void setSuspiciousDistanceOverride(bool? isSuspicious) {
+    _isSuspiciousDistanceOverride = isSuspicious;
+    notifyListeners();
+  }
+
+  void setSuspiciousDistanceThresholdMeters(int? meters) {
+    _suspiciousDistanceMetersOverride = meters;
+    notifyListeners();
+  }
+
+  void setDistanceFromStartStationOverride(int? meters) {
+    _distanceFromStartStationOverride = meters;
+    notifyListeners();
+  }
+
+  void setRiderLocation(LatLng location) {
+    riderLatLng = location;
+    notifyListeners();
+  }
+
   int get extensionsRemaining =>
       math.max(0, maxRideExtensions - (_session?.rental.extensionsUsed ?? 0));
+
+  int get totalAvailableBikes =>
+      stations.fold<int>(0, (sum, s) => sum + s.availableBikes);
+
+  int get totalAvailableDocks =>
+      stations.fold<int>(0, (sum, s) => sum + s.availableDocks);
+
+  int get totalStations => stations.length;
 
   Future<void> initialize() {
     return _initialization ??= _initialize();
@@ -397,6 +555,31 @@ class RentingController extends ChangeNotifier {
 
     _scannedBikeCode = await _resolveBikeCode(qrToken ?? token);
 
+    try {
+      final bikeRecord = await repository.findBikeByQrToken(token);
+      if (bikeRecord != null) {
+        _scannedBikeCode = bikeRecord.code;
+        if (bikeRecord.status == BikeDatabaseStatus.maintenance) {
+          error = RentalError.bikeMaintenance;
+          notifyListeners();
+          return;
+        }
+        if (bikeRecord.status == BikeDatabaseStatus.unavailable ||
+            bikeRecord.status == BikeDatabaseStatus.retired ||
+            bikeRecord.status == BikeDatabaseStatus.lost ||
+            bikeRecord.status == BikeDatabaseStatus.inUse) {
+          error = RentalError.bikeUnavailable;
+          notifyListeners();
+          return;
+        }
+        if (bikeRecord.status == BikeDatabaseStatus.reserved) {
+          error = RentalError.bikeReserved;
+          notifyListeners();
+          return;
+        }
+      }
+    } catch (_) {}
+
     await _run(() async {
       final snapshot = await repository.reserveSession(token);
       _applySnapshot(snapshot);
@@ -450,6 +633,75 @@ class RentingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<RentalPaymentMethod?> reloadPaymentMethods({String? selectId}) async {
+    final repo = paymentMethodRepository;
+    if (repo == null) return null;
+    try {
+      final prevIds = availablePaymentMethods.map((m) => m.id).toSet();
+      final paymentRecords = await repo.listOwn();
+      if (paymentRecords.isNotEmpty) {
+        final list = paymentRecords
+            .map(
+              (p) => RentalPaymentMethod(
+                id: p.id.toString(),
+                brand: p.brand,
+                lastFour: p.lastFour,
+              ),
+            )
+            .toList();
+        if (!list.any((p) => p.id == 'paypal')) {
+          list.insert(0, paypalPaymentMethod);
+        }
+        availablePaymentMethods = List.unmodifiable(list);
+
+        RentalPaymentMethod? newlySelected;
+        if (selectId != null) {
+          newlySelected = list.where((m) => m.id == selectId).firstOrNull;
+        } else {
+          newlySelected = list
+              .where((m) => !prevIds.contains(m.id) && m.id != 'paypal')
+              .lastOrNull;
+        }
+
+        if (newlySelected != null) {
+          selectedPaymentMethod = newlySelected;
+        } else if (selectedPaymentMethod != null) {
+          selectedPaymentMethod = list
+                  .where((m) => m.id == selectedPaymentMethod!.id)
+                  .firstOrNull ??
+              selectedPaymentMethod;
+        }
+        notifyListeners();
+        return newlySelected;
+      } else {
+        availablePaymentMethods = paymentMethods;
+        notifyListeners();
+        return null;
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<RentalError?> verifyCurrentBikeRentable() async {
+    final bikeId = _session?.rental.bikeId;
+    if (bikeId == null) return null;
+    try {
+      final record = await repository.getBike(bikeId);
+      if (record == null) return null;
+      if (record.status == BikeDatabaseStatus.maintenance) {
+        return RentalError.bikeMaintenance;
+      }
+      if (record.status == BikeDatabaseStatus.unavailable ||
+          record.status == BikeDatabaseStatus.retired ||
+          record.status == BikeDatabaseStatus.lost ||
+          record.status == BikeDatabaseStatus.inUse) {
+        return RentalError.bikeUnavailable;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   void reviewAuthorization() {
     if (_session?.rental.status != RentalDatabaseStatus.reserved) return;
     _clearError();
@@ -470,6 +722,11 @@ class RentingController extends ChangeNotifier {
     }
     _beginBusy();
     try {
+      final bikeError = await verifyCurrentBikeRentable();
+      if (bikeError != null) {
+        error = bikeError;
+        return;
+      }
       await paymentSimulator.authorize(holdAmount);
       authorization = PaymentAuthorization(
         amount: holdAmount,
@@ -480,20 +737,35 @@ class RentingController extends ChangeNotifier {
       stage = RentalStage.unlocking;
     } on RentalPaymentSimulationException {
       error = RentalError.holdDeclined;
+    } catch (caught) {
+      error = _mapError(caught);
     } finally {
       isBusy = false;
       notifyListeners();
     }
   }
 
-  Future<Uri?> createPayPalOrder() async {
+  Future<Uri?> createPayPalOrder({String? locale}) async {
     if (isBusy || _session?.rental.status != RentalDatabaseStatus.reserved) {
       return null;
     }
-    if (_paypalOrder != null) return _paypalOrder!.approvalUrl;
+    final bikeError = await verifyCurrentBikeRentable();
+    if (bikeError != null) {
+      error = bikeError;
+      notifyListeners();
+      return null;
+    }
+    if (_paypalOrder != null && _paypalOrderLocale == locale) {
+      return _paypalOrder!.approvalUrl;
+    }
+    _paypalOrder = null;
+    _paypalOrderLocale = locale;
     _beginBusy();
     try {
-      _paypalOrder = await _paypalGateway.createAuthorizationOrder(holdAmount);
+      _paypalOrder = await _paypalGateway.createAuthorizationOrder(
+        holdAmount,
+        locale: locale,
+      );
       isBusy = false;
       _clearError();
       notifyListeners();
@@ -523,6 +795,11 @@ class RentingController extends ChangeNotifier {
     if (isBusy || order == null) return;
     _beginBusy();
     try {
+      final bikeError = await verifyCurrentBikeRentable();
+      if (bikeError != null) {
+        error = bikeError;
+        return;
+      }
       final result = await _paypalGateway.authorizeOrder(order.orderId);
       _paypalAuthorizationId = result.authorizationId;
     } on PayPalException {
@@ -531,13 +808,16 @@ class RentingController extends ChangeNotifier {
       _paypalAuthorizationId = 'AUTH-${order.orderId}';
     } finally {
       _paypalOrder = null;
-      _stopBikeReadyTimer();
-      authorization = PaymentAuthorization(
-        amount: holdAmount,
-        status: PaymentStatus.authorized,
-      );
-      stage = RentalStage.unlocking;
-      _clearError();
+      _paypalOrderLocale = null;
+      if (error == null) {
+        _stopBikeReadyTimer();
+        authorization = PaymentAuthorization(
+          amount: holdAmount,
+          status: PaymentStatus.authorized,
+        );
+        stage = RentalStage.unlocking;
+        _clearError();
+      }
       isBusy = false;
       notifyListeners();
     }
@@ -546,6 +826,7 @@ class RentingController extends ChangeNotifier {
   void cancelPayPalCheckout() {
     if (isBusy) return;
     _paypalOrder = null;
+    _paypalOrderLocale = null;
     error = RentalError.paymentCancelled;
     notifyListeners();
   }
@@ -625,16 +906,18 @@ class RentingController extends ChangeNotifier {
       RentalStage.returning => true,
       _ => false,
     };
-    if (!rentalStillActive || !gpsAvailable) return;
+    if (!rentalStillActive || !gpsAvailable || isTrackingPaused) return;
 
-    // TODO(gps): Replace simulated distance with validated Android location
-    // samples and checkpoint progress for crash-safe distance recovery.
+    // When real GPS has provided positions, distance is computed directly
+    // from physical movement. Fall back to simulation only when GPS is unseeded.
+    final bool useSimulatedDistance = riderLatLng == null;
+
     metrics = metrics.copyWith(
       elapsedSeconds: math.max(
         metrics.elapsedSeconds + seconds,
         _elapsedFromServerStart(),
       ),
-      distanceKm: metrics.distanceKm + distanceKm,
+      distanceKm: metrics.distanceKm + (useSimulatedDistance ? distanceKm : 0),
     );
     notifyListeners();
   }
@@ -860,7 +1143,8 @@ class RentingController extends ChangeNotifier {
 
       // TODO(notifications): Notify the rider from a future server-side event
       // worker after the completed rental event is committed.
-    } catch (caught) {
+    } catch (caught, stack) {
+      debugPrint('confirmDock caught error: $caught\n$stack');
       error = _mapError(caught);
     } finally {
       isBusy = false;
@@ -1065,19 +1349,36 @@ class RentingController extends ChangeNotifier {
     }
   }
 
-  ReturnStation _stationFromDatabase(StationAvailabilityRecord station) {
-    return ReturnStation(
-      backendId: station.id,
-      id: station.code,
-      name: station.name,
-      distanceMeters: switch (station.code) {
+  ReturnStation _stationFromDatabase(
+    StationAvailabilityRecord station, [
+    RiderPosition? userPosition,
+  ]) {
+    final int distanceMeters;
+    if (userPosition != null) {
+      distanceMeters = Geolocator.distanceBetween(
+        userPosition.latitude,
+        userPosition.longitude,
+        station.latitude,
+        station.longitude,
+      ).round();
+    } else {
+      distanceMeters = switch (station.code) {
         'central' => 120,
         'riverside' => 260,
         'market' => 430,
         'university' => 610,
         _ => _calculateDistanceMeters(station.latitude, station.longitude),
-      },
+      };
+    }
+
+    return ReturnStation(
+      backendId: station.id,
+      id: station.code,
+      name: station.name,
+      distanceMeters: distanceMeters,
       availableDocks: station.availableDocks,
+      availableBikes: station.availableBikes,
+      capacity: station.capacity,
       qrToken: station.qrToken,
       latitude: station.latitude,
       longitude: station.longitude,
@@ -1121,7 +1422,9 @@ class RentingController extends ChangeNotifier {
       DatabaseErrorCode.notAuthenticated => RentalError.authenticationFailed,
       DatabaseErrorCode.accountUnavailable => RentalError.accountSuspended,
       DatabaseErrorCode.activeRentalExists => RentalError.activeRentalExists,
-      DatabaseErrorCode.bikeUnavailable => RentalError.bikeReserved,
+      DatabaseErrorCode.bikeMaintenance => RentalError.bikeMaintenance,
+      DatabaseErrorCode.bikeUnavailable => RentalError.bikeUnavailable,
+      DatabaseErrorCode.bikeReserved => RentalError.bikeReserved,
       DatabaseErrorCode.notFound => RentalError.invalidQr,
       DatabaseErrorCode.stationFull => RentalError.stationFull,
       DatabaseErrorCode.stationQrMismatch => RentalError.stationQrMismatch,
@@ -1180,18 +1483,144 @@ class RentingController extends ChangeNotifier {
 
   void _startClock() {
     _stopClock();
-    if (!enableClock) return;
+    if (!enableClock || isTrackingPaused) return;
     _rideTimer = Timer.periodic(const Duration(seconds: 1), (_) => tickRide());
+    _startLocationTracking();
   }
 
   void _stopClock() {
     _rideTimer?.cancel();
     _rideTimer = null;
+    _stopLocationTracking();
+  }
+
+  void _startLocationTracking() {
+    _stopLocationTracking();
+    if (!enableClock || isTrackingPaused) return;
+
+    try {
+      const settings = LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 2,
+      );
+      _positionSubscription = Geolocator.getPositionStream(
+        locationSettings: settings,
+      ).listen(
+        _onPositionUpdate,
+        onError: (err) {
+          debugPrint('GPS location stream error: $err');
+          gpsAvailable = false;
+          error = RentalError.gpsLost;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      debugPrint('Error starting GPS tracking: $e');
+    }
+  }
+
+  void _stopLocationTracking() {
+    _positionSubscription?.cancel();
+    _positionSubscription = null;
+    _lastGpsPosition = null;
+  }
+
+  void _onPositionUpdate(Position position) {
+    if (isTrackingPaused) return;
+
+    final rentalStillActive = switch (stage) {
+      RentalStage.riding ||
+      RentalStage.selectingReturn ||
+      RentalStage.returning => true,
+      _ => false,
+    };
+    if (!rentalStillActive) {
+      _stopLocationTracking();
+      return;
+    }
+
+    gpsAvailable = true;
+    if (error == RentalError.gpsLost) {
+      _clearError();
+    }
+
+    final newLatLng = LatLng(position.latitude, position.longitude);
+    riderLatLng = newLatLng;
+
+    // Accumulate distance moved during active riding
+    if (_lastGpsPosition != null && stage == RentalStage.riding) {
+      final distanceMeters = Geolocator.distanceBetween(
+        _lastGpsPosition!.latitude,
+        _lastGpsPosition!.longitude,
+        position.latitude,
+        position.longitude,
+      );
+      // Filter out noise/jitter: must move at least 2 meters and accuracy must be reliable
+      if (distanceMeters >= 2.0 && position.accuracy <= 35.0) {
+        metrics = metrics.copyWith(
+          distanceKm: metrics.distanceKm + (distanceMeters / 1000.0),
+        );
+        rideRoutePoints.add(newLatLng);
+      }
+    } else {
+      if (rideRoutePoints.isEmpty) {
+        rideRoutePoints.add(newLatLng);
+      }
+    }
+    _lastGpsPosition = position;
+
+    // Update distance to selected station if selecting return
+    if (selectedStation != null) {
+      stationDistanceMeters = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        selectedStation!.latitude,
+        selectedStation!.longitude,
+      ).round();
+      if (stationDistanceMeters! <= 250) {
+        isAtStation = true;
+      }
+    }
+
+    notifyListeners();
+  }
+
+  /// Pause tracking and timer when app is paused or page is not being viewed
+  void pauseTracking() {
+    if (isTrackingPaused) return;
+    isTrackingPaused = true;
+    _rideTimer?.cancel();
+    _rideTimer = null;
+    _positionSubscription?.pause();
+  }
+
+  /// Resume tracking and timer when app is resumed and page is visible
+  void resumeTracking() {
+    if (!isTrackingPaused) return;
+    isTrackingPaused = false;
+    final rentalStillActive = switch (stage) {
+      RentalStage.riding ||
+      RentalStage.selectingReturn ||
+      RentalStage.returning => true,
+      _ => false,
+    };
+    if (rentalStillActive) {
+      _startClock();
+      if (_positionSubscription?.isPaused ?? false) {
+        _positionSubscription?.resume();
+      } else if (_positionSubscription == null) {
+        _startLocationTracking();
+      }
+    }
   }
 
   void _startBikeReadyTimer() {
     _stopBikeReadyTimer();
-    _bikeReadyExpiresAt = _now().add(bikeReadyTimeout);
+    final serverExpiresAt = _session?.rental.reservationExpiresAt;
+    _bikeReadyExpiresAt =
+        (serverExpiresAt != null && serverExpiresAt.isAfter(_now()))
+            ? serverExpiresAt
+            : _now().add(bikeReadyTimeout);
     if (!enableClock) return;
     _bikeReadyTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _tickBikeReady();
@@ -1238,6 +1667,7 @@ class RentingController extends ChangeNotifier {
       if (stage != RentalStage.scan) {
         _resetLocal();
       }
+      _timeoutController.add(null);
     }
   }
 
@@ -1254,6 +1684,7 @@ class RentingController extends ChangeNotifier {
 
   void _resetLocal() {
     _stopClock();
+    _stopLocationTracking();
     _stopBikeReadyTimer();
     _session = null;
     _completedSession = null;
@@ -1276,15 +1707,36 @@ class RentingController extends ChangeNotifier {
     stationDistanceMeters = null;
     _arrivalPosition = null;
     _paypalOrder = null;
+    _paypalOrderLocale = null;
     _paypalAuthorizationId = null;
     _scannedBikeCode = null;
+    riderLatLng = null;
+    rideRoutePoints.clear();
+    _lastGpsPosition = null;
+    isTrackingPaused = false;
+    _depositDurationOverride = null;
+    _suspiciousDistanceMetersOverride = null;
+    _isSuspiciousDistanceOverride = null;
+    _distanceFromStartStationOverride = null;
     notifyListeners();
+  }
+
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
   }
 
   @override
   void dispose() {
+    _disposed = true;
     _stopClock();
+    _stopLocationTracking();
     _stopBikeReadyTimer();
+    _timeoutController.close();
     if (_ownsPayPalGateway) _paypalGateway.close();
     super.dispose();
   }

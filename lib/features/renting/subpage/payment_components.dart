@@ -295,14 +295,68 @@ Future<void> _showPaymentMethodPicker(
   );
 }
 
-class _PaymentMethodPickerSheet extends StatelessWidget {
+class _PaymentMethodPickerSheet extends StatefulWidget {
   const _PaymentMethodPickerSheet({required this.controller});
 
   final RentingController controller;
 
   @override
+  State<_PaymentMethodPickerSheet> createState() =>
+      _PaymentMethodPickerSheetState();
+}
+
+class _PaymentMethodPickerSheetState extends State<_PaymentMethodPickerSheet> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_handleControllerChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant _PaymentMethodPickerSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleControllerChange);
+      widget.controller.addListener(_handleControllerChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleControllerChange);
+    super.dispose();
+  }
+
+  void _handleControllerChange() {
+    if (!mounted) return;
+    if (widget.controller.stage != RentalStage.authorizing &&
+        widget.controller.stage != RentalStage.bikeCheck) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+    setState(() {});
+  }
+
+  Future<void> _openAddCard() async {
+    final repo = widget.controller.paymentMethodRepository ??
+        AppRepositories.fromSupabase(Supabase.instance.client).paymentMethods;
+    final paymentController = PaymentMethodsController(repo);
+    await Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => AddEditCardPage(controller: paymentController),
+      ),
+    );
+    if (!mounted) return;
+    await widget.controller.reloadPaymentMethods();
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final controller = widget.controller;
     return SafeArea(
       top: false,
       child: Padding(
@@ -318,7 +372,7 @@ class _PaymentMethodPickerSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            for (final method in controller.availablePaymentMethods)
+            for (final method in controller.availablePaymentMethods) ...[
               _PaymentMethodOption(
                 method: method,
                 selected: method.id == controller.selectedPaymentMethod?.id,
@@ -327,6 +381,21 @@ class _PaymentMethodPickerSheet extends StatelessWidget {
                   Navigator.of(context).pop();
                 },
               ),
+              const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 4),
+            OutlinedButton.icon(
+              key: const ValueKey('rent-add-payment-method'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: _openAddCard,
+              icon: const Icon(Icons.add_card_rounded),
+              label: const Text('Add Payment Method'),
+            ),
           ],
         ),
       ),

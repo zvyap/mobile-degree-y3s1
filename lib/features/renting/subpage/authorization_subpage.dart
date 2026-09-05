@@ -89,23 +89,51 @@ Future<void> _handleAuthorize(
   RentingController controller,
 ) async {
   if (controller.selectedPaymentMethod?.id == 'paypal') {
-    final approvalUrl = await controller.createPayPalOrder();
-    if (!context.mounted || approvalUrl == null) return;
+    // Automatically detect and use client language (e.g. Chinese -> zh-CN, English -> en-US)
+    final clientLocale = PayPalLocaleService.resolveClientLocale(context);
+
+    final approvalUrl = await controller.createPayPalOrder(
+      locale: clientLocale.bcp47,
+    );
+    if (!context.mounted) return;
+    if (controller.error == RentalError.bikeMaintenance ||
+        controller.error == RentalError.bikeUnavailable) {
+      await showBikeCannotRentDialog(context, controller: controller);
+      return;
+    }
+    if (approvalUrl == null) return;
 
     final result = await Navigator.of(context, rootNavigator: true)
         .push<PayPalCheckoutResult>(
           MaterialPageRoute(
-            builder: (context) => PayPalCheckoutPage(approvalUrl: approvalUrl),
+            builder: (context) => PayPalCheckoutPage(
+              approvalUrl: approvalUrl,
+              initialLocale: clientLocale,
+              controller: controller,
+            ),
           ),
         );
     if (!context.mounted) return;
 
     if (result == PayPalCheckoutResult.approved) {
       await controller.authorizePayPalOrder();
+      if (context.mounted &&
+          (controller.error == RentalError.bikeMaintenance ||
+              controller.error == RentalError.bikeUnavailable)) {
+        await showBikeCannotRentDialog(context, controller: controller);
+      }
+    } else if (result == PayPalCheckoutResult.timedOut) {
+      // User was kicked out due to rent timeout. Controller already reset.
+      return;
     } else {
       controller.cancelPayPalCheckout();
     }
   } else {
     await controller.authorizePayment();
+    if (context.mounted &&
+        (controller.error == RentalError.bikeMaintenance ||
+            controller.error == RentalError.bikeUnavailable)) {
+      await showBikeCannotRentDialog(context, controller: controller);
+    }
   }
 }

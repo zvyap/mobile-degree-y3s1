@@ -1,15 +1,26 @@
 part of '../renting_flow_page.dart';
 
-class _ScanStage extends StatefulWidget {
-  const _ScanStage({required this.controller});
+class ScanStage extends StatefulWidget {
+  const ScanStage({
+    required this.controller,
+    @visibleForTesting this.scannerController,
+    @visibleForTesting this.mockPermissionDenied,
+    @visibleForTesting this.onGrantPermission,
+    super.key,
+  });
 
   final RentingController controller;
+  final MobileScannerController? scannerController;
+  final bool? mockPermissionDenied;
+  final VoidCallback? onGrantPermission;
 
   @override
-  State<_ScanStage> createState() => _ScanStageState();
+  State<ScanStage> createState() => _ScanStageState();
 }
 
-class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
+typedef _ScanStage = ScanStage;
+
+class _ScanStageState extends State<ScanStage> with WidgetsBindingObserver {
   MobileScannerController? _scannerController;
   bool _isProcessing = false;
   bool _isShowingErrorDialog = false;
@@ -19,30 +30,57 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
 
   bool get _isTest => Platform.environment.containsKey('FLUTTER_TEST');
 
+  bool get _isPermissionDenied {
+    if (widget.mockPermissionDenied != null) {
+      return widget.mockPermissionDenied!;
+    }
+    final controller = _scannerController;
+    if (controller == null) return false;
+    final state = controller.value;
+    return state.error?.errorCode == MobileScannerErrorCode.permissionDenied ||
+        (state.isInitialized && !state.hasCameraPermission);
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (!_isTest) {
+    if (!_isTest || widget.scannerController != null) {
       _initScanner();
     }
   }
 
   void _initScanner() {
-    _scannerController = MobileScannerController(
-      detectionSpeed: DetectionSpeed.normal,
-      detectionTimeoutMs: 250,
-      formats: const [BarcodeFormat.qrCode],
-      autoZoom: true,
-      returnImage: false,
-    );
+    _scannerController = widget.scannerController ??
+        MobileScannerController(
+          detectionSpeed: DetectionSpeed.normal,
+          detectionTimeoutMs: 250,
+          formats: const [BarcodeFormat.qrCode],
+          autoZoom: true,
+          returnImage: false,
+          facing: CameraFacing.back,
+        );
+    _scannerController!.addListener(_onScannerStateChanged);
+  }
+
+  void _onScannerStateChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didUpdateWidget(covariant _ScanStage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.scannerController != widget.scannerController) {
+      oldWidget.scannerController?.removeListener(_onScannerStateChanged);
+      _scannerController = widget.scannerController;
+      _scannerController?.addListener(_onScannerStateChanged);
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_isTest || _scannerController == null) return;
     final controller = _scannerController!;
-    if (!controller.value.hasCameraPermission) return;
 
     switch (state) {
       case AppLifecycleState.resumed:
@@ -63,7 +101,10 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(_scannerController?.dispose());
+    _scannerController?.removeListener(_onScannerStateChanged);
+    if (widget.scannerController == null) {
+      unawaited(_scannerController?.dispose());
+    }
     super.dispose();
   }
 
@@ -92,6 +133,9 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
         setState(() => _isProcessing = false);
         if (widget.controller.error == RentalError.invalidQr) {
           _showInvalidQrDialog();
+        } else if (widget.controller.error == RentalError.bikeMaintenance ||
+            widget.controller.error == RentalError.bikeUnavailable) {
+          _showBikeCannotRentDialog();
         }
       });
       break;
@@ -102,6 +146,18 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
     if (!mounted || _isShowingErrorDialog) return;
     setState(() => _isShowingErrorDialog = true);
     await showInvalidQrDialog(context, controller: widget.controller);
+    if (mounted) {
+      setState(() {
+        _isShowingErrorDialog = false;
+        _lastScanTime = DateTime.now();
+      });
+    }
+  }
+
+  Future<void> _showBikeCannotRentDialog() async {
+    if (!mounted || _isShowingErrorDialog) return;
+    setState(() => _isShowingErrorDialog = true);
+    await showBikeCannotRentDialog(context, controller: widget.controller);
     if (mounted) {
       setState(() {
         _isShowingErrorDialog = false;
@@ -121,12 +177,27 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
     } catch (_) {}
   }
 
-  Future<void> _switchCamera() async {
+  Future<void> _grantPermission() async {
+    widget.onGrantPermission?.call();
     final controller = _scannerController;
-    if (controller == null || !controller.value.isRunning) return;
+    if (controller == null) return;
     try {
-      await controller.switchCamera();
+      await controller.start();
     } catch (_) {}
+    if (mounted && _isPermissionDenied) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.cameraPermissionSettingsPrompt),
+          action: SnackBarAction(
+            label: context.l10n.settings,
+            onPressed: () {
+              unawaited(Geolocator.openAppSettings());
+            },
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -140,8 +211,10 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
           aspectRatio: 0.82,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: _isTest || _scannerController == null
-                ? _buildFallbackPreview(context)
+            child: (_isTest && widget.scannerController == null)
+                ? (widget.mockPermissionDenied == true
+                    ? _buildNoPermissionView(context)
+                    : _buildFallbackPreview(context))
                 : Stack(
                     children: [
                       Positioned.fill(
@@ -149,12 +222,21 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
                           controller: _scannerController,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error) {
+                            if (error.errorCode ==
+                                MobileScannerErrorCode.permissionDenied) {
+                              return _buildNoPermissionView(context);
+                            }
                             return _buildFallbackPreview(context);
                           },
                           onDetect: _onDetect,
                         ),
                       ),
-                      _buildOverlay(context),
+                      if (_isPermissionDenied)
+                        Positioned.fill(
+                          child: _buildNoPermissionView(context),
+                        )
+                      else
+                        _buildOverlay(context),
                     ],
                   ),
           ),
@@ -186,6 +268,145 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNoPermissionView(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Semantics(
+      label:
+          '${context.l10n.cameraNoPermission}. ${context.l10n.cameraPermissionDescription}',
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF1A1D24),
+              scheme.error.withValues(alpha: 0.12),
+              const Color(0xFF0D0F14),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Stack(
+          children: [
+            // Camera status pill top left
+            Positioned(
+              top: 14,
+              left: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.no_photography_rounded,
+                      color: scheme.error,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      context.l10n.cameraNoPermission,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Center icon & "No Permission"
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: scheme.error.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: scheme.error.withValues(alpha: 0.35),
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.no_photography_rounded,
+                        size: 40,
+                        color: scheme.error,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      context.l10n.cameraNoPermission,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Bottom small description and Grant Permission button
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      context.l10n.cameraPermissionDescription,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.75),
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      key: const ValueKey<String>('rent-grant-permission-button'),
+                      onPressed: _grantPermission,
+                      icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                      label: Text(context.l10n.grantPermission),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                        backgroundColor: scheme.primary,
+                        foregroundColor: scheme.onPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -227,47 +448,26 @@ class _ScanStageState extends State<_ScanStage> with WidgetsBindingObserver {
           ),
         ),
 
-        // Controls top right (Torch & Camera Switch)
+        // Control top right (Torch)
         Positioned(
           top: 10,
           right: 10,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    _torchOn
-                        ? Icons.flash_on_rounded
-                        : Icons.flash_off_rounded,
-                    color: _torchOn ? Colors.amber : Colors.white,
-                    size: 20,
-                  ),
-                  tooltip: 'Flashlight',
-                  onPressed: _toggleTorch,
-                ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.55),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(
+                _torchOn
+                    ? Icons.flash_on_rounded
+                    : Icons.flash_off_rounded,
+                color: _torchOn ? Colors.amber : Colors.white,
+                size: 20,
               ),
-              const SizedBox(width: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.cameraswitch_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  tooltip: 'Switch camera',
-                  onPressed: _switchCamera,
-                ),
-              ),
-            ],
+              tooltip: 'Flashlight',
+              onPressed: _toggleTorch,
+            ),
           ),
         ),
 
@@ -474,6 +674,46 @@ Future<void> showInvalidQrDialog(
   controller?.clearError();
 }
 
+Future<void> showBikeCannotRentDialog(
+  BuildContext context, {
+  required RentingController controller,
+}) async {
+  final message = _rentalError(context, controller);
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    builder: (dialogContext) {
+      final theme = Theme.of(dialogContext);
+      final scheme = theme.colorScheme;
+      return AlertDialog(
+        icon: Icon(
+          controller.error == RentalError.bikeMaintenance
+              ? Icons.build_circle_outlined
+              : Icons.block_rounded,
+          size: 36,
+          color: scheme.error,
+        ),
+        title: Text(dialogContext.l10n.bikeCannotBeRentedTitle),
+        content: Text(
+          message,
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          FilledButton(
+            key: const ValueKey<String>('rent-bike-status-ok-button'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(120, 48),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 Future<void> _handleCameraTap(
   BuildContext context,
   RentingController controller, {
@@ -492,6 +732,11 @@ Future<void> _handleCameraTap(
       await onInvalidQr();
     } else if (context.mounted) {
       await showInvalidQrDialog(context, controller: controller);
+    }
+  } else if (controller.error == RentalError.bikeMaintenance ||
+      controller.error == RentalError.bikeUnavailable) {
+    if (context.mounted) {
+      await showBikeCannotRentDialog(context, controller: controller);
     }
   }
 }
@@ -716,4 +961,5 @@ String _debugBikeStatusLabel(BikeDatabaseStatus status) => switch (status) {
   BikeDatabaseStatus.maintenance => 'maintenance',
   BikeDatabaseStatus.retired => 'retired',
   BikeDatabaseStatus.lost => 'lost',
+  BikeDatabaseStatus.unavailable => 'unavailable',
 };

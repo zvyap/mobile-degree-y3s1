@@ -22,6 +22,8 @@ enum RentalError {
   invalidTransition,
   invalidQr,
   bikeReserved,
+  bikeMaintenance,
+  bikeUnavailable,
   holdDeclined,
   paymentConfiguration,
   paymentNetwork,
@@ -79,6 +81,8 @@ class ReturnStation {
     required this.name,
     required this.distanceMeters,
     required this.availableDocks,
+    this.availableBikes = 0,
+    this.capacity = 0,
     this.qrToken = '',
     this.latitude = 0,
     this.longitude = 0,
@@ -89,6 +93,8 @@ class ReturnStation {
   final String name;
   final int distanceMeters;
   final int availableDocks;
+  final int availableBikes;
+  final int capacity;
   final String qrToken;
   final double latitude;
   final double longitude;
@@ -144,3 +150,33 @@ class RentalReceipt {
     );
   }
 }
+
+enum RideWarningSeverity {
+  warning,
+  critical,
+}
+
+enum RideWarningType {
+  depositExceeded,
+  doubleDepositLegalAction,
+  suspiciousActivity,
+  suspiciousLegalAction,
+}
+
+class ActiveRideWarning {
+  const ActiveRideWarning({
+    required this.type,
+    required this.severity,
+    required this.title,
+    required this.message,
+  });
+
+  final RideWarningType type;
+  final RideWarningSeverity severity;
+  final String title;
+  final String message;
+
+  bool get isCritical => severity == RideWarningSeverity.critical;
+  bool get isWarning => severity == RideWarningSeverity.warning;
+}
+
