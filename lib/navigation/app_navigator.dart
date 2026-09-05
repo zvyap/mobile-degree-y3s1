@@ -14,6 +14,8 @@ import 'package:bike_renting_app/features/history/ride_history_page.dart';
 import 'package:bike_renting_app/features/qr/qr_scan_page.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/settings/settings_page.dart';
+import 'package:bike_renting_app/features/user/user_controller.dart';
+import 'package:bike_renting_app/features/user/user_management_page.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:flutter/material.dart';
@@ -30,12 +32,16 @@ import 'package:bike_renting_app/data/repositories/payment_method_repository.dar
 import 'package:bike_renting_app/features/payment_methods/pages/payment_methods_page.dart';
 import 'package:bike_renting_app/features/bike/pages/pending_report_detail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../features/user/add_user.dart';
+import '../features/user/edit_user.dart';
 class AppNavigator extends StatelessWidget {
   const AppNavigator({
     super.key,
     required this.navigatorKey,
     required this.observer,
     required this.rentingController,
+    required this.profileController,
     required this.userController,
     required this.onSelectRootPage,
     required this.onOpenPage,
@@ -45,7 +51,8 @@ class AppNavigator extends StatelessWidget {
   final GlobalKey<NavigatorState> navigatorKey;
   final NavigatorObserver observer;
   final RentingController rentingController;
-  final ProfileController userController;
+  final ProfileController profileController;
+  final UserController userController;
   final ValueChanged<AppPage> onSelectRootPage;
   final ValueChanged<AppPage> onOpenPage;
   final ValueChanged<Brightness> onToggleTheme;
@@ -127,10 +134,11 @@ class AppNavigator extends StatelessWidget {
         ride: (arguments as RideDetailsRouteArguments).ride,
       ),
       AppPage.profile => ProfilePage(
-        userCTRL: userController,
+        profileCTRL: profileController,
       ),
       AppPage.admin => AdminManagementPage(
         onNavigate: onSelectRootPage,
+        onOpenUserManagement: () => onOpenPage(AppPage.userManagement),
         onOpenBikeManagement: () => onOpenPage(AppPage.bikeManagement),
         onOpenStationManagement: () => onOpenPage(AppPage.stationManagement),
         onOpenRentingManagement: () => onOpenPage(AppPage.rentingManagement),
@@ -245,6 +253,29 @@ class AppNavigator extends StatelessWidget {
         },
       ),
 
+      AppPage.editUser => EditUserPage(
+        userCTRL: userController,
+        userId: arguments as String,
+      ),
+
+      AppPage.addUser => AddUserPage(
+        userCTRL: userController,
+      ),
+      AppPage.userManagement => UserManagementPage(
+        userCTRL: userController,
+        onEditUser: (userId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.editUser.routeName,
+            arguments: userId,
+          );
+        },
+        onAddUser: () {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.addUser.routeName,
+          );
+        },
+
+      ),
 
       AppPage.settings => SettingsPage(onToggleTheme: onToggleTheme),
       AppPage.paymentMethods => PaymentMethodsPage(
