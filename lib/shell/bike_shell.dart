@@ -37,9 +37,7 @@ class _BikeShellState extends State<BikeShell> {
   StreamSubscription<String>? _forceEndSubscription;
 
   bool get _isAdmin =>
-      kDebugMode ||
-      _profileController.profile?.role == AppUserRole.admin ||
-      _profileController.profile == null;
+      _profileController.profile?.role == AppUserRole.admin;
 
   @override
   void initState() {
