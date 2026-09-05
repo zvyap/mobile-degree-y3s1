@@ -47,6 +47,15 @@ class ProfileRepository {
     return UserProfileRecord.fromJson(json);
   }
 
+  Future<UserProfileRecord?> findById(String userId) async {
+    final json = await _dataSource.selectMaybeSingle(
+      table: 'profiles',
+      columns: _columns,
+      equals: {'id': userId},
+    );
+    return json == null ? null : UserProfileRecord.fromJson(json);
+  }
+
   String _requireUserId() {
     final userId = _dataSource.currentUserId;
     if (userId == null) {

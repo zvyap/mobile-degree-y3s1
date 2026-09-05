@@ -2,12 +2,24 @@ import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/features/splash/cold_boot_loading_page.dart';
 import 'package:bike_renting_app/shared/app_toast.dart';
+import 'package:bike_renting_app/shared/connection_service.dart';
 import 'package:bike_renting_app/shared/location_safeguard.dart';
 import 'package:bike_renting_app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class BikeRentingApp extends StatefulWidget {
-  const BikeRentingApp({super.key});
+  const BikeRentingApp({
+    super.key,
+    this.testInternet = testInternetConnection,
+    this.testSupabase = testSupabaseConnection,
+    this.initSupabase = ensureSupabaseInitialized,
+    this.minimumSplashDuration = const Duration(milliseconds: 600),
+  });
+
+  final Future<bool> Function() testInternet;
+  final Future<bool> Function() testSupabase;
+  final Future<void> Function() initSupabase;
+  final Duration minimumSplashDuration;
 
   @override
   State<BikeRentingApp> createState() => _BikeRentingAppState();
@@ -37,7 +49,13 @@ class _BikeRentingAppState extends State<BikeRentingApp> {
       builder: (context, child) => AppToastHost(
         child: LocationSafeguard(child: child!),
       ),
-      home: ColdBootLoadingPage(onToggleTheme: _toggleTheme),
+      home: ColdBootLoadingPage(
+        onToggleTheme: _toggleTheme,
+        testInternet: widget.testInternet,
+        testSupabase: widget.testSupabase,
+        initSupabase: widget.initSupabase,
+        minimumDuration: widget.minimumSplashDuration,
+      ),
     );
   }
 }

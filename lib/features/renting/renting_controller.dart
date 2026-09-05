@@ -77,6 +77,14 @@ class RentingController extends ChangeNotifier {
       StreamController<void>.broadcast();
   Stream<void> get onRentalTimeout => _timeoutController.stream;
 
+  final StreamController<String> _forceEndController =
+      StreamController<String>.broadcast();
+  Stream<String> get onRentalForceEnded => _forceEndController.stream;
+
+  bool isForceEndDialogShowing = false;
+  RealtimeChannel? _realtimeChannel;
+  int _statusCheckCounter = 0;
+
   String? get paypalAuthorizationId => _paypalAuthorizationId;
   Uri? get paypalApprovalUrl => _paypalOrder?.approvalUrl;
   DateTime? get bikeReadyExpiresAt => _bikeReadyExpiresAt;
@@ -919,7 +927,76 @@ class RentingController extends ChangeNotifier {
       ),
       distanceKm: metrics.distanceKm + (useSimulatedDistance ? distanceKm : 0),
     );
+    _statusCheckCounter++;
+    if (_statusCheckCounter % 4 == 0) {
+      unawaited(checkActiveRentalStatus());
+    }
     notifyListeners();
+  }
+
+  Future<void> checkActiveRentalStatus() async {
+    final session = _session;
+    if (session == null) return;
+    try {
+      final rentalId = session.rental.id;
+      final current = await repository.getRental(rentalId);
+      if (current != null) {
+        final isEnded = current.status == RentalDatabaseStatus.completed ||
+            current.status == RentalDatabaseStatus.cancelled ||
+            current.status == RentalDatabaseStatus.lost;
+        if (isEnded && current.failureReason == 'force_ended_by_admin') {
+          handleAdminForceEnd();
+        }
+      }
+    } catch (_) {}
+  }
+
+  void handleAdminForceEnd([String? customMessage]) {
+    _stopClock();
+    _stopLocationTracking();
+    _stopRealtimeEvents();
+    _stopBikeReadyTimer();
+    _session = null;
+    _completedSession = null;
+    stage = RentalStage.scan;
+    metrics = const RideMetrics(elapsedSeconds: 0, distanceKm: 0);
+    _clearError();
+    notifyListeners();
+    final message = customMessage ??
+        'Your renting session has been force ended by an admin.';
+    _forceEndController.add(message);
+  }
+
+  void _listenToRealtimeEvents(int rentalId) {
+    _stopRealtimeEvents();
+    try {
+      final client = Supabase.instance.client;
+      _realtimeChannel = client.channel('rental_session_$rentalId')
+        ..onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'rentals',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: rentalId,
+          ),
+          callback: (payload) {
+            final newRecord = payload.newRecord;
+            if (newRecord['failure_reason'] == 'force_ended_by_admin') {
+              handleAdminForceEnd();
+            }
+          },
+        )
+        ..subscribe();
+    } catch (_) {}
+  }
+
+  void _stopRealtimeEvents() {
+    try {
+      _realtimeChannel?.unsubscribe();
+      _realtimeChannel = null;
+    } catch (_) {}
   }
 
   void setGpsAvailable(bool value) {
@@ -1240,6 +1317,7 @@ class RentingController extends ChangeNotifier {
 
   void _applySnapshot(RentalSessionSnapshot snapshot) {
     _session = snapshot;
+    _listenToRealtimeEvents(snapshot.rental.id);
     bike = RentalBike(
       id: snapshot.bike.code,
       batteryPercent: snapshot.bike.batteryPercent,
@@ -1686,6 +1764,7 @@ class RentingController extends ChangeNotifier {
     _stopClock();
     _stopLocationTracking();
     _stopBikeReadyTimer();
+    _stopRealtimeEvents();
     _session = null;
     _completedSession = null;
     stage = RentalStage.scan;
@@ -1736,7 +1815,9 @@ class RentingController extends ChangeNotifier {
     _stopClock();
     _stopLocationTracking();
     _stopBikeReadyTimer();
+    _stopRealtimeEvents();
     _timeoutController.close();
+    _forceEndController.close();
     if (_ownsPayPalGateway) _paypalGateway.close();
     super.dispose();
   }

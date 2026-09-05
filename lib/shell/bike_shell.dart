@@ -34,6 +34,8 @@ class _BikeShellState extends State<BikeShell> {
   AppPage _currentPage = AppPage.home;
   AppPage _selectedRootPage = AppPage.home;
 
+  StreamSubscription<String>? _forceEndSubscription;
+
   bool get _isAdmin =>
       kDebugMode ||
       _profileController.profile?.role == AppUserRole.admin ||
@@ -51,6 +53,11 @@ class _BikeShellState extends State<BikeShell> {
       bypassGeofence: kDebugMode,
     );
     unawaited(_rentingController.initialize());
+    _forceEndSubscription = _rentingController.onRentalForceEnded.listen((message) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showGlobalForceEndAlert(message);
+      });
+    });
     _profileController = ProfileController(repositories.profiles)
       ..addListener(_handleProfileChanged)
       ..loadProfile();
@@ -61,6 +68,51 @@ class _BikeShellState extends State<BikeShell> {
       onDetach: _handleAppLifecycleExit,
       onHide: _handleAppLifecycleExit,
     );
+  }
+
+  Future<void> _showGlobalForceEndAlert(String message) async {
+    if (!mounted || _rentingController.isForceEndDialogShowing) return;
+    _rentingController.isForceEndDialogShowing = true;
+    final dialogContext = _navigatorKey.currentContext ?? context;
+    try {
+      await showDialog<void>(
+        context: dialogContext,
+        useRootNavigator: true,
+        barrierDismissible: false,
+        builder: (ctx) {
+          final theme = Theme.of(ctx);
+          return AlertDialog(
+            icon: Icon(
+              Icons.warning_amber_rounded,
+              size: 44,
+              color: theme.colorScheme.error,
+            ),
+            title: const Text(
+              'Session Ended by Admin',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              message,
+              textAlign: TextAlign.center,
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              FilledButton(
+                key: const ValueKey('rent-force-ended-modal-ok'),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _selectRootPage(AppPage.home);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      _rentingController.isForceEndDialogShowing = false;
+    }
   }
 
   void _handleAppLifecycleExit() {
@@ -74,6 +126,7 @@ class _BikeShellState extends State<BikeShell> {
 
   @override
   void dispose() {
+    _forceEndSubscription?.cancel();
     _lifecycleListener.dispose();
     _profileController.removeListener(_handleProfileChanged);
     _profileController.dispose();

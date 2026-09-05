@@ -1,8 +1,10 @@
 import 'package:bike_renting_app/data/database/database_data_source.dart';
 import 'package:bike_renting_app/data/database/database_exception.dart';
+import 'package:bike_renting_app/data/models/admin_rental_session.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/data/models/rental_session_snapshot.dart';
 import 'package:bike_renting_app/data/repositories/bike_repository.dart';
+import 'package:bike_renting_app/data/repositories/profile_repository.dart';
 import 'package:bike_renting_app/data/repositories/station_repository.dart';
 
 abstract interface class RentalSessionRepository {
@@ -38,6 +40,14 @@ abstract interface class RentalSessionRepository {
   Future<BikeDatabaseRecord?> getBike(int bikeId);
 
   Future<BikeDatabaseRecord?> findBikeByQrToken(String qrToken);
+
+  Future<RentalDatabaseRecord?> getRental(int rentalId);
+
+  Future<List<AdminRentalSession>> listActiveRentals();
+
+  Future<AdminRentalSession> getRentalSessionDetails(int rentalId);
+
+  Future<RentalDatabaseRecord> adminForceEndRental(int rentalId);
 }
 
 /// Debug-only escape hatch for the camera-less debug scan stage. Remove
@@ -50,7 +60,8 @@ class RentalRepository
     implements RentalSessionRepository, DebugRentBikeSource {
   RentalRepository(this._dataSource)
     : _bikes = BikeRepository(_dataSource),
-      _stations = StationRepository(_dataSource);
+      _stations = StationRepository(_dataSource),
+      _profiles = ProfileRepository(_dataSource);
 
   static const _rentalColumns =
       'id, public_id, user_id, bike_id, rental_plan_id, payment_method_id, '
@@ -83,6 +94,7 @@ class RentalRepository
   final DatabaseDataSource _dataSource;
   final BikeRepository _bikes;
   final StationRepository _stations;
+  final ProfileRepository _profiles;
 
   @override
   Future<List<StationAvailabilityRecord>> listReturnStations() {
@@ -284,6 +296,75 @@ class RentalRepository
       bike: bike,
       startStation: startStation,
       endStation: endStation,
+    );
+  }
+
+  @override
+  Future<RentalDatabaseRecord?> getRental(int rentalId) async {
+    final rows = await _dataSource.selectList(
+      table: 'rentals',
+      columns: _rentalColumns,
+      equals: {'id': rentalId},
+      limit: 1,
+    );
+    return rows.isEmpty ? null : RentalDatabaseRecord.fromJson(rows.single);
+  }
+
+  @override
+  Future<List<AdminRentalSession>> listActiveRentals() async {
+    final rows = await _dataSource.selectList(
+      table: 'rentals',
+      columns: _rentalColumns,
+      includedIn: {'status': _blockingStatuses},
+      orderBy: 'created_at',
+      ascending: false,
+    );
+    final rentals = rows.map(RentalDatabaseRecord.fromJson).toList();
+    return Future.wait(rentals.map(_hydrateAdminSession));
+  }
+
+  @override
+  Future<AdminRentalSession> getRentalSessionDetails(int rentalId) async {
+    final row = await _dataSource.selectMaybeSingle(
+      table: 'rentals',
+      columns: _rentalColumns,
+      equals: {'id': rentalId},
+    );
+    if (row == null) {
+      throw const DatabaseException(
+        code: DatabaseErrorCode.notFound,
+        message: 'rental_not_found',
+      );
+    }
+    return _hydrateAdminSession(RentalDatabaseRecord.fromJson(row));
+  }
+
+  @override
+  Future<RentalDatabaseRecord> adminForceEndRental(int rentalId) async {
+    return _callRentalRpc('force_end_rental', {
+      'p_rental_id': rentalId,
+    });
+  }
+
+  Future<AdminRentalSession> _hydrateAdminSession(RentalDatabaseRecord rental) async {
+    final results = await Future.wait<Object?>([
+      _bikes.findById(rental.bikeId),
+      _stations.findById(rental.startStationId),
+      if (rental.endStationId == null)
+        Future<StationAvailabilityRecord?>.value()
+      else
+        _stations.findById(rental.endStationId!),
+      if (rental.userId == null)
+        Future<UserProfileRecord?>.value()
+      else
+        _profiles.findById(rental.userId!),
+    ]);
+    return AdminRentalSession(
+      rental: rental,
+      bike: results[0] as BikeDatabaseRecord?,
+      startStation: results[1] as StationAvailabilityRecord?,
+      endStation: results[2] as StationAvailabilityRecord?,
+      user: results[3] as UserProfileRecord?,
     );
   }
 

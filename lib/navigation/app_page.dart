@@ -25,7 +25,9 @@ enum AppPage {
   reportForm(routeName: '/admin/bikes/reports/new', icon: Icons.add_rounded,),
   pendingReportDetail(routeName: '/admin/bikes/reports/pending/detail',icon: Icons.description_outlined,),
   settings(routeName: '/settings', icon: Icons.settings_rounded),
-  paymentMethods(routeName: '/settings/payment-methods', icon: Icons.payment_rounded);
+  paymentMethods(routeName: '/settings/payment-methods', icon: Icons.payment_rounded),
+  rentingManagement(routeName: '/admin/rentals', icon: Icons.pedal_bike_rounded),
+  rentingDetail(routeName: '/admin/rentals/detail', icon: Icons.receipt_long_rounded);
 
   const AppPage({required this.routeName, required this.icon});
 
@@ -57,6 +59,8 @@ enum AppPage {
     reportForm => 'New Report',
     pendingReportDetail => 'Pending Report Details',
     paymentMethods => 'Payment Methods',
+    rentingManagement => 'Active Rentals',
+    rentingDetail => 'Rental Details',
   };
 
   String navigationLabel(AppLocalizations l10n) => switch (this) {

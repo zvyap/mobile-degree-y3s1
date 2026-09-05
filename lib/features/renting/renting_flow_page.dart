@@ -66,6 +66,7 @@ class _RentingFlowPageState extends State<RentingFlowPage>
   late RentingController _controller;
   bool _lastLockState = false;
   StreamSubscription<void>? _timeoutSubscription;
+  StreamSubscription<String>? _forceEndSubscription;
   bool _isTimeoutAlertShowing = false;
 
   @override
@@ -119,6 +120,56 @@ class _RentingFlowPageState extends State<RentingFlowPage>
         _showTimeoutAlert();
       });
     });
+    _forceEndSubscription?.cancel();
+    _forceEndSubscription = _controller.onRentalForceEnded.listen((message) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showForceEndAlert(message);
+      });
+    });
+  }
+
+  Future<void> _showForceEndAlert(String message) async {
+    if (!mounted || _controller.isForceEndDialogShowing) return;
+    _controller.isForceEndDialogShowing = true;
+    try {
+      await showDialog<void>(
+        context: context,
+        useRootNavigator: true,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          final theme = Theme.of(dialogContext);
+          return AlertDialog(
+            icon: Icon(
+              Icons.warning_amber_rounded,
+              size: 44,
+              color: theme.colorScheme.error,
+            ),
+            title: const Text(
+              'Session Ended by Admin',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              message,
+              textAlign: TextAlign.center,
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              FilledButton(
+                key: const ValueKey('rent-force-ended-modal-ok'),
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  widget.onRequestExit?.call();
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      _controller.isForceEndDialogShowing = false;
+    }
   }
 
   Future<void> _showTimeoutAlert() async {
@@ -176,6 +227,7 @@ class _RentingFlowPageState extends State<RentingFlowPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timeoutSubscription?.cancel();
+    _forceEndSubscription?.cancel();
     _controller.removeListener(_handleControllerChange);
     _controller.pauseTracking();
     if (_controller.stage == RentalStage.bikeCheck ||
