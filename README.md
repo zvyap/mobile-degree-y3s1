@@ -1,91 +1,32 @@
 # Bike Renting App
 
-Flutter mobile application for renting shared bikes. It uses a Material 3 interface, light and dark themes, accessible touch controls, and reduced-motion support.
+Flutter mobile app for renting shared bikes. Material 3 UI, light and dark themes, accessible touch targets, and reduced-motion support.
 
-## Core Modules and Pages
+## Modules
 
-| Module | Pages / functions |
+| Module | Functions |
 | --- | --- |
-| Global layout module | `BikeShell` app shell, safe-area layout, page header, back action, settings page, theme switcher, and bottom navigation. |
-| User module | User module landing page for profile, wallet, permissions, and ride history. |
-| Bike renting module | QR scan, bike check, payment-hold authorization, unlock, active ride tracking, return-station selection, dock return, charging, and receipt. |
-| Bike station module | Station module landing page for nearby stations, dock capacity, available return points, and station status. |
-| Bike management module | Bike module landing page for fleet health, battery status, bike availability, and maintenance queue. |
+| Global layout | `BikeShell` app shell, safe-area layout, bottom navigation, settings, theme switcher. |
+| User | Profile, wallet, permissions, ride history. |
+| Renting | QR scan, bike check, payment hold, unlock, active ride, return station, dock return, charging, receipt. |
+| Station | Nearby stations, dock capacity, return points, station status. |
+| Bike management | Fleet health, battery status, availability, maintenance queue. |
 
-The home dashboard combines summary information from the renting, station, and bike management modules: available bikes, active rides, open docks, and a station preview.
+The home dashboard summarizes available bikes, active rides, open docks, and a station preview.
 
 ## SDG 9: Industry, Innovation and Infrastructure
 
-This app supports **SDG 9** by using a digital shared-mobility service to make transport infrastructure easier to access and manage.
-
-- Riders can discover bikes and stations, unlock a bike through QR scanning, and return it to an available dock.
-- Station capacity and bike availability can help operators make better infrastructure decisions, such as where to add docks or redistribute bikes.
-- Fleet-health and maintenance information support more reliable, efficient cycling infrastructure.
-- The app's data-driven design can reduce manual operational work and encourage innovation in sustainable urban transport.
+The app supports SDG 9 by making shared transport infrastructure easier to access and manage: riders discover bikes and stations and unlock bikes via QR scan, while station capacity, bike availability, and fleet-health data help operators plan docks, redistribute bikes, and keep cycling infrastructure reliable.
 
 ## Government Dataset Use
 
-Home currently shows local weather values at the UI integration point. A TODO marks where the cached government API response and location lookup will replace them.
+Home currently shows local weather values at the UI integration point, with a TODO marking where the cached `api.met.gov.my` response and location lookup will replace them.
 
-The planned implementation will fetch and cache weather data from `api.met.gov.my`, resolve the user's current coordinates into a detailed location, translate documented Bahasa Melayu forecast values into English, and preserve unknown Bahasa Melayu wording as a fallback.
+Planned datasets: MET Malaysia weather forecasts (rider weather display), open-data cycling infrastructure (supported bike locations and routes), public transport stops and timetables (first/last-mile trip planning), traffic and weather alerts (route warnings and operations planning), and local authority boundaries and points of interest (station coverage). Each dataset must be checked for licence, update frequency, accuracy, and API terms before release.
 
-| Dataset type | Use in the app |
-| --- | --- |
-| MET Malaysia weather forecast | Display current and next-hour weather conditions around the rider. |
-| Government open-data portal station, road, and cycling-infrastructure data | Show supported bike locations, cycling routes, and safe access to stations. |
-| Public transport stop and timetable data | Help users plan first-mile and last-mile bike trips to buses, rail stations, or other public transport. |
-| Traffic, road-closure, and weather-alert data | Warn riders about disrupted routes and help operations plan bike redistribution or maintenance. |
-| Local authority geographic boundaries and points of interest | Organize station coverage areas and help users find nearby public destinations. |
+## Navigation
 
-Before release, the weather TODO must be completed with the cached API integration. Each dataset must be checked for its licence, update frequency, geographic accuracy, and API terms. Cached government data should keep the app usable when a source is temporarily unavailable.
-
-## Navigation Relation
-
-Current navigation has one global shell. The items labelled **planned** are in the intended structure but do not yet have dedicated pages in the current code.
-
-```text
-BikeRent App
-|
-L-- Global layout: BikeShell
-    |
-    +-- Login (planned)
-    |   |
-    |   +-- Register (planned)
-    |   L-- Forgot password (planned)
-    |
-    +-- Home dashboard
-    |   L-- QRCode / current ride
-    |
-    +-- Admin page: top-bar icon beside Settings
-    |   +-- Bike management page
-    |   |   L-- Bike list (planned)
-    |   +-- Station management page
-    |   |   L-- Station create (planned)
-    |   L-- User management page
-    |       +-- User create (planned)
-    |       L-- User renting history (planned)
-    |           L-- Ride details (planned)
-    |
-    +-- Ride history (planned)
-    |   L-- Ride details (planned)
-    +-- QRCode / current ride
-    |   L-- Bike check
-    |       L-- Payment authorization
-    |           L-- Unlock bike
-    |               L-- Active ride
-    |                   L-- Select return station
-    |                       L-- Return and confirm dock
-    |                           L-- Charge payment
-    |                               L-- Rental receipt
-    |                                   L-- Home dashboard
-    +-- Station page
-    |   L-- Station details (planned)
-    |       L-- Station route (planned)
-    +-- Profile page (planned)
-    L-- Settings page
-```
-
-The bottom navigation opens Home, Stations, Scan, History, and Profile. `AppPage` defines each typed route and its header/navigation metadata, while the nested `Navigator` owns root replacement and child-page back stacks. When `BikeShell._isAdmin` is `true`, the header shows an **Admin management** icon beside Settings. It opens the Admin page, whose actions open station management, bike management, and user management destinations. The renting flow handles back through its previous applicable step.
+One global shell (`BikeShell`) hosts: Home dashboard, QRCode/current ride, Station page, Profile (planned), Settings, and an Admin page (bike, station, and user management) shown via a header icon. The renting flow is a linear chain: bike check → payment authorization → unlock → active ride → return station → dock confirm → charge → receipt → home. Pages labelled "planned" in the structure do not yet have dedicated pages.
 
 ## Run
 

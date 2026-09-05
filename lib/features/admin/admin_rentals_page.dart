@@ -145,7 +145,7 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
               : 'User');
       return "$name's Rental";
     }
-    return 'All User Rental';
+    return 'Rental Management';
   }
 
   List<AdminRentalSession> get _scopedSessions {
@@ -592,42 +592,45 @@ class _RentalSessionCard extends StatelessWidget {
             children: [
               // Top row: Bike Code + Status badge
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: scheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.directions_bike_rounded,
-                          size: 22,
-                          color: scheme.onPrimaryContainer,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            session.bike?.code ?? 'BIKE #${session.rental.bikeId}',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          Text(
-                            session.publicId,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: scheme.onSurface.withValues(alpha: 0.55),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: scheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.directions_bike_rounded,
+                      size: 22,
+                      color: scheme.onPrimaryContainer,
+                    ),
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          session.bike?.code ?? 'BIKE #${session.rental.bikeId}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          session.publicId,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.55),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   _buildStatusChip(scheme, session),
                 ],
               ),
@@ -662,8 +665,10 @@ class _RentalSessionCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (session.bike != null)
+                  if (session.bike != null) ...[
+                    const SizedBox(width: 8),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           _batteryIcon(session.bike!.batteryPercent),
@@ -679,6 +684,7 @@ class _RentalSessionCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ],
                 ],
               ),
               const SizedBox(height: 6),
@@ -710,10 +716,10 @@ class _RentalSessionCard extends StatelessWidget {
 
               // Bottom row: Live duration, distance, estimated fare, and chevron
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Duration
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.timer_outlined,
@@ -730,9 +736,10 @@ class _RentalSessionCard extends StatelessWidget {
                       ),
                     ],
                   ),
-
+                  const Spacer(),
                   // Distance
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.route_outlined,
@@ -746,16 +753,20 @@ class _RentalSessionCard extends StatelessWidget {
                       ),
                     ],
                   ),
-
+                  const Spacer(),
                   // Fare
-                  Text(
-                    context.formats.currency(fare),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: scheme.primary,
+                  Flexible(
+                    child: Text(
+                      context.formats.currency(fare),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: scheme.primary,
+                      ),
                     ),
                   ),
-
+                  const SizedBox(width: 4),
                   Icon(
                     Icons.chevron_right_rounded,
                     color: scheme.onSurface.withValues(alpha: 0.4),

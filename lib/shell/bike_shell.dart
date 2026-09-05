@@ -88,11 +88,90 @@ class _BikeShellState extends State<BikeShell> {
       onPause: _handleAppLifecycleExit,
       onDetach: _handleAppLifecycleExit,
       onHide: _handleAppLifecycleExit,
+      onResume: _handleAppLifecycleResume,
     );
   }
 
-  void _handleDeepLinkBikeQr(String token) {
+  bool _isVerificationDialogShowing = false;
+
+  bool _isUserVerified(UserProfileRecord? profile) {
+    if (profile == null) return false;
+    final ic = profile.icNumber?.trim();
+    if (ic == null || ic.isEmpty) return false;
+    return profile.icVerified;
+  }
+
+  Future<bool> _ensureUserVerified() async {
+    if (_profileController.profile == null) {
+      if (_profileController.isBusy) {
+        while (_profileController.isBusy) {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+      } else {
+        await _profileController.loadProfile();
+      }
+    }
+    return _isUserVerified(_profileController.profile);
+  }
+
+  Future<void> _showVerificationRequiredAlert() async {
+    if (!mounted || _isVerificationDialogShowing) return;
+    _isVerificationDialogShowing = true;
+    final dialogContext = _navigatorKey.currentContext ?? context;
+    try {
+      await showDialog<void>(
+        context: dialogContext,
+        useRootNavigator: true,
+        barrierDismissible: false,
+        builder: (ctx) {
+          final theme = Theme.of(ctx);
+          return AlertDialog(
+            icon: Icon(
+              Icons.verified_user_outlined,
+              size: 44,
+              color: theme.colorScheme.primary,
+            ),
+            title: Text(
+              ctx.l10n.verificationRequiredTitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              ctx.l10n.verificationRequiredBody,
+              textAlign: TextAlign.center,
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              FilledButton(
+                key: const ValueKey('verification-required-modal-ok'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(120, 48),
+                ),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                },
+                child: Text(ctx.l10n.okButton),
+              ),
+            ],
+          );
+        },
+      );
+      if (mounted) {
+        _selectRootPage(AppPage.profile);
+      }
+    } finally {
+      _isVerificationDialogShowing = false;
+    }
+  }
+
+  void _handleDeepLinkBikeQr(String token) async {
     if (!mounted) return;
+    final verified = await _ensureUserVerified();
+    if (!mounted) return;
+    if (!verified) {
+      await _showVerificationRequiredAlert();
+      return;
+    }
     _selectRootPage(AppPage.scan);
     unawaited(_rentingController.scanBike(token));
   }
@@ -143,7 +222,12 @@ class _BikeShellState extends State<BikeShell> {
   }
 
   void _handleAppLifecycleExit() {
+    _rentingController.pauseTracking();
     _rentingController.handleAppExit();
+  }
+
+  void _handleAppLifecycleResume() {
+    _rentingController.resumeTracking();
   }
 
   void _handleProfileChanged() {

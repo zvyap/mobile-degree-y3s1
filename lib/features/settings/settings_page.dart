@@ -54,6 +54,39 @@ class SettingsPage extends StatelessWidget {
     }
   }
 
+  String _localeKey(Locale locale) {
+    final country = locale.countryCode;
+    if (country == null || country.isEmpty) {
+      return locale.languageCode;
+    }
+    return '${locale.languageCode}_$country';
+  }
+
+  Locale _localeFromKey(String key) {
+    return AppLocalizations.supportedLocales.firstWhere(
+      (locale) => _localeKey(locale) == key,
+      orElse: () => Locale(key.split('_').first),
+    );
+  }
+
+  /// Generic `zh` is hidden when `zh_CN` exists so the picker
+  /// does not show two entries with the same display name.
+  List<Locale> _selectableLocales() {
+    final locales = AppLocalizations.supportedLocales;
+    final hasZhCn = locales.any(
+      (locale) => locale.languageCode == 'zh' && locale.countryCode == 'CN',
+    );
+    return locales
+        .where(
+          (locale) =>
+              !(hasZhCn &&
+                  locale.languageCode == 'zh' &&
+                  (locale.countryCode == null ||
+                      locale.countryCode!.isEmpty)),
+        )
+        .toList();
+  }
+
   String _getLocaleDisplayName(BuildContext context, Locale locale) {
     switch (locale.languageCode) {
       case 'en':
@@ -61,6 +94,10 @@ class SettingsPage extends StatelessWidget {
       case 'ms':
         return context.l10n.malay;
       case 'zh':
+        if (locale.countryCode == 'TW' || locale.countryCode == 'HK' ||
+            locale.countryCode == 'MO') {
+          return context.l10n.traditionalChinese;
+        }
         return context.l10n.simplifiedChinese;
       default:
         return locale.languageCode.toUpperCase();
@@ -79,12 +116,11 @@ class SettingsPage extends StatelessWidget {
           contentPadding: const EdgeInsets.only(top: 16, bottom: 8),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: AppLocalizations.supportedLocales.map((locale) {
-              final isSelected =
-                  locale.languageCode == activeLocale.languageCode;
+            children: _selectableLocales().map((locale) {
+              final isSelected = _localeKey(locale) == _localeKey(activeLocale);
               return ListTile(
                 key: ValueKey<String>(
-                  'settings-language-option-${locale.languageCode}',
+                  'settings-language-option-${_localeKey(locale)}',
                 ),
                 leading: Icon(
                   isSelected
@@ -121,12 +157,16 @@ class SettingsPage extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final activeLocale = _resolveActiveLocale(context);
-    final supportedCodes = AppLocalizations.supportedLocales
-        .map((locale) => locale.languageCode)
-        .toSet();
-    final dropdownValue = supportedCodes.contains(activeLocale.languageCode)
-        ? activeLocale.languageCode
-        : (supportedCodes.isNotEmpty ? supportedCodes.first : 'en');
+    final supportedKeys = _selectableLocales().map(_localeKey).toList();
+    final activeKey = _localeKey(activeLocale);
+    final dropdownValue = supportedKeys.contains(activeKey)
+        ? activeKey
+        : (supportedKeys.isNotEmpty
+              ? supportedKeys.firstWhere(
+                  (key) => key.split('_').first == activeLocale.languageCode,
+                  orElse: () => supportedKeys.first,
+                )
+              : 'en');
 
     return ListView(
       key: const ValueKey<String>('settings-page'),
@@ -157,18 +197,18 @@ class SettingsPage extends StatelessWidget {
               key: const ValueKey<String>('settings-language-dropdown'),
               value: dropdownValue,
               icon: const Icon(Icons.arrow_drop_down_rounded),
-              items: AppLocalizations.supportedLocales.map((locale) {
+              items: _selectableLocales().map((locale) {
                 return DropdownMenuItem<String>(
                   key: ValueKey<String>(
-                    'settings-language-${locale.languageCode}',
+                    'settings-language-${_localeKey(locale)}',
                   ),
-                  value: locale.languageCode,
+                  value: _localeKey(locale),
                   child: Text(_getLocaleDisplayName(context, locale)),
                 );
               }).toList(),
-              onChanged: (newCode) {
-                if (newCode != null) {
-                  _handleLocaleChange(context, Locale(newCode));
+              onChanged: (newKey) {
+                if (newKey != null) {
+                  _handleLocaleChange(context, _localeFromKey(newKey));
                 }
               },
             ),

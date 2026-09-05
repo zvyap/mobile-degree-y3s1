@@ -1,7 +1,7 @@
 part of '../renting_flow_page.dart';
 
-String _stationName(AppLocalizations l10n, ReturnStation station) {
-  return station.name;
+String _stationName(AppLocalizations l10n, ReturnStation? station) {
+  return station?.name ?? '';
 }
 
 String _paymentMethodLabel(AppLocalizations l10n, RentalPaymentMethod method) {

@@ -25,13 +25,27 @@
   "rideHistoryEntrySemantics": "Ride on {date} at {time}, from {fromStation} to {toStation}, duration {duration}, distance {distance}, fare {fare}. Tap for details.",
   "@rideHistoryEntrySemantics": {
     "placeholders": {
-      "date": {"type": "String"},
-      "time": {"type": "String"},
-      "fromStation": {"type": "String"},
-      "toStation": {"type": "String"},
-      "duration": {"type": "String"},
-      "distance": {"type": "String"},
-      "fare": {"type": "String"}
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      },
+      "fromStation": {
+        "type": "String"
+      },
+      "toStation": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "String"
+      },
+      "distance": {
+        "type": "String"
+      },
+      "fare": {
+        "type": "String"
+      }
     }
   },
   "rideCompleted": "Ride completed",
@@ -39,9 +53,21 @@
   "from": "From",
   "to": "To",
   "departedAt": "Departed at {time}",
-  "@departedAt": {"placeholders": {"time": {"type": "String"}}},
+  "@departedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "arrivedAt": "Arrived at {time}",
-  "@arrivedAt": {"placeholders": {"time": {"type": "String"}}},
+  "@arrivedAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "rideSummary": "Ride summary",
   "bikeId": "Bike ID",
   "paymentDetails": "Payment details",
@@ -66,8 +92,9 @@
   "languageDescription": "Select your preferred app language",
   "selectLanguage": "Select language",
   "english": "English",
-  "malay": "Bahasa Melayu",
-  "simplifiedChinese": "简体中文",
+  "malay": "Malay",
+  "simplifiedChinese": "Simplified Chinese",
+  "traditionalChinese": "Traditional Chinese",
   "darkTheme": "Dark theme",
   "on": "On",
   "off": "Off",
@@ -80,15 +107,23 @@
   "bikeAvailability": "{bikeCount} bikes available across {stationCount} stations.",
   "@bikeAvailability": {
     "placeholders": {
-      "bikeCount": {"type": "int"},
-      "stationCount": {"type": "int"}
+      "bikeCount": {
+        "type": "int"
+      },
+      "stationCount": {
+        "type": "int"
+      }
     }
   },
   "unlockRate": "{unlockFee} unlock fee + {minuteRate} per started minute",
   "@unlockRate": {
     "placeholders": {
-      "unlockFee": {"type": "String"},
-      "minuteRate": {"type": "String"}
+      "unlockFee": {
+        "type": "String"
+      },
+      "minuteRate": {
+        "type": "String"
+      }
     }
   },
   "scanBike": "Scan bike",
@@ -100,13 +135,37 @@
   "nearYou": "Near you",
   "viewAll": "View all",
   "stationDistance": "{distance} m away",
-  "@stationDistance": {"placeholders": {"distance": {"type": "int"}}},
+  "@stationDistance": {
+    "placeholders": {
+      "distance": {
+        "type": "int"
+      }
+    }
+  },
   "bikeCount": "{count, plural, =1{1 bike} other{{count} bikes}}",
-  "@bikeCount": {"placeholders": {"count": {"type": "int"}}},
+  "@bikeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "dockCount": "{count, plural, =1{1 dock} other{{count} docks}}",
-  "@dockCount": {"placeholders": {"count": {"type": "int"}}},
+  "@dockCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "docksAvailable": "{count, plural, =1{1 dock available} other{{count} docks available}}",
-  "@docksAvailable": {"placeholders": {"count": {"type": "int"}}},
+  "@docksAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "full": "Full",
   "libraryStation": "Library Station",
   "mainGate": "Main Gate",
@@ -118,44 +177,92 @@
   "currentWeather": "Current weather",
   "partlyCloudy": "Partly cloudy",
   "feelsLike": "Feels like {temperature}",
-  "@feelsLike": {"placeholders": {"temperature": {"type": "String"}}},
+  "@feelsLike": {
+    "placeholders": {
+      "temperature": {
+        "type": "String"
+      }
+    }
+  },
   "scatteredThunderstorms": "Scattered thunderstorms",
   "rainChance": "{chance}% rain",
-  "@rainChance": {"placeholders": {"chance": {"type": "int"}}},
+  "@rainChance": {
+    "placeholders": {
+      "chance": {
+        "type": "int"
+      }
+    }
+  },
   "humidity": "Humidity",
   "airQuality": "Air quality",
   "good": "Good",
   "wind": "Wind",
   "nextHour": "Next hour · {condition}",
-  "@nextHour": {"placeholders": {"condition": {"type": "String"}}},
+  "@nextHour": {
+    "placeholders": {
+      "condition": {
+        "type": "String"
+      }
+    }
+  },
   "weatherValues": "{temperature} · {rainChance}",
   "@weatherValues": {
     "placeholders": {
-      "temperature": {"type": "String"},
-      "rainChance": {"type": "String"}
+      "temperature": {
+        "type": "String"
+      },
+      "rainChance": {
+        "type": "String"
+      }
     }
   },
   "weatherUpdated": "Updated {time} · {date}",
   "@weatherUpdated": {
     "placeholders": {
-      "time": {"type": "String"},
-      "date": {"type": "String"}
+      "time": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
     }
   },
   "rideConditionsSemantics": "Ride conditions. Current location, {location}. Current weather, {condition}, {temperature}, {feelsLike}. Next hour, {nextCondition}, {nextTemperature}, {rainChance}. Humidity {humidity}. Air quality index {airQualityIndex}, {airQualityLabel}. Wind {wind}.",
   "@rideConditionsSemantics": {
     "placeholders": {
-      "location": {"type": "String"},
-      "condition": {"type": "String"},
-      "temperature": {"type": "String"},
-      "feelsLike": {"type": "String"},
-      "nextCondition": {"type": "String"},
-      "nextTemperature": {"type": "String"},
-      "rainChance": {"type": "String"},
-      "humidity": {"type": "String"},
-      "airQualityIndex": {"type": "String"},
-      "airQualityLabel": {"type": "String"},
-      "wind": {"type": "String"}
+      "location": {
+        "type": "String"
+      },
+      "condition": {
+        "type": "String"
+      },
+      "temperature": {
+        "type": "String"
+      },
+      "feelsLike": {
+        "type": "String"
+      },
+      "nextCondition": {
+        "type": "String"
+      },
+      "nextTemperature": {
+        "type": "String"
+      },
+      "rainChance": {
+        "type": "String"
+      },
+      "humidity": {
+        "type": "String"
+      },
+      "airQualityIndex": {
+        "type": "String"
+      },
+      "airQualityLabel": {
+        "type": "String"
+      },
+      "wind": {
+        "type": "String"
+      }
     }
   },
   "scanStep": "Scan",
@@ -163,7 +270,13 @@
   "returnStep": "Return",
   "payStep": "Pay",
   "stepSemantics": "{label} step",
-  "@stepSemantics": {"placeholders": {"label": {"type": "String"}}},
+  "@stepSemantics": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "cameraPreviewSemantics": "Camera preview. Tap to scan the bike QR code.",
   "cameraReady": "Camera ready",
   "cameraNoPermission": "No Permission",
@@ -177,8 +290,12 @@
   "bikeBatteryLocation": "{battery}% battery · {location}",
   "@bikeBatteryLocation": {
     "placeholders": {
-      "battery": {"type": "int"},
-      "location": {"type": "String"}
+      "battery": {
+        "type": "int"
+      },
+      "location": {
+        "type": "String"
+      }
     }
   },
   "view": "View",
@@ -186,38 +303,62 @@
   "brakesIssueReported": "{count, plural, =1{Brakes / tyres: 1 issue reported} other{Brakes / tyres: {count} issues reported}}",
   "@brakesIssueReported": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "frameSafe": "Seat and frame have no visible damage",
   "frameIssueReported": "{count, plural, =1{Seat / frame: 1 issue reported} other{Seat / frame: {count} issues reported}}",
   "@frameIssueReported": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "lightsSafe": "Front and rear lights are working",
   "lightsIssueReported": "{count, plural, =1{Lights / bell: 1 issue reported} other{Lights / bell: {count} issues reported}}",
   "@lightsIssueReported": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "checkingBikeCondition": "Checking bike condition reports…",
   "reportBikeIssue": "Report bike issue",
   "change": "Change",
   "reviewHold": "Review {amount} hold",
-  "@reviewHold": {"placeholders": {"amount": {"type": "String"}}},
+  "@reviewHold": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "cancelRental": "Cancel rental",
   "holdExplanation": "The hold is not a charge. Unused funds are released after return.",
   "authorizeCardHold": "Authorize test hold",
   "authorizeCardHoldDescription": "Simulate approval of the test payment before the bike unlocks.",
   "temporaryAuthorizationHold": "Temporary authorization hold",
   "authorizeHold": "Authorize {amount} hold",
-  "@authorizeHold": {"placeholders": {"amount": {"type": "String"}}},
+  "@authorizeHold": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "unlockBikeTitle": "Unlock the bike",
   "unlockBikeDescription": "Stay beside {bikeId} while the rear lock opens.",
-  "@unlockBikeDescription": {"placeholders": {"bikeId": {"type": "String"}}},
+  "@unlockBikeDescription": {
+    "placeholders": {
+      "bikeId": {
+        "type": "String"
+      }
+    }
+  },
   "contactingBikeLock": "Contacting bike lock…",
   "cardHoldAuthorized": "Test hold authorized",
   "unlockBike": "Unlock bike",
@@ -230,7 +371,13 @@
   "distance": "Distance",
   "estimated": "Estimated",
   "distanceKm": "{distance} km",
-  "@distanceKm": {"placeholders": {"distance": {"type": "String"}}},
+  "@distanceKm": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
   "returnBike": "Return Bike",
   "nearestReturnStation": "Nearest return station",
   "otherNearbyStations": "Other nearby stations",
@@ -254,13 +401,25 @@
   "confirm": "Confirm",
   "@confirm": {},
   "rideDeadlineCountdown": "{minutes} min left to return the bike",
-  "@rideDeadlineCountdown": {"placeholders": {"minutes": {"type": "int"}}},
+  "@rideDeadlineCountdown": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "rideOverdueTitle": "Ride overdue",
   "@rideOverdueTitle": {},
   "rideOverdueBody": "You passed the maximum ride time. Return the bike now — if it is not returned in time, the rental is closed as lost and the account is suspended.",
   "@rideOverdueBody": {},
   "extendRide": "Extend +60 min ({count} left)",
-  "@extendRide": {"placeholders": {"count": {"type": "int"}}},
+  "@extendRide": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noExtensionsLeft": "No extensions left",
   "@noExtensionsLeft": {},
   "secureBike": "Secure the bike",
@@ -270,17 +429,41 @@
   "rideCompleteDescription": "The bike is secured. Review the final charge.",
   "unlockFee": "Unlock fee",
   "startedMinutes": "{count, plural, =1{1 started minute} other{{count} started minutes}}",
-  "@startedMinutes": {"placeholders": {"count": {"type": "int"}}},
+  "@startedMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "rideDuration": "Ride duration",
   "timeFare": "Time fare",
   "hourCount": "{count, plural, =1{1 hour} other{{count} hours}}",
-  "@hourCount": {"placeholders": {"count": {"type": "int"}}},
+  "@hourCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "minuteCount": "{count, plural, =1{1 minute} other{{count} minutes}}",
-  "@minuteCount": {"placeholders": {"count": {"type": "int"}}},
+  "@minuteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "finalFare": "Final fare",
   "holdReleased": "Hold released",
   "chargeAmount": "Charge {amount}",
-  "@chargeAmount": {"placeholders": {"amount": {"type": "String"}}},
+  "@chargeAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "ridePaid": "Ride paid",
   "paymentPending": "Ride ended · Payment pending",
   "holdReleasedDescription": "The remaining test hold has been released.",
@@ -296,12 +479,22 @@
   "pricingFormula": "{unlockFee} + (started minutes × {minuteRate})",
   "@pricingFormula": {
     "placeholders": {
-      "unlockFee": {"type": "String"},
-      "minuteRate": {"type": "String"}
+      "unlockFee": {
+        "type": "String"
+      },
+      "minuteRate": {
+        "type": "String"
+      }
     }
   },
   "pricingExample": "{minutes}-minute example",
-  "@pricingExample": {"placeholders": {"minutes": {"type": "int"}}},
+  "@pricingExample": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "pricingTimerDescription": "The timer starts after the bike unlocks and stops when the dock confirms the return.",
   "choosePaymentMethod": "Choose payment method",
   "personalCard": "Personal card",
@@ -317,16 +510,38 @@
   "cityMapSemantics": "City map showing current bike position and return stations",
   "errorInvalidQr": "This QR code is not a BikeRent bike. Scan the code on the bike frame.",
   "errorBikeReserved": "Bike {bikeId} is already reserved. Choose another bike and scan again.",
-  "@errorBikeReserved": {"placeholders": {"bikeId": {"type": "String"}}},
+  "@errorBikeReserved": {
+    "placeholders": {
+      "bikeId": {
+        "type": "String"
+      }
+    }
+  },
   "errorBikeMaintenance": "Bike {bikeId} is currently under maintenance and cannot be rented. Choose another bike and scan again.",
-  "@errorBikeMaintenance": {"placeholders": {"bikeId": {"type": "String"}}},
+  "@errorBikeMaintenance": {
+    "placeholders": {
+      "bikeId": {
+        "type": "String"
+      }
+    }
+  },
   "errorBikeUnavailable": "Bike {bikeId} is currently unavailable and cannot be rented. Choose another bike and scan again.",
-  "@errorBikeUnavailable": {"placeholders": {"bikeId": {"type": "String"}}},
+  "@errorBikeUnavailable": {
+    "placeholders": {
+      "bikeId": {
+        "type": "String"
+      }
+    }
+  },
   "errorBikeLowBattery": "Bike {bikeId} has low battery ({percent}%) and cannot be rented. Minimum required is 10%. Choose another bike and scan again.",
   "@errorBikeLowBattery": {
     "placeholders": {
-      "bikeId": {"type": "String"},
-      "percent": {"type": "int"}
+      "bikeId": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "lowBatteryWarningTitle": "Low Battery Warning",
@@ -334,8 +549,12 @@
   "lowBatteryWarningMessage": "Bike {bikeId} battery is at {percent}%. Riding distance and motor assist may be limited. Do you want to continue?",
   "@lowBatteryWarningMessage": {
     "placeholders": {
-      "bikeId": {"type": "String"},
-      "percent": {"type": "int"}
+      "bikeId": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
     }
   },
   "continueButton": "Continue",
@@ -343,7 +562,13 @@
   "bikeCannotBeRentedTitle": "Bike Cannot Be Rented",
   "@bikeCannotBeRentedTitle": {},
   "errorHoldDeclined": "The {amount} test hold was declined. Retry when ready.",
-  "@errorHoldDeclined": {"placeholders": {"amount": {"type": "String"}}},
+  "@errorHoldDeclined": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "errorPaymentConfiguration": "The local test payment simulator is unavailable.",
   "errorPaymentNetwork": "The local test payment failed. Retry when ready.",
   "errorPaymentCancelled": "Test payment approval was cancelled. Retry when ready.",
@@ -352,7 +577,13 @@
   "errorLockFailed": "The lock did not respond. Stand near the bike and try again.",
   "errorGpsLost": "GPS signal lost. Move to an open area and check location access.",
   "errorStationFull": "{station} has no free docks. Choose another station.",
-  "@errorStationFull": {"placeholders": {"station": {"type": "String"}}},
+  "@errorStationFull": {
+    "placeholders": {
+      "station": {
+        "type": "String"
+      }
+    }
+  },
   "errorChooseStation": "Choose a return station first.",
   "errorOutsideReturnZone": "Move within 250 m of the selected station before returning the bike.",
   "errorStationQrMismatch": "That QR does not match the selected station. Scan the QR poster at the station or enter its code.",
@@ -368,9 +599,21 @@
   "errorBackendConnection": "The rent service is unavailable. Check the connection and retry.",
   "errorActiveRentalExists": "This rider already has an unfinished rental. Resume or finish it first.",
   "errorStationMaintenance": "Station {station} is currently under maintenance. You cannot rent or return bikes here.",
-  "@errorStationMaintenance": {"placeholders": {"station": {"type": "String"}}},
+  "@errorStationMaintenance": {
+    "placeholders": {
+      "station": {
+        "type": "String"
+      }
+    }
+  },
   "errorStationTerminated": "Station {station} has been terminated. You cannot rent or return bikes here.",
-  "@errorStationTerminated": {"placeholders": {"station": {"type": "String"}}},
+  "@errorStationTerminated": {
+    "placeholders": {
+      "station": {
+        "type": "String"
+      }
+    }
+  },
   "errorStationMaintenanceGeneral": "This station is currently under maintenance. You cannot rent or return bikes here.",
   "@errorStationMaintenanceGeneral": {},
   "errorStationTerminatedGeneral": "This station has been terminated. You cannot rent or return bikes here.",
@@ -388,7 +631,6 @@
   "rideWarningSuspiciousActivityBody": "Suspicious activity detected: You are unusually far from the pickup station.",
   "rideWarningSuspiciousLegalTitle": "Suspicious Activity & Legal Action",
   "rideWarningSuspiciousLegalBody": "Suspicious activity detected far from station and deposit time exceeded. Immediate legal action will be taken if the bike is not returned.",
-
   "addBike": "Add Bike",
   "editBike": "Edit Bike",
   "bikeDetail": "Bike Detail",
@@ -400,23 +642,19 @@
   "newReport": "New Report",
   "pendingReportDetails": "Pending Report Details",
   "paymentMethods": "Payment Methods",
-
   "conditionReports": "Condition reports",
   "reviewAndResolveBikeIssues": "Review and resolve bike issues.",
   "trackSubmittedBikeReports": "Track your submitted bike reports.",
   "searchReportOrBikeId": "Search report or bike ID",
-
   "pending": "Pending",
   "approved": "Approved",
   "rejected": "Rejected",
   "cancelled": "Cancelled",
   "reports": "Reports",
   "newestFirst": "Newest first",
-
   "cancelReport": "Cancel Report",
   "cancelReportQuestion": "Cancel Report?",
   "keepReport": "Keep Report",
-
   "cancelReportConfirmation": "Cancel {reportId}? This report will no longer be reviewed by an administrator.",
   "@cancelReportConfirmation": {
     "placeholders": {
@@ -425,7 +663,6 @@
       }
     }
   },
-
   "reportCancelled": "{reportId} cancelled.",
   "@reportCancelled": {
     "placeholders": {
@@ -434,7 +671,6 @@
       }
     }
   },
-
   "failedToCancelReport": "Failed to cancel report: {error}",
   "@failedToCancelReport": {
     "placeholders": {
@@ -443,9 +679,7 @@
       }
     }
   },
-
   "onlyPendingReportsCanBeCancelled": "Only pending reports can be cancelled.",
-
   "allReports": "All {count}",
   "@allReports": {
     "placeholders": {
@@ -454,7 +688,6 @@
       }
     }
   },
-
   "pendingReportsCount": "Pending {count}",
   "@pendingReportsCount": {
     "placeholders": {
@@ -463,7 +696,6 @@
       }
     }
   },
-
   "approvedReportsCount": "Approved {count}",
   "@approvedReportsCount": {
     "placeholders": {
@@ -472,7 +704,6 @@
       }
     }
   },
-
   "rejectedReportsCount": "Rejected {count}",
   "@rejectedReportsCount": {
     "placeholders": {
@@ -481,7 +712,6 @@
       }
     }
   },
-
   "cancelledReportsCount": "Cancelled {count}",
   "@cancelledReportsCount": {
     "placeholders": {
@@ -490,7 +720,6 @@
       }
     }
   },
-
   "noMatchingReports": "No matching reports",
   "noReportsYet": "No reports yet",
   "tryDifferentSearchTerm": "Try a different search term.",
@@ -528,36 +757,30 @@
   "noReviewNoteProvided": "No review note provided.",
   "reportCancelledStatus": "Report cancelled",
   "reportCancelledDescription": "You cancelled this report before it was reviewed.",
-
   "addNewBike": "Add new bike",
   "step1BasicInformation": "Step 1 of 3 • Basic information",
   "step2QrCode": "Step 2 of 3 • QR code",
   "step3ReviewInformation": "Step 3 of 3 • Review information",
-
   "bikeCode": "Bike Code",
   "enterBikeCode": "Enter bike code",
   "bikeCodeTooShort": "Bike code is too short",
-
   "initialStation": "Initial station",
   "pleaseSelectStation": "Please select a station",
   "selectStation": "Select a station",
   "unableToLoadStations": "Unable to load stations",
   "noStationsAvailable": "No stations are available.",
   "noStationSelected": "No station selected",
-
   "batteryPercentage": "Battery percentage",
   "enterBatteryPercentage": "Enter battery percentage",
   "invalidBatteryPercentage": "Invalid battery percentage",
   "enterValidNumber": "Enter a valid number",
   "batteryRangeError": "Battery must be between 0 and 100",
   "battery": "Battery",
-
   "initialStatus": "Initial status",
   "status": "Status",
   "available": "Available",
   "maintenance": "Maintenance",
   "retired": "Retired",
-
   "qrGeneratedAutomatically": "A unique QR token will be generated automatically.",
   "qrScanningDescription": "The QR code can later contain this token for bike scanning.",
   "bikeQrCode": "Bike QR Code",
@@ -567,11 +790,9 @@
   "notGenerated": "Not generated",
   "qrPlaceholderDescription": "The visual QR image is currently a placeholder. Later we can generate an actual QR code from this token.",
   "generatedQrCode": "Generated QR Code",
-
   "next": "Next",
   "bikeInformation": "Bike information",
   "notSelected": "Not selected",
-
   "bikeAddedSuccessfully": "Bike added successfully",
   "failedToAddBike": "Failed to add bike: {error}",
   "@failedToAddBike": {
@@ -581,14 +802,12 @@
       }
     }
   },
-
   "managePaymentMethodsSubtitle": "Manage credit/debit cards and PayPal",
   "termsOfService": "Terms of Service",
   "termsOfServiceSubtitle": "Rental rules, safety policies, and liabilities",
   "privacyPolicy": "Privacy Policy",
   "privacyPolicySubtitle": "Data protection, GPS location, and privacy rights",
   "logOut": "Log Out",
-
   "onlineCheckout": "ONLINE CHECKOUT",
   "savedCards": "SAVED CARDS",
   "savedCardsCount": "{count} saved",
@@ -627,7 +846,6 @@
     }
   },
   "failedToUpdateDefaultCard": "Failed to update default card",
-
   "editCard": "Edit Card",
   "cardUpdatedSuccess": "Card updated successfully",
   "failedToUpdateCard": "Failed to update card",
@@ -644,7 +862,6 @@
   "setAsDefaultPaymentMethod": "Set as default payment method",
   "automaticallyUseCard": "Automatically use this card for bike rentals",
   "updateCard": "Update Card",
-
   "cardExpiry": "Exp {month}/{year}",
   "@cardExpiry": {
     "placeholders": {
@@ -662,7 +879,6 @@
   "setAsDefault": "Set as default",
   "editCardMenu": "Edit card",
   "removeCardMenu": "Remove card",
-
   "payPal": "PayPal",
   "payPalBuiltIn": "Built-in",
   "payPalSubtitle": "Webview checkout · Always available",
@@ -671,11 +887,9 @@
   "payPalAlwaysAvailable": "Always available payment option",
   "payPalDescription": "PayPal checkout is processed on-demand through a secure in-app webview during bike rental authorization. It does not require storing credit or debit card details, so it cannot be edited or removed.",
   "gotIt": "Got it",
-
   "cardholderPreview": "CARDHOLDER",
   "cardholderNamePreview": "CARDHOLDER NAME",
   "expiresPreview": "EXPIRES",
-
   "agree": "Agree",
   "agreementConfirmation": "Agreement Confirmation",
   "agreementNotice": "By tapping \"{buttonText}\" above or below, you acknowledge that you have reviewed and accept these {title}.",
@@ -698,197 +912,219 @@
     }
   },
   "contactSupport": "Questions? Contact support@bikerent.app",
-
   "errorLoadingStations": "Error loading stations: {error}",
-    "@errorLoadingStations": {
-      "description": "Error message when stations fail to fetch from database",
-      "placeholders": {
-        "error": { "type": "String" }
+  "@errorLoadingStations": {
+    "description": "Error message when stations fail to fetch from database",
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
-    },
-
-    "stationA": "Station A",
-    "stationB": "Station B",
-    "selectOriginStation": "Select origin station",
-    "selectDestinationStation": "Select destination station",
-    "underMaintenance": "Under Maintenance",
-
-    "selectedStationTooFar": "Selected Station are too far away",
-    "etaLabel": "ETA:",
-    "estimatedArrivalTime": "Estimated Arrival Time (ETA)",
-    "durationInMinutes": "{minutes} minutes",
-    "@durationInMinutes": {
-      "description": "Duration display in minutes for route calculation",
-      "placeholders": {
-        "minutes": { "type": "int" }
+    }
+  },
+  "stationA": "Station A",
+  "stationB": "Station B",
+  "selectOriginStation": "Select origin station",
+  "selectDestinationStation": "Select destination station",
+  "underMaintenance": "Under Maintenance",
+  "selectedStationTooFar": "Selected Station are too far away",
+  "etaLabel": "ETA:",
+  "estimatedArrivalTime": "Estimated Arrival Time (ETA)",
+  "durationInMinutes": "{minutes} minutes",
+  "@durationInMinutes": {
+    "description": "Duration display in minutes for route calculation",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
       }
-    },
-
-    "totalDistanceKm": "Total Distance: {distance} km",
-    "@totalDistanceKm": {
-      "description": "Calculated route distance in kilometers",
-      "placeholders": {
-        "distance": { "type": "String" }
+    }
+  },
+  "totalDistanceKm": "Total Distance: {distance} km",
+  "@totalDistanceKm": {
+    "description": "Calculated route distance in kilometers",
+    "placeholders": {
+      "distance": {
+        "type": "String"
       }
-    },
-
-    "selectStationsToCalculateRoutePrompt": "Select Station A & Station B to calculate route.",
-
-    "failedToLoadBikes": "Failed to load bikes: {error}",
-      "@failedToLoadBikes": {
-        "description": "Error message when fetching station bikes fails",
-        "placeholders": {
-          "error": { "type": "String" }
-        }
-      },
-
-      "invalidBikeIdError": "Unable to open: Invalid Bike ID",
-
-      "stationBikes": "Station Bikes",
-      "locationCoordinatesNotProvided": "Location coordinates not provided",
-
-      "searchBikesCodeOrId": "Search bikes by code or ID",
-
-      "noBikesInStationYet": "there is no bikes in this station yet",
-      "noBikesMatchSearch": "No bikes match your search.",
-
-      "unknownStatus": "Unknown",
-      "bikeStatus": "Status: {status}",
-      "@bikeStatus": {
-        "description": "Label indicating the operational status of a bike",
-        "placeholders": {
-          "status": { "type": "String" }
-        }
-      },
-
+    }
+  },
+  "selectStationsToCalculateRoutePrompt": "Select Station A & Station B to calculate route.",
+  "failedToLoadBikes": "Failed to load bikes: {error}",
+  "@failedToLoadBikes": {
+    "description": "Error message when fetching station bikes fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "invalidBikeIdError": "Unable to open: Invalid Bike ID",
+  "stationBikes": "Station Bikes",
+  "locationCoordinatesNotProvided": "Location coordinates not provided",
+  "searchBikesCodeOrId": "Search bikes by code or ID",
+  "noBikesInStationYet": "there is no bikes in this station yet",
+  "noBikesMatchSearch": "No bikes match your search.",
+  "unknownStatus": "Unknown",
+  "bikeStatus": "Status: {status}",
+  "@bikeStatus": {
+    "description": "Label indicating the operational status of a bike",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
   "failedToLoadStations": "Failed to load stations: {error}",
-    "@failedToLoadStations": {
-      "description": "Error message shown in SnackBar when station fetching fails",
-      "placeholders": {
-        "error": { "type": "String" }
+  "@failedToLoadStations": {
+    "description": "Error message shown in SnackBar when station fetching fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
-    },
-
-    "searchStationHint": "Search station code, name or address...",
-    "longPressMapToAddStation": "Long-press map to add new station",
-    "noMatchingStationsFound": "No matching stations found.",
-    "unnamedStation": "Unnamed Station",
-    "noAddress": "No address",
-
-    "stationNameEmptyError": "Station name cannot be empty.",
-      "stationAddressEmptyError": "Station address cannot be empty.",
-      "validCapacityError": "Please enter a valid number for max capacity.",
-      "maxCapacityExceededError": "Max capacity ({capacity}) cannot be less than current docked bikes ({bikes}).",
-      "@maxCapacityExceededError": {
-        "description": "Error message shown when the entered capacity is lower than current bikes",
-        "placeholders": {
-          "capacity": { "type": "int" },
-          "bikes": { "type": "int" }
-        }
+    }
+  },
+  "searchStationHint": "Search station code, name or address...",
+  "longPressMapToAddStation": "Long-press map to add new station",
+  "noMatchingStationsFound": "No matching stations found.",
+  "unnamedStation": "Unnamed Station",
+  "noAddress": "No address",
+  "stationNameEmptyError": "Station name cannot be empty.",
+  "stationAddressEmptyError": "Station address cannot be empty.",
+  "validCapacityError": "Please enter a valid number for max capacity.",
+  "maxCapacityExceededError": "Max capacity ({capacity}) cannot be less than current docked bikes ({bikes}).",
+  "@maxCapacityExceededError": {
+    "description": "Error message shown when the entered capacity is lower than current bikes",
+    "placeholders": {
+      "capacity": {
+        "type": "int"
       },
-
-      "stationUpdatedSuccess": "Station updated successfully!",
-      "stationAddedSuccess": "Station added successfully!",
-      "failedToSaveStation": "Failed to save station: {error}",
-      "@failedToSaveStation": {
-        "description": "Error notification when saving station fails",
-        "placeholders": {
-          "error": { "type": "String" }
-        }
+      "bikes": {
+        "type": "int"
+      }
+    }
+  },
+  "stationUpdatedSuccess": "Station updated successfully!",
+  "stationAddedSuccess": "Station added successfully!",
+  "failedToSaveStation": "Failed to save station: {error}",
+  "@failedToSaveStation": {
+    "description": "Error notification when saving station fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "removeStation": "Remove Station",
+  "confirmRemoveStationBody": "Are you sure you want to remove this station?",
+  "stationRemovedSuccess": "Station removed successfully!",
+  "failedToRemoveStation": "Failed to remove station: {error}",
+  "@failedToRemoveStation": {
+    "description": "Error notification when deleting a station fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "changePhoto": "Change Photo",
+  "stationName": "Station Name",
+  "enterStationNameHint": "Enter station name...",
+  "stationCode": "Station Code",
+  "readOnly": "Read-Only",
+  "address": "Address",
+  "enterStationAddressHint": "Enter station address...",
+  "operatingStatus": "Operating status",
+  "currentDockedBikes": "Current Docked Bikes",
+  "maxBikesPerStation": "Max bike per station",
+  "addStation": "Add Station",
+  "updateStation": "Update Station",
+  "viewBikesAtStation": "View Bikes at Station",
+  "noAddressSet": "No address set",
+  "noBikesAtStation": "No bikes at this station.",
+  "stationDeactivatedSuccess": "{stationName} deactivated successfully",
+  "@stationDeactivatedSuccess": {
+    "description": "Notification when a station is successfully deactivated by an admin",
+    "placeholders": {
+      "stationName": {
+        "type": "String"
+      }
+    }
+  },
+  "searchStationToRemove": "Search station to remove...",
+  "searchStationNameOrAddress": "Search station name or address...",
+  "noStationsFound": "No stations found.",
+  "bikesCount": "{count, plural, =1{1 bike} other{{count} bikes}}",
+  "@bikesCount": {
+    "description": "Pluralized count of available bikes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "currentlySelected": "Currently Selected",
+  "targetStationToRemove": "Target Station to Remove",
+  "closestToYou": "Closest to you",
+  "reset": "Reset",
+  "allActiveStations": "All Active Stations",
+  "nearbyStations": "Nearby Stations",
+  "stationSummarySubtitle": "{address} • {count} Bikes{distance}",
+  "@stationSummarySubtitle": {
+    "description": "Subtitle format for featured station displaying address, bike count, and optional distance",
+    "placeholders": {
+      "address": {
+        "type": "String"
       },
-
-      "removeStation": "Remove Station",
-      "confirmRemoveStationBody": "Are you sure you want to remove this station?",
-      "stationRemovedSuccess": "Station removed successfully!",
-      "failedToRemoveStation": "Failed to remove station: {error}",
-      "@failedToRemoveStation": {
-        "description": "Error notification when deleting a station fails",
-        "placeholders": {
-          "error": { "type": "String" }
-        }
+      "count": {
+        "type": "int"
       },
-
-      "changePhoto": "Change Photo",
-      "stationName": "Station Name",
-      "enterStationNameHint": "Enter station name...",
-      "stationCode": "Station Code",
-      "readOnly": "Read-Only",
-      "address": "Address",
-      "enterStationAddressHint": "Enter station address...",
-      "operatingStatus": "Operating status",
-      "currentDockedBikes": "Current Docked Bikes",
-      "maxBikesPerStation": "Max bike per station",
-      "addStation": "Add Station",
-      "updateStation": "Update Station",
-      "viewBikesAtStation": "View Bikes at Station",
-
-      "noAddressSet": "No address set",
-
-      "noBikesAtStation": "No bikes at this station.",
-      "stationDeactivatedSuccess": "{stationName} deactivated successfully",
-        "@stationDeactivatedSuccess": {
-          "description": "Notification when a station is successfully deactivated by an admin",
-          "placeholders": {
-            "stationName": { "type": "String" }
-          }
-        },
-
-
-        "searchStationToRemove": "Search station to remove...",
-        "searchStationNameOrAddress": "Search station name or address...",
-        "noStationsFound": "No stations found.",
-
-
-        "bikesCount": "{count, plural, =1{1 bike} other{{count} bikes}}",
-        "@bikesCount": {
-          "description": "Pluralized count of available bikes",
-          "placeholders": {
-            "count": { "type": "int" }
-          }
-        },
-
-        "currentlySelected": "Currently Selected",
-        "targetStationToRemove": "Target Station to Remove",
-        "closestToYou": "Closest to you",
-        "reset": "Reset",
-        "allActiveStations": "All Active Stations",
-        "nearbyStations": "Nearby Stations",
-
-        "stationSummarySubtitle": "{address} • {count} Bikes{distance}",
-        "@stationSummarySubtitle": {
-          "description": "Subtitle format for featured station displaying address, bike count, and optional distance",
-          "placeholders": {
-            "address": { "type": "String" },
-            "count": { "type": "int" },
-            "distance": { "type": "String" }
-          }
-        },
-
-        "confirmRemoveStationTitle": "Are you sure to remove\n{stationName}?",
-        "@confirmRemoveStationTitle": {
-          "description": "Title prompt for admin station removal confirmation dialog",
-          "placeholders": {
-            "stationName": { "type": "String" }
-          }
-        },
-
-        "actionIrreversibleWarning": "This action is irreversible, are you sure to continue?",
-        "removeLocation": "Remove Location",
-
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmRemoveStationTitle": "Are you sure to remove\n{stationName}?",
+  "@confirmRemoveStationTitle": {
+    "description": "Title prompt for admin station removal confirmation dialog",
+    "placeholders": {
+      "stationName": {
+        "type": "String"
+      }
+    }
+  },
+  "actionIrreversibleWarning": "This action is irreversible, are you sure to continue?",
+  "removeLocation": "Remove Location",
   "okButton": "OK",
   "scanningLabel": "Scanning…",
   "flashlightTooltip": "Flashlight",
   "invalidQrTitle": "Invalid QR Code",
   "reservationExpiresIn": "Reservation expires in {time}",
-  "@reservationExpiresIn": {"placeholders": {"time": {"type": "String"}}},
+  "@reservationExpiresIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "rentalTimedOutTitle": "Rental Timed Out",
   "rentalTimedOutBody": "Your bike reservation timed out after the {minutes}-minute limit. The bike has been released.",
-  "@rentalTimedOutBody": {"placeholders": {"minutes": {"type": "int"}}},
+  "@rentalTimedOutBody": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "forceEndedTitle": "Session Ended by Admin",
   "rentalEndedTitle": "Rental Ended",
   "rentalEndedBody": "Your rental session has ended. Start a new ride whenever you're ready.",
   "returnAtStation": "Return at {station}",
-  "@returnAtStation": {"placeholders": {"station": {"type": "String"}}},
+  "@returnAtStation": {
+    "placeholders": {
+      "station": {
+        "type": "String"
+      }
+    }
+  },
   "originStation": "Origin Station",
   "tripStartedHere": "Trip started here",
   "currentLocation": "Current Location",
@@ -902,7 +1138,6 @@
   "termsNoticeSuffix": " of the app.",
   "rideHistoryLoadFailed": "Ride history could not be loaded.",
   "noCompletedRides": "No completed rides yet.",
-
   "weatherConnectionFailedTitle": "Connection failed",
   "weatherConnectionFailedBody": "Unable to connect to the weather service. Please check your internet connection and try again.",
   "weatherTimeoutTitle": "Connection timed out",
@@ -927,23 +1162,37 @@
   "rideConditionsErrorSemantics": "Ride conditions. {title}: {message}.",
   "@rideConditionsErrorSemantics": {
     "placeholders": {
-      "title": {"type": "String"},
-      "message": {"type": "String"}
+      "title": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
     }
   },
-
   "pmSessionExpired": "User session expired. Please log in again.",
   "pmCardInUse": "Cannot delete card: it is currently attached to an active or pending rental.",
   "pmDuplicateCard": "This card is already registered in your account.",
   "pmValidationError": "Validation error: {detail}",
-  "@pmValidationError": {"placeholders": {"detail": {"type": "String"}}},
+  "@pmValidationError": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
   "pmUnknownError": "An unexpected error occurred. Please try again.",
-
   "cvCardNumberRequired": "Card number is required",
   "cvCardDigitsOnly": "Enter valid card digits",
   "cvCardBrandUnsupported": "Only Visa and Mastercard are supported",
   "cvCardNumberLength": "Card number must be 16 digits ({entered}/16)",
-  "@cvCardNumberLength": {"placeholders": {"entered": {"type": "int"}}},
+  "@cvCardNumberLength": {
+    "placeholders": {
+      "entered": {
+        "type": "int"
+      }
+    }
+  },
   "cvCardNumberTooLong": "Card number exceeds 16 digits",
   "cvCardChecksumFailed": "Invalid card number (checksum failed)",
   "cvExpiryRequired": "Expiry date is required",
@@ -959,5 +1208,7 @@
   "cvNameTooLong": "Name cannot exceed 50 characters",
   "cvNameInvalidChars": "Only letters, spaces, hyphens, and dots allowed",
   "cvNameNeedsTwoParts": "Please enter first and last name",
-  "cvNameDuplicate": "Cardholder name is already used by another card"
+  "cvNameDuplicate": "Cardholder name is already used by another card",
+  "verificationRequiredTitle": "Verification Required",
+  "verificationRequiredBody": "Please provide your IC and complete face verification before renting a bike."
 }

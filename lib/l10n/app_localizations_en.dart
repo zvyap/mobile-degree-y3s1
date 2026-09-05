@@ -191,10 +191,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get english => 'English';
 
   @override
-  String get malay => 'Bahasa Melayu';
+  String get malay => 'Malay';
 
   @override
-  String get simplifiedChinese => '简体中文';
+  String get simplifiedChinese => 'Simplified Chinese';
+
+  @override
+  String get traditionalChinese => 'Traditional Chinese';
 
   @override
   String get darkTheme => 'Dark theme';
@@ -2003,4 +2006,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cvNameDuplicate =>
       'Cardholder name is already used by another card';
+
+  @override
+  String get verificationRequiredTitle => 'Verification Required';
+
+  @override
+  String get verificationRequiredBody =>
+      'Please provide your IC and complete face verification before renting a bike.';
 }

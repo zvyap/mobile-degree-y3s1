@@ -237,7 +237,6 @@ class _RentingFlowPageState extends State<RentingFlowPage>
     _timeoutSubscription?.cancel();
     _forceEndSubscription?.cancel();
     _controller.removeListener(_handleControllerChange);
-    _controller.pauseTracking();
     if (_controller.stage == RentalStage.bikeCheck ||
         _controller.stage == RentalStage.authorizing ||
         _controller.stage == RentalStage.unlocking) {

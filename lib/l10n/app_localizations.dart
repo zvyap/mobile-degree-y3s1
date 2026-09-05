@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
+import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
 
@@ -92,7 +93,12 @@ abstract class AppLocalizations {
       ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('en')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('zh'),
+    Locale('zh', 'CN'),
+    Locale('zh', 'TW'),
+  ];
 
   /// No description provided for @appName.
   ///
@@ -423,14 +429,20 @@ abstract class AppLocalizations {
   /// No description provided for @malay.
   ///
   /// In en, this message translates to:
-  /// **'Bahasa Melayu'**
+  /// **'Malay'**
   String get malay;
 
   /// No description provided for @simplifiedChinese.
   ///
   /// In en, this message translates to:
-  /// **'简体中文'**
+  /// **'Simplified Chinese'**
   String get simplifiedChinese;
+
+  /// No description provided for @traditionalChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'Traditional Chinese'**
+  String get traditionalChinese;
 
   /// No description provided for @darkTheme.
   ///
@@ -3455,6 +3467,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cardholder name is already used by another card'**
   String get cvNameDuplicate;
+
+  /// No description provided for @verificationRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification Required'**
+  String get verificationRequiredTitle;
+
+  /// No description provided for @verificationRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Please provide your IC and complete face verification before renting a bike.'**
+  String get verificationRequiredBody;
 }
 
 class _AppLocalizationsDelegate
@@ -3468,17 +3492,33 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en'].contains(locale.languageCode);
+      <String>['en', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+  // Lookup logic when language+country codes are specified.
+  switch (locale.languageCode) {
+    case 'zh':
+      {
+        switch (locale.countryCode) {
+          case 'CN':
+            return AppLocalizationsZhCn();
+          case 'TW':
+            return AppLocalizationsZhTw();
+        }
+        break;
+      }
+  }
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
     case 'en':
       return AppLocalizationsEn();
+    case 'zh':
+      return AppLocalizationsZh();
   }
 
   throw FlutterError(

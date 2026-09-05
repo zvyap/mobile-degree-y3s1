@@ -172,6 +172,7 @@ class _AdminRentalDetailPageState extends State<AdminRentalDetailPage> {
       appBar: AppBar(
         title: Text(
           session != null ? 'Rental ${session.publicId}' : 'Rental Details',
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [

@@ -6,7 +6,7 @@ import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
 
-class ActiveRideHome extends StatelessWidget {
+class ActiveRideHome extends StatefulWidget {
   const ActiveRideHome({
     super.key,
     required this.controller,
@@ -17,78 +17,101 @@ class ActiveRideHome extends StatelessWidget {
   final VoidCallback onOpenRide;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
+  State<ActiveRideHome> createState() => _ActiveRideHomeState();
+}
 
-    return SurfacePanel(
-      key: const ValueKey<String>('home-active-ride'),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (largeText)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _RideIdentity(controller: controller),
-                const SizedBox(height: 8),
-                _GpsStatus(available: controller.gpsAvailable),
-              ],
-            )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _RideIdentity(controller: controller)),
-                const SizedBox(width: 10),
-                _GpsStatus(available: controller.gpsAvailable),
-              ],
-            ),
-          const SizedBox(height: 12),
-          _RideMetrics(controller: controller, stacked: largeText),
-          const SizedBox(height: 12),
-          if (largeText)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _CurrentRideButton(onPressed: onOpenRide),
-                const SizedBox(height: 8),
-                _ReportIssueButton(controller: controller),
-              ],
-            )
-          else
-            Row(
-              children: [
-                Expanded(child: _CurrentRideButton(onPressed: onOpenRide)),
-                const SizedBox(width: 8),
-                Expanded(child: _ReportIssueButton(controller: controller)),
-              ],
-            ),
-          const SizedBox(height: 9),
-          Row(
+class _ActiveRideHomeState extends State<ActiveRideHome> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.resumeTracking();
+  }
+
+  @override
+  void didUpdateWidget(covariant ActiveRideHome oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    widget.controller.resumeTracking();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, _) {
+        final controller = widget.controller;
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
+
+        return SurfacePanel(
+          key: const ValueKey<String>('home-active-ride'),
+          padding: const EdgeInsets.all(14),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.health_and_safety_outlined,
-                size: 16,
-                color: scheme.onSurface.withValues(alpha: 0.58),
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  context.l10n.phoneSafety,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.62),
-                    height: 1.3,
-                  ),
+              if (largeText)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _RideIdentity(controller: controller),
+                    const SizedBox(height: 8),
+                    _GpsStatus(available: controller.gpsAvailable),
+                  ],
+                )
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _RideIdentity(controller: controller)),
+                    const SizedBox(width: 10),
+                    _GpsStatus(available: controller.gpsAvailable),
+                  ],
                 ),
+              const SizedBox(height: 12),
+              _RideMetrics(controller: controller, stacked: largeText),
+              const SizedBox(height: 12),
+              if (largeText)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _CurrentRideButton(onPressed: widget.onOpenRide),
+                    const SizedBox(height: 8),
+                    _ReportIssueButton(controller: controller),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(child: _CurrentRideButton(onPressed: widget.onOpenRide)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _ReportIssueButton(controller: controller)),
+                  ],
+                ),
+              const SizedBox(height: 9),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.health_and_safety_outlined,
+                    size: 16,
+                    color: scheme.onSurface.withValues(alpha: 0.58),
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      context.l10n.phoneSafety,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.62),
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -29,6 +29,22 @@ class _HomePageState extends State<HomePage> {
   final GlobalKey<RideConditionsPanelState> _weatherPanelKey =
       GlobalKey<RideConditionsPanelState>();
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.rentingController.isRideActive) {
+      widget.rentingController.resumeTracking();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant HomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.rentingController.isRideActive) {
+      widget.rentingController.resumeTracking();
+    }
+  }
+
   Future<void> _handleRefresh() async {
     await Future.wait([
       if (widget.onRefresh != null) widget.onRefresh!(),

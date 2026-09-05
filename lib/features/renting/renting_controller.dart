@@ -723,7 +723,20 @@ class RentingController extends ChangeNotifier {
     } catch (_) {}
 
     await _run(() async {
-      final snapshot = await repository.reserveSession(token);
+      RentalSessionSnapshot snapshot;
+      try {
+        snapshot = await repository.reserveSession(token);
+      } on DatabaseException catch (e) {
+        if (e.code == DatabaseErrorCode.activeRentalExists) {
+          final active = await repository.restoreActive();
+          if (active != null) {
+            _applySnapshot(active);
+            _clearError();
+            return;
+          }
+        }
+        rethrow;
+      }
       final stationStatus = snapshot.startStation.status.trim().toLowerCase();
       if (stationStatus == 'under maintenance' || stationStatus == 'terminated') {
         errorStation = _stationFromDatabase(snapshot.startStation);
@@ -738,6 +751,18 @@ class RentingController extends ChangeNotifier {
         return;
       }
       _applySnapshot(snapshot);
+    });
+  }
+
+  Future<bool> restoreActiveRental() async {
+    return _run(() async {
+      final active = await repository.restoreActive();
+      if (active != null) {
+        _applySnapshot(active);
+        _clearError();
+      } else {
+        error = RentalError.activeRentalExists;
+      }
     });
   }
 
@@ -1249,6 +1274,7 @@ class RentingController extends ChangeNotifier {
       _arrivalPosition = null;
       _clearError();
       stage = RentalStage.riding;
+      resumeTracking();
       notifyListeners();
       return;
     }
@@ -1583,6 +1609,12 @@ class RentingController extends ChangeNotifier {
       await cancelReservation();
       return;
     }
+    if (status == RentalDatabaseStatus.paymentPending ||
+        status == RentalDatabaseStatus.paymentFailed) {
+      error = RentalError.paymentCaptureFailed;
+      notifyListeners();
+      return;
+    }
     _resetLocal();
   }
 
@@ -1660,6 +1692,7 @@ class RentingController extends ChangeNotifier {
         break;
       case RentalDatabaseStatus.active:
         _stopBikeReadyTimer();
+        isTrackingPaused = false;
         metrics = RideMetrics(
           elapsedSeconds: _elapsedFromServerStart(),
           distanceKm: snapshot.rental.distanceKm,
@@ -1674,11 +1707,18 @@ class RentingController extends ChangeNotifier {
         break;
       case RentalDatabaseStatus.returning:
         _stopBikeReadyTimer();
+        isTrackingPaused = false;
         metrics = RideMetrics(
           elapsedSeconds: _elapsedFromServerStart(),
           distanceKm: snapshot.rental.distanceKm,
         );
-        selectedStation = _stationFromSnapshot(snapshot.endStation);
+        selectedStation = _stationFromSnapshot(snapshot.endStation) ??
+            selectedStation ??
+            (snapshot.rental.endStationId != null
+                ? stations
+                    .where((s) => s.backendId == snapshot.rental.endStationId)
+                    .firstOrNull
+                : null);
         isAtStation = true;
         stationQrToken = null;
         _arrivalPosition = null;
@@ -1689,7 +1729,13 @@ class RentingController extends ChangeNotifier {
         _stopBikeReadyTimer();
         _completedSession = snapshot;
         _stopClock();
-        selectedStation = _stationFromSnapshot(snapshot.endStation);
+        selectedStation = _stationFromSnapshot(snapshot.endStation) ??
+            selectedStation ??
+            (snapshot.rental.endStationId != null
+                ? stations
+                    .where((s) => s.backendId == snapshot.rental.endStationId)
+                    .firstOrNull
+                : null);
         metrics = RideMetrics(
           elapsedSeconds: snapshot.rental.durationSeconds,
           distanceKm: snapshot.rental.distanceKm,
@@ -1700,7 +1746,13 @@ class RentingController extends ChangeNotifier {
       case RentalDatabaseStatus.paymentPending:
         _completedSession = snapshot;
         _stopClock();
-        selectedStation = _stationFromSnapshot(snapshot.endStation);
+        selectedStation = _stationFromSnapshot(snapshot.endStation) ??
+            selectedStation ??
+            (snapshot.rental.endStationId != null
+                ? stations
+                    .where((s) => s.backendId == snapshot.rental.endStationId)
+                    .firstOrNull
+                : null);
         metrics = RideMetrics(
           elapsedSeconds: snapshot.rental.durationSeconds,
           distanceKm: snapshot.rental.distanceKm,
@@ -1711,7 +1763,13 @@ class RentingController extends ChangeNotifier {
       case RentalDatabaseStatus.paymentFailed:
         _completedSession = snapshot;
         _stopClock();
-        selectedStation = _stationFromSnapshot(snapshot.endStation);
+        selectedStation = _stationFromSnapshot(snapshot.endStation) ??
+            selectedStation ??
+            (snapshot.rental.endStationId != null
+                ? stations
+                    .where((s) => s.backendId == snapshot.rental.endStationId)
+                    .firstOrNull
+                : null);
         metrics = RideMetrics(
           elapsedSeconds: snapshot.rental.durationSeconds,
           distanceKm: snapshot.rental.distanceKm,
@@ -1851,7 +1909,8 @@ class RentingController extends ChangeNotifier {
 
   void _startClock() {
     _stopClock();
-    if (!enableClock || isTrackingPaused) return;
+    if (!enableClock) return;
+    isTrackingPaused = false;
     _rideTimer = Timer.periodic(const Duration(seconds: 1), (_) => tickRide());
     _startLocationTracking();
   }
@@ -2013,21 +2072,33 @@ class RentingController extends ChangeNotifier {
 
   /// Resume tracking and timer when app is resumed and page is visible
   void resumeTracking() {
-    if (!isTrackingPaused) return;
-    isTrackingPaused = false;
     final rentalStillActive = switch (stage) {
       RentalStage.riding ||
       RentalStage.selectingReturn ||
       RentalStage.returning => true,
       _ => false,
     };
-    if (rentalStillActive) {
+    if (!rentalStillActive) return;
+
+    final wasPaused = isTrackingPaused;
+    isTrackingPaused = false;
+
+    final serverElapsed = _elapsedFromServerStart();
+    final shouldSync = serverElapsed > metrics.elapsedSeconds;
+    if (shouldSync) {
+      metrics = metrics.copyWith(elapsedSeconds: serverElapsed);
+    }
+
+    if (_rideTimer == null || !_rideTimer!.isActive) {
       _startClock();
-      if (_positionSubscription?.isPaused ?? false) {
-        _positionSubscription?.resume();
-      } else if (_positionSubscription == null) {
-        _startLocationTracking();
-      }
+    } else if (_positionSubscription?.isPaused ?? false) {
+      _positionSubscription?.resume();
+    } else if (_positionSubscription == null) {
+      _startLocationTracking();
+    }
+
+    if (wasPaused || shouldSync) {
+      notifyListeners();
     }
   }
 

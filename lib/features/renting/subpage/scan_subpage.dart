@@ -260,6 +260,17 @@ class _ScanStageState extends State<ScanStage> with WidgetsBindingObserver {
         if (widget.controller.error != null && !_isShowingErrorDialog) ...[
           const SizedBox(height: 10),
           _ErrorPanel(message: _rentalError(context, widget.controller)),
+          if (widget.controller.error == RentalError.activeRentalExists) ...[
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              key: const ValueKey<String>('rent-resume-active-rental-button'),
+              onPressed: widget.controller.isBusy
+                  ? null
+                  : widget.controller.restoreActiveRental,
+              icon: const Icon(Icons.directions_bike_rounded),
+              label: Text(context.l10n.currentRide),
+            ),
+          ],
         ],
         const SizedBox(height: 8),
         Text(

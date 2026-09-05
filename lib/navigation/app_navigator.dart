@@ -127,7 +127,9 @@ class AppNavigator extends StatelessWidget {
       AppPage.stationManagement => const AdminStationMapScreen(),
       AppPage.scan => QrScanPage(
         controller: rentingController,
+        profileController: profileController,
         onRequestExit: () => onSelectRootPage(AppPage.home),
+        onRequestProfile: () => onSelectRootPage(AppPage.profile),
       ),
       AppPage.history => RideHistoryPage(
         onRideSelected: (ride) => Navigator.of(context).pushNamed(
