@@ -863,6 +863,7 @@ class RentingController extends ChangeNotifier {
     }
     _clearError();
     stage = RentalStage.authorizing;
+    unawaited(reloadPaymentMethods());
     notifyListeners();
   }
 
@@ -1046,10 +1047,49 @@ class RentingController extends ChangeNotifier {
         error = RentalError.lockFailed;
         return;
       }
+      if (error == RentalError.invalidTransition) {
+        final active = await repository.restoreActive();
+        if (active != null &&
+            (active.rental.id == id ||
+                active.rental.status == RentalDatabaseStatus.active)) {
+          _applySnapshot(active);
+          _clearError();
+          return;
+        }
+      }
       _applySnapshot(await repository.startSession(id));
       _clearError();
     } catch (caught) {
-      error = _mapError(caught);
+      final mapped = _mapError(caught);
+      if (mapped == RentalError.invalidTransition) {
+        try {
+          final active = await repository.restoreActive();
+          if (active != null &&
+              (active.rental.id == id ||
+                  active.rental.status == RentalDatabaseStatus.active)) {
+            _applySnapshot(active);
+            _clearError();
+            return;
+          } else if (active == null) {
+            final record = await repository.getRental(id);
+            if (record != null) {
+              if (record.failureReason == 'force_ended_by_admin') {
+                handleAdminForceEnd();
+                return;
+              }
+              if (record.status == RentalDatabaseStatus.cancelled ||
+                  record.status == RentalDatabaseStatus.completed ||
+                  record.status == RentalDatabaseStatus.lost) {
+                _stopBikeReadyTimer();
+                _resetLocal();
+                _timeoutController.add(null);
+                return;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      error = mapped;
     } finally {
       isBusy = false;
       notifyListeners();
@@ -1486,7 +1526,13 @@ class RentingController extends ChangeNotifier {
     }
 
     final succeeded = await _run(() => repository.cancelSession(id));
-    if (succeeded) _resetLocal();
+    if (succeeded) {
+      _resetLocal();
+    } else if (error == RentalError.invalidTransition ||
+        error == RentalError.invalidQr) {
+      _clearError();
+      _resetLocal();
+    }
   }
 
   Future<void> reset() async {
