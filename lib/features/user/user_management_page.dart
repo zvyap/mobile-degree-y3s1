@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:bike_renting_app/shared/app_toast.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/user/user_controller.dart';
 import 'package:bike_renting_app/features/user/user_models.dart';
@@ -310,11 +310,11 @@ class _UserManagementPageState extends State<UserManagementPage> {
     if (!mounted) return;
 
     if (widget.userCTRL.error == UserError.userDeleteFailed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to delete user.'),
-        ),
-      );
+      AppToast.show(
+        context,
+        message: 'User deleted successfully.',
+        variant: AppToastVariant.success,
+      );;
     }
   }
 

@@ -96,8 +96,11 @@ class ProfileRepository {
     final values = <String, dynamic>{
       'display_name': displayName.trim(),
       'phone': phone,
-      'avatar_url': avatarUrl,
     };
+
+    if (avatarUrl != null) {
+      values['avatar_url'] = avatarUrl;
+    }
 
     if (role != null) {
       values['role'] = role.name;
