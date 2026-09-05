@@ -55,6 +55,9 @@ abstract class BaseStationMapView extends StatefulWidget {
 }
 
 abstract class BaseStationMapViewState<T extends BaseStationMapView> extends State<T> {
+  // Shared key to command the map controller from the base state
+  final GlobalKey<SharedBikeMapState> mapTileKey = GlobalKey<SharedBikeMapState>();
+
   SupabaseClient? get supabase {
     try {
       return Supabase.instance.client;
@@ -335,11 +338,12 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
     }
   }
 
-  /// Recenter GPS position and update stations
+  /// Recenter GPS position, move map camera, and update stations
   Future<void> recenterToGps() async {
     final pos = await getUserLocation();
     if (pos != null && mounted) {
       setState(() => userLocation = pos);
+      mapTileKey.currentState?.moveCameraToLocation(pos);
     }
     if (widget.initialStations == null) {
       await fetchStations();
@@ -362,6 +366,7 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
   /// Builds the underlying map widget layer
   Widget buildMapLayer(BuildContext context) {
     return SharedBikeMap(
+      key: mapTileKey,
       stations: stations,
       riderLocation: widget.riderLocation ?? userLocation,
       riderHeading: widget.riderHeading ?? userHeading,
