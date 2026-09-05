@@ -9,9 +9,13 @@ class UserManagementPage extends StatefulWidget {
   const UserManagementPage({
     super.key,
     required this.userCTRL,
+    required this.onEditUser,
+    required this.onAddUser,
   });
 
   final UserController userCTRL;
+  final ValueChanged<String> onEditUser;
+  final VoidCallback onAddUser;
 
   @override
   State<UserManagementPage> createState() => _UserManagementPageState();

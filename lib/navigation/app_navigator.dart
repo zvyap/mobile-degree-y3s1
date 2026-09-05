@@ -30,6 +30,9 @@ import 'package:bike_renting_app/data/repositories/payment_method_repository.dar
 import 'package:bike_renting_app/features/payment_methods/pages/payment_methods_page.dart';
 import 'package:bike_renting_app/features/bike/pages/pending_report_detail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../features/user/add_user.dart';
+import '../features/user/edit_user.dart';
 class AppNavigator extends StatelessWidget {
   const AppNavigator({
     super.key,
@@ -231,10 +234,30 @@ class AppNavigator extends StatelessWidget {
           );
         },
       ),
-      AppPage.userManagement => UserManagementPage(
+
+      AppPage.editUser => EditUserPage(
         userCTRL: userController,
+        userId: arguments as String,
       ),
 
+      AppPage.addUser => AddUserPage(
+        userCTRL: userController,
+      ),
+      AppPage.userManagement => UserManagementPage(
+        userCTRL: userController,
+        onEditUser: (userId) {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.editUser.routeName,
+            arguments: userId,
+          );
+        },
+        onAddUser: () {
+          navigatorKey.currentState?.pushNamed(
+            AppPage.addUser.routeName,
+          );
+        },
+
+      ),
 
       AppPage.settings => SettingsPage(onToggleTheme: onToggleTheme),
       AppPage.paymentMethods => PaymentMethodsPage(

@@ -43,6 +43,22 @@ class UserController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadUser(String userId) async {
+    if (isBusy) return;
+
+    error = null;
+    _beginBusy();
+
+    try {
+      selectedUser = await _profileRepository.getUserById(userId);
+    } catch (caught) {
+      error = UserError.usersLoadFailed;
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
   void clearSelectedUser() {
     selectedUser = null;
     error = null;
