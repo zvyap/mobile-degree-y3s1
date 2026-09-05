@@ -59,7 +59,7 @@ enum AppPage {
     reportForm => l10n.newReport,
     pendingReportDetail => l10n.pendingReportDetails,
     paymentMethods => l10n.paymentMethods,
-    rentingManagement => 'Active Rentals',
+    rentingManagement => 'Rental Management',
     rentingDetail => 'Rental Details',
   };
 

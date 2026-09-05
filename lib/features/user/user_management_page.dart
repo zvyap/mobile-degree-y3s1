@@ -11,11 +11,13 @@ class UserManagementPage extends StatefulWidget {
     required this.userCTRL,
     required this.onEditUser,
     required this.onAddUser,
+    this.onOpenRentalHistory,
   });
 
   final UserController userCTRL;
   final ValueChanged<String> onEditUser;
   final VoidCallback onAddUser;
+  final ValueChanged<UserProfileRecord>? onOpenRentalHistory;
 
   @override
   State<UserManagementPage> createState() => _UserManagementPageState();
@@ -160,6 +162,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     child: _UserListItem(
                       user: user,
                       onEdit: () => _editUser(user),
+                      onRentalHistory: () => _openRentalHistory(user),
                       onVerifyIc: () => _verifyIc(user),
                       onToggleStatus: () => _toggleStatus(user),
                       onDelete: () => _confirmDelete(user),
@@ -254,6 +257,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
     widget.onEditUser(user.id);
   }
 
+  void _openRentalHistory(UserProfileRecord user) {
+    widget.onOpenRentalHistory?.call(user);
+  }
+
   Future<void> _verifyIc(UserProfileRecord user) async {
     // TODO: Implement once IC image upload and face detection
     // have been added.
@@ -343,6 +350,7 @@ class _UserListItem extends StatelessWidget {
   const _UserListItem({
     required this.user,
     required this.onEdit,
+    required this.onRentalHistory,
     required this.onVerifyIc,
     required this.onToggleStatus,
     required this.onDelete,
@@ -350,6 +358,7 @@ class _UserListItem extends StatelessWidget {
 
   final UserProfileRecord user;
   final VoidCallback onEdit;
+  final VoidCallback onRentalHistory;
   final VoidCallback onVerifyIc;
   final VoidCallback onToggleStatus;
   final VoidCallback onDelete;
@@ -406,6 +415,10 @@ class _UserListItem extends StatelessWidget {
                 onEdit();
                 break;
 
+              case 'rental_history':
+                onRentalHistory();
+                break;
+
               case 'verify_ic':
                 onVerifyIc();
                 break;
@@ -425,6 +438,13 @@ class _UserListItem extends StatelessWidget {
               child: ListTile(
                 leading: Icon(Icons.edit_rounded),
                 title: Text('Edit User'),
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'rental_history',
+              child: ListTile(
+                leading: Icon(Icons.history_rounded),
+                title: Text('Rental History'),
               ),
             ),
             const PopupMenuItem(

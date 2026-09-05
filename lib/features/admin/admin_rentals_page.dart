@@ -14,16 +14,30 @@ enum _RentalFilter {
   ended,
 }
 
+class AdminRentalsRouteArguments {
+  const AdminRentalsRouteArguments({
+    this.userId,
+    this.userName,
+  });
+
+  final String? userId;
+  final String? userName;
+}
+
 class AdminRentalsPage extends StatefulWidget {
   const AdminRentalsPage({
     super.key,
     required this.repository,
     required this.onOpenDetails,
+    this.userId,
+    this.userName,
     this.enableTicker = true,
   });
 
   final RentalSessionRepository repository;
   final FutureOr<void> Function(int) onOpenDetails;
+  final String? userId;
+  final String? userName;
   final bool enableTicker;
 
   @override
@@ -44,11 +58,25 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.userId != null) {
+      _showEndedSessions = true;
+    }
     _loadSessions();
     if (widget.enableTicker) {
       _tickerTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() {});
       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AdminRentalsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId) {
+      if (widget.userId != null) {
+        _showEndedSessions = true;
+      }
+      _loadSessions();
     }
   }
 
@@ -100,9 +128,29 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
     }
   }
 
+  List<AdminRentalSession> get _userSessions {
+    if (widget.userId == null) return _sessions;
+    return _sessions.where((session) {
+      final sessionUserId = session.user?.id ?? session.rental.userId;
+      return sessionUserId == widget.userId;
+    }).toList();
+  }
+
+  String get _pageTitle {
+    if (widget.userId != null) {
+      final name = widget.userName?.trim().isNotEmpty == true
+          ? widget.userName!.trim()
+          : (_userSessions.firstOrNull?.user?.displayName.trim().isNotEmpty == true
+              ? _userSessions.firstOrNull!.user!.displayName.trim()
+              : 'User');
+      return "$name's Rental";
+    }
+    return 'All User Rental';
+  }
+
   List<AdminRentalSession> get _filteredSessions {
     final query = _searchQuery.trim().toLowerCase();
-    return _sessions.where((session) {
+    return _userSessions.where((session) {
       // Default only show ongoing sessions
       if (!_showEndedSessions && session.isEnded) {
         return false;
@@ -166,26 +214,45 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
     final filtered = _filteredSessions;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Active Rentals',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loadSessions,
-          ),
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: _loadSessions,
         child: ListView(
           key: const ValueKey<String>('admin-rentals-page'),
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _pageTitle,
+                        key: const ValueKey('admin-rentals-title'),
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Monitor active renting sessions and rental history',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.68),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  key: const ValueKey('admin-rentals-refresh-btn'),
+                  tooltip: 'Refresh',
+                  icon: const Icon(Icons.refresh_rounded),
+                  onPressed: _loadSessions,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             // Search field
             TextField(
               key: const ValueKey('admin-rentals-search'),
@@ -345,7 +412,7 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
                     children: [
                       Icon(Icons.error_outline_rounded, size: 48, color: scheme.error),
                       const SizedBox(height: 12),
-                      Text('Failed to load active rentals', style: theme.textTheme.titleMedium),
+                      Text('Failed to load rentals', style: theme.textTheme.titleMedium),
                       const SizedBox(height: 6),
                       Text(_error!, style: TextStyle(color: scheme.error), textAlign: TextAlign.center),
                       const SizedBox(height: 16),
@@ -373,7 +440,9 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
                       Text(
                         _searchQuery.isNotEmpty
                             ? 'No rentals match your search'
-                            : 'No Active Renting Sessions',
+                            : (widget.userId != null
+                                ? 'No rentals found for this user'
+                                : 'No Active Renting Sessions'),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -382,7 +451,9 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
                       Text(
                         _searchQuery.isNotEmpty
                             ? 'Try adjusting your search or filter criteria'
-                            : 'There are currently no bikes being rented or reserved.',
+                            : (widget.userId != null
+                                ? 'This user has no recorded rentals.'
+                                : 'There are currently no bikes being rented or reserved.'),
                         style: TextStyle(
                           color: scheme.onSurface.withValues(alpha: 0.60),
                         ),
@@ -407,22 +478,22 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
   }
 
   int get _totalCount {
-    if (_showEndedSessions) return _sessions.length;
-    return _sessions.where((s) => !s.isEnded).length;
+    if (_showEndedSessions) return _userSessions.length;
+    return _userSessions.where((s) => !s.isEnded).length;
   }
 
   int _countByStatus(RentalDatabaseStatus status) {
-    return _sessions.where((s) => s.status == status).length;
+    return _userSessions.where((s) => s.status == status).length;
   }
 
   int _countReserved() {
-    return _sessions.where((s) =>
+    return _userSessions.where((s) =>
         s.status == RentalDatabaseStatus.reserved ||
         s.status == RentalDatabaseStatus.pendingAuthorization).length;
   }
 
   int _countEnded() {
-    return _sessions.where((s) => s.isEnded).length;
+    return _userSessions.where((s) => s.isEnded).length;
   }
 
   Widget _buildFilterChip(String label, _RentalFilter filter) {
