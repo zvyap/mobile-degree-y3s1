@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'docking.dart';
 
 class StationDetailScreen extends StatefulWidget {
@@ -199,10 +200,10 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Station name cannot be empty.'),
+        SnackBar(
+          content: Text(context.l10n.stationNameEmptyError),
           behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
         ),
       );
       return;
@@ -210,10 +211,10 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
     if (address.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Station address cannot be empty.'),
+        SnackBar(
+          content: Text(context.l10n.stationAddressEmptyError),
           behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
         ),
       );
       return;
@@ -222,10 +223,10 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     final capacity = int.tryParse(capacityText);
     if (capacity == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid number for max capacity.'),
+        SnackBar(
+          content: Text(context.l10n.validCapacityError),
           behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(bottom: 90, left: 16, right: 16),
+          margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
         ),
       );
       return;
@@ -235,7 +236,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Max capacity ($capacity) cannot be less than current docked bikes ($_availableBikes).',
+            context.l10n.maxCapacityExceededError(capacity, _availableBikes),
           ),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
@@ -294,8 +295,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
           SnackBar(
             content: Text(
               widget.stationData?['id'] != null
-                  ? 'Station updated successfully!'
-                  : 'Station added successfully!',
+                  ? context.l10n.stationUpdatedSuccess
+                  : context.l10n.stationAddedSuccess,
             ),
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
@@ -308,7 +309,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to save station: $e'),
+            content: Text(context.l10n.failedToSaveStation(e.toString())),
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
           ),
@@ -321,14 +322,14 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Remove Station"),
-        content: const Text("Are you sure you want to remove this station?"),
+        title: Text(context.l10n.removeStation),
+        content: Text(context.l10n.confirmRemoveStationBody),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.l10n.cancel)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            child: const Text("Remove"),
+            child: Text(context.l10n.remove),
           ),
         ],
       ),
@@ -341,10 +342,10 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       await supabase.from('stations').update({'is_active': false}).eq('id', widget.stationData!['id']);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Station removed successfully!'),
+          SnackBar(
+            content: Text(context.l10n.stationRemovedSuccess),
             behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.only(bottom: 90, left: 16, right: 16),
+            margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
           ),
         );
         Navigator.pop(context, true);
@@ -354,7 +355,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to remove station: $e'),
+            content: Text(context.l10n.failedToRemoveStation(e.toString())),
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.only(bottom: 90, left: 16, right: 16),
           ),
@@ -413,7 +414,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     child: Icon(Icons.storefront_rounded, size: 64, color: colorScheme.onSurface.withOpacity(0.3)),
                   )),
                 ),
-                // 🟢 Back Arrow for User / Rider View
+                // Back Arrow for User / Rider View
                 if (widget.isViewOnly)
                   Positioned(
                     top: MediaQuery.of(context).padding.top + 8,
@@ -438,7 +439,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                       ),
                       onPressed: _pickAndUploadImage,
                       icon: const Icon(Icons.edit, size: 16),
-                      label: const Text("Change Photo", style: TextStyle(fontSize: 12)),
+                      label: Text(context.l10n.changePhoto, style: const TextStyle(fontSize: 12)),
                     ),
                   ),
               ],
@@ -460,14 +461,14 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // NAME FIELD
-                        Text("Station Name", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text(context.l10n.stationName, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 4),
                         TextField(
                           controller: _nameController,
                           readOnly: widget.isViewOnly,
                           style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16),
                           decoration: InputDecoration(
-                            hintText: "Enter station name...",
+                            hintText: context.l10n.enterStationNameHint,
                             hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.4), fontSize: 14),
                             isDense: true,
                             border: widget.isViewOnly ? InputBorder.none : const OutlineInputBorder(),
@@ -478,7 +479,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         // CODE FIELD
                         Row(
                           children: [
-                            Text("Station Code", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.bold)),
+                            Text(context.l10n.stationCode, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.bold)),
                             const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -487,7 +488,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                "Read-Only",
+                                context.l10n.readOnly,
                                 style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 10),
                               ),
                             ),
@@ -507,7 +508,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         const SizedBox(height: 16),
 
                         // ADDRESS FIELD
-                        Text("Address", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text(context.l10n.address, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 4),
                         TextField(
                           controller: _addressController,
@@ -515,7 +516,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                           maxLines: 2,
                           style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
                           decoration: InputDecoration(
-                            hintText: "Enter station address...",
+                            hintText: context.l10n.enterStationAddressHint,
                             hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.4), fontSize: 14),
                             isDense: true,
                             border: widget.isViewOnly ? InputBorder.none : const OutlineInputBorder(),
@@ -529,7 +530,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text("Operating status", style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text(context.l10n.operatingStatus, style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 14)),
                             if (!widget.isViewOnly)
                               IconButton(
                                 icon: const Icon(Icons.edit_square, size: 20),
@@ -552,7 +553,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         // DOCKED BIKES
                         Row(
                           children: [
-                            Text("Current Docked Bikes", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
+                            Text(context.l10n.currentDockedBikes, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
                             const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -560,7 +561,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                                 color: colorScheme.onSurface.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Text("Read-Only", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 10)),
+                              child: Text(context.l10n.readOnly, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 10)),
                             ),
                           ],
                         ),
@@ -575,7 +576,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         const SizedBox(height: 16),
 
                         // CAPACITY (Digits Only Filter)
-                        Text("Max bike per station", style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
+                        Text(context.l10n.maxBikesPerStation, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
                         const SizedBox(height: 6),
                         Row(
                           children: [
@@ -616,7 +617,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         onPressed: _isSaving ? null : _saveStation,
                         child: _isSaving
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : Text(isNewStation ? "Add Station" : "Update Station", style: const TextStyle(fontWeight: FontWeight.bold)),
+                            : Text(isNewStation ? context.l10n.addStation : context.l10n.updateStation, style: const TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -644,7 +645,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                           );
                         },
                         icon: const Icon(Icons.directions_bike, size: 18),
-                        label: const Text("View Bikes at Station", style: TextStyle(fontWeight: FontWeight.bold)),
+                        label: Text(context.l10n.viewBikesAtStation, style: const TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -662,7 +663,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         ),
                         onPressed: _isSaving ? null : _deleteStation,
                         icon: const Icon(Icons.delete_outline, size: 18),
-                        label: const Text("Remove Station", style: TextStyle(fontWeight: FontWeight.bold)),
+                        label: Text(context.l10n.removeStation, style: const TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -691,7 +692,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                 ),
                 Expanded(
                   child: Text(
-                    _nameController.text.isNotEmpty ? _nameController.text : 'Station',
+                    _nameController.text.isNotEmpty ? _nameController.text : context.l10n.stations,
                     style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                 ),
@@ -706,7 +707,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      _addressController.text.isNotEmpty ? _addressController.text : 'No address set',
+                      _addressController.text.isNotEmpty ? _addressController.text : context.l10n.noAddressSet,
                       style: TextStyle(color: colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -723,7 +724,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
               onChanged: _filterBikes,
               style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
               decoration: InputDecoration(
-                hintText: 'Search bikes by code or ID',
+                hintText: context.l10n.searchBikesCodeOrId,
                 hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
                 prefixIcon: Icon(Icons.search, color: colorScheme.onSurface.withOpacity(0.5), size: 20),
                 filled: true,
@@ -744,7 +745,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                   : (_filteredBikes.isEmpty
                   ? Center(
                 child: Text(
-                  "No bikes at this station.",
+                  context.l10n.noBikesAtStation,
                   style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5)),
                 ),
               )
@@ -790,7 +791,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                               Row(
                                 children: [
                                   Text(
-                                    "Status: ${status.toLowerCase()}",
+                                    context.l10n.bikeStatus(status.toLowerCase()),
                                     style: TextStyle(
                                       color: status.toLowerCase() == 'available'
                                           ? const Color(0xFF10B981)

@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:bike_renting_app/bike_station/station_details.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 
 // ============================================================================
 // 1. MAIN PARENT SCREEN: AdminStationMapScreen
@@ -80,7 +81,7 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
       if (mounted) {
         setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load stations: $e')),
+          SnackBar(content: Text(context.l10n.failedToLoadStations(e.toString()))),
         );
       }
     }
@@ -198,7 +199,7 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
                       onChanged: _filterStations,
                       style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: 'Search station code, name or address...',
+                        hintText: context.l10n.searchStationHint,
                         hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13),
                         prefixIcon: Icon(Icons.search, color: colorScheme.primary, size: 20),
                         suffixIcon: _searchController.text.isNotEmpty
@@ -231,7 +232,7 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
                         Icon(Icons.touch_app, color: colorScheme.primary, size: 14),
                         const SizedBox(width: 6),
                         Text(
-                          "Long-press map to add new station",
+                          context.l10n.longPressMapToAddStation,
                           style: TextStyle(
                             color: colorScheme.onSurface,
                             fontWeight: FontWeight.bold,
@@ -265,7 +266,7 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
                         ? Padding(
                       padding: const EdgeInsets.all(20.0),
                       child: Text(
-                        "No matching stations found.",
+                        context.l10n.noMatchingStationsFound,
                         style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14),
                         textAlign: TextAlign.center,
                       ),
@@ -293,7 +294,7 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  station['name'] ?? 'Unnamed Station',
+                                  station['name'] ?? context.l10n.unnamedStation,
                                   style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 14),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -309,7 +310,7 @@ class _AdminStationMapScreenState extends State<AdminStationMapScreen> {
                             ],
                           ),
                           subtitle: Text(
-                            station['address'] ?? 'No address',
+                            station['address'] ?? context.l10n.noAddress,
                             style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 12),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -429,7 +430,7 @@ class SharedBikeMapState extends State<SharedBikeMap> {
           distanceFilter: 2,
         ),
       ).listen(
-        (Position pos) {
+            (Position pos) {
           if (!mounted) return;
           final newPos = LatLng(pos.latitude, pos.longitude);
           double? heading = pos.heading;
@@ -695,7 +696,7 @@ class SharedBikeMapState extends State<SharedBikeMap> {
       final String stationCode = station['code']?.toString() ?? '';
       final String status = station['status']?.toString() ?? 'Normal';
 
-      // 🟢 Skip rendering markers for Terminated stations in User View (when isAdminMode is false)
+      // Skip rendering markers for Terminated stations in User View (when isAdminMode is false)
       if (!widget.isAdminMode && status.trim().toLowerCase() == 'terminated') {
         continue;
       }

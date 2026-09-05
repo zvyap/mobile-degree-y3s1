@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 
 // 🟢 Correct import path for BikeDetailsPage
 import '../features/bike/pages/bike_details.dart';
@@ -65,7 +66,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
       if (mounted) {
         setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load bikes: $e')),
+          SnackBar(content: Text(context.l10n.failedToLoadBikes(e.toString()))),
         );
       }
     }
@@ -92,7 +93,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
 
     if (bikeId == null || bikeId <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open: Invalid Bike ID')),
+        SnackBar(content: Text(context.l10n.invalidBikeIdError)),
       );
       return;
     }
@@ -161,7 +162,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.stationData?['name']?.toString() ?? "Station Bikes",
+                    widget.stationData?['name']?.toString() ?? context.l10n.stationBikes,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
@@ -175,7 +176,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          widget.stationData?['address']?.toString() ?? "Location coordinates not provided",
+                          widget.stationData?['address']?.toString() ?? context.l10n.locationCoordinatesNotProvided,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
@@ -209,7 +210,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: InputDecoration(
                     icon: Icon(Icons.search, color: colorScheme.onSurface.withValues(alpha: 0.6)),
-                    hintText: "Search bikes by code or ID",
+                    hintText: context.l10n.searchBikesCodeOrId,
                     hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 14),
                     border: InputBorder.none,
                   ),
@@ -239,7 +240,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            "there is no bikes in this station yet",
+                            context.l10n.noBikesInStationYet,
                             style: theme.textTheme.bodyLarge?.copyWith(
                               color: colorScheme.onSurface.withValues(alpha: 0.6),
                               fontWeight: FontWeight.w500,
@@ -253,7 +254,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                   if (filteredBikes.isEmpty) {
                     return Center(
                       child: Text(
-                        "No bikes match your search.",
+                        context.l10n.noBikesMatchSearch,
                         style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
                       ),
                     );
@@ -265,7 +266,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                     itemBuilder: (context, index) {
                       final bike = filteredBikes[index];
                       final String bikeCode = bike["code"] ?? "BR-${bike["id"]}";
-                      final String status = bike["status"] ?? "Unknown";
+                      final String status = bike["status"] ?? context.l10n.unknownStatus;
                       final int battery = (bike["battery_percent"] as num?)?.toInt() ?? 0;
                       final bool isAvailable = status.toLowerCase() == "available";
 
@@ -308,7 +309,7 @@ class _StationBikesScreenState extends State<StationBikesScreen> {
                                   Row(
                                     children: [
                                       Text(
-                                        "Status: $status",
+                                        context.l10n.bikeStatus(status),
                                         style: theme.textTheme.bodySmall?.copyWith(
                                           color: isAvailable
                                               ? colorScheme.secondary

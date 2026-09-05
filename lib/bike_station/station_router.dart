@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bike_renting_app/bike_station/base_station_map.dart';
 import 'package:bike_renting_app/bike_station/shared_map.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -85,7 +86,7 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
           distanceFilter: 2,
         ),
       ).listen(
-        (pos) {
+            (pos) {
           if (!mounted) return;
           setState(() {
             userPosition = pos;
@@ -291,7 +292,7 @@ class _StationRoutePlannerScreenState extends State<StationRoutePlannerScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          "Select origin & destination below to plan route",
+                          context.l10n.selectStationsToCalculateRoutePrompt,
                           style: TextStyle(
                             color: colorScheme.onSurface,
                             fontWeight: FontWeight.bold,
@@ -487,7 +488,7 @@ class _StationPickerBottomSheetState extends State<_StationPickerBottomSheet> {
                 onChanged: _filter,
                 style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Search station code, name or address...',
+                  hintText: context.l10n.searchStationHint,
                   hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13),
                   prefixIcon: Icon(Icons.search, color: colorScheme.primary, size: 20),
                   border: OutlineInputBorder(
@@ -502,7 +503,7 @@ class _StationPickerBottomSheetState extends State<_StationPickerBottomSheet> {
               child: _filteredStations.isEmpty
                   ? Center(
                 child: Text(
-                  "No matching stations found.",
+                  context.l10n.noMatchingStationsFound,
                   style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
                 ),
               )
@@ -526,7 +527,7 @@ class _StationPickerBottomSheetState extends State<_StationPickerBottomSheet> {
                       );
                       distStr = meters >= 1000
                           ? '${(meters / 1000).toStringAsFixed(1)} km away'
-                          : '${meters.round()} m away';
+                          : context.l10n.stationDistance(meters.round());
                     }
                   } else {
                     if (widget.originStation != null) {
@@ -542,7 +543,7 @@ class _StationPickerBottomSheetState extends State<_StationPickerBottomSheet> {
                         );
                         distStr = meters >= 1000
                             ? '${(meters / 1000).toStringAsFixed(1)} km away'
-                            : '${meters.round()} m away';
+                            : context.l10n.stationDistance(meters.round());
                       }
                     }
                   }
@@ -550,11 +551,11 @@ class _StationPickerBottomSheetState extends State<_StationPickerBottomSheet> {
                   return ListTile(
                     leading: Icon(Icons.location_on_outlined, color: colorScheme.primary),
                     title: Text(
-                      station['name'] ?? 'Unnamed Station',
+                      station['name'] ?? context.l10n.unnamedStation,
                       style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                      station['address'] ?? '',
+                      station['address'] ?? context.l10n.noAddress,
                       style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
                     trailing: Text(

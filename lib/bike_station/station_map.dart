@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:bike_renting_app/bike_station/base_station_map.dart';
 import 'package:bike_renting_app/bike_station/shared_map.dart';
 import 'package:bike_renting_app/bike_station/station_details.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 
 export 'package:bike_renting_app/bike_station/base_station_map.dart';
 
@@ -96,13 +97,19 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${station['name']} deactivated successfully')),
+          SnackBar(
+            content: Text(
+              context.l10n.stationDeactivatedSuccess(station['name']?.toString() ?? ''),
+            ),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove station: $e')),
+          SnackBar(
+            content: Text(context.l10n.failedToRemoveStation(e.toString())),
+          ),
         );
       }
     }
@@ -202,7 +209,9 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                       onChanged: filterStations,
                       style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: widget.isAdminDeleteMode ? 'Search station to remove...' : 'Search station name or address...',
+                        hintText: widget.isAdminDeleteMode
+                            ? context.l10n.searchStationToRemove
+                            : context.l10n.searchStationNameOrAddress,
                         hintStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13),
                         prefixIcon: Icon(Icons.search, color: colorScheme.primary, size: 20),
                         suffixIcon: searchController.text.isNotEmpty
@@ -242,7 +251,7 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                             ? Padding(
                           padding: const EdgeInsets.all(20.0),
                           child: Text(
-                            "No stations found.",
+                            context.l10n.noStationsFound,
                             style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14),
                             textAlign: TextAlign.center,
                           ),
@@ -256,15 +265,16 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                             final station = filteredStations[index];
                             final dist = formatDistance(station['distance_meters']);
                             final statusColor = _getStatusColor(station['status']?.toString());
+                            final int availableBikes = (station['available_bikes'] as num?)?.toInt() ?? 0;
 
                             return ListTile(
                               leading: Icon(Icons.location_on, color: statusColor),
                               title: Text(
-                                station['name'] ?? 'Unnamed Station',
+                                station['name'] ?? context.l10n.unnamedStation,
                                 style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 14),
                               ),
                               subtitle: Text(
-                                station['address'] ?? 'No address',
+                                station['address'] ?? context.l10n.noAddress,
                                 style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 12),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -273,7 +283,10 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text("${station['available_bikes'] ?? 0} bikes", style: TextStyle(color: colorScheme.secondary, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  Text(
+                                    context.l10n.bikesCount(availableBikes),
+                                    style: TextStyle(color: colorScheme.secondary, fontWeight: FontWeight.bold, fontSize: 12),
+                                  ),
                                   if (dist.isNotEmpty)
                                     Text(dist, style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 11)),
                                 ],
@@ -341,8 +354,10 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                                       children: [
                                         Text(
                                           selectedStation != null
-                                              ? "Currently Selected"
-                                              : (widget.isAdminDeleteMode ? "Target Station to Remove" : "Closest to you"),
+                                              ? context.l10n.currentlySelected
+                                              : (widget.isAdminDeleteMode
+                                              ? context.l10n.targetStationToRemove
+                                              : context.l10n.closestToYou),
                                           style: TextStyle(
                                             color: selectedStation != null ? colorScheme.secondary : colorScheme.onSurface.withValues(alpha: 0.7),
                                             fontSize: 13,
@@ -353,7 +368,7 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                                           InkWell(
                                             onTap: () => setState(() => selectedStation = null),
                                             child: Text(
-                                              "Reset",
+                                              context.l10n.reset,
                                               style: TextStyle(color: colorScheme.primary, fontSize: 12, fontWeight: FontWeight.bold),
                                             ),
                                           ),
@@ -372,7 +387,9 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
                                     child: Text(
-                                      widget.isAdminDeleteMode ? "All Active Stations" : "Nearby Stations",
+                                      widget.isAdminDeleteMode
+                                          ? context.l10n.allActiveStations
+                                          : context.l10n.nearbyStations,
                                       style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13, fontWeight: FontWeight.bold),
                                     ),
                                   ),
@@ -412,7 +429,10 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
           children: [
             Icon(Icons.info_outline, color: colorScheme.onSurface.withValues(alpha: 0.5)),
             const SizedBox(width: 10),
-            Text("No stations available", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13)),
+            Text(
+              context.l10n.noStationsAvailable,
+              style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 13),
+            ),
           ],
         ),
       );
@@ -429,9 +449,10 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
     final String statusStr = displayStation['status']?.toString() ?? 'Normal';
     final Color statusColor = _getStatusColor(statusStr);
 
-    final availableBikes = displayStation['available_bikes'] ?? 0;
+    final int availableBikes = (displayStation['available_bikes'] as num?)?.toInt() ?? 0;
     final distStr = formatDistance(displayStation['distance_meters']);
     final distDisplay = distStr.isNotEmpty ? " • $distStr away" : "";
+    final addressStr = displayStation["address"] ?? context.l10n.noAddress;
 
     return InkWell(
       onTap: () {
@@ -479,7 +500,7 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                     children: [
                       Expanded(
                         child: Text(
-                          displayStation["name"] ?? "Unnamed Station",
+                          displayStation["name"] ?? context.l10n.unnamedStation,
                           style: TextStyle(color: colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -506,7 +527,7 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "${displayStation["address"] ?? "No address"} • $availableBikes Bikes$distDisplay",
+                    context.l10n.stationSummarySubtitle(addressStr, availableBikes, distDisplay),
                     style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 12),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -528,7 +549,10 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Text("No matching stations found.", style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13)),
+          child: Text(
+            context.l10n.noMatchingStationsFound,
+            style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 13),
+          ),
         ),
       );
     }
@@ -547,9 +571,9 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
           child: Container(
             color: isSelected ? statusColor.withValues(alpha: 0.08) : Colors.transparent,
             child: _StandardStationTile(
-              name: station["name"] ?? "Unnamed Station",
-              address: station["address"] ?? "",
-              bikes: station["available_bikes"] ?? 0,
+              name: station["name"] ?? context.l10n.unnamedStation,
+              address: station["address"] ?? context.l10n.noAddress,
+              bikes: (station["available_bikes"] as num?)?.toInt() ?? 0,
               distance: distStr,
               statusColor: statusColor,
               isSelected: isSelected,
@@ -574,9 +598,19 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("Are you sure to remove\n${station["name"]}?", textAlign: TextAlign.center, style: theme.textTheme.titleMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
+              Text(
+                context.l10n.confirmRemoveStationTitle(
+                  station["name"]?.toString() ?? context.l10n.unnamedStation,
+                ),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 16),
-              Text("This action is irreversible, are you sure to continue?", textAlign: TextAlign.center, style: TextStyle(color: destructiveColor, fontSize: 12, fontStyle: FontStyle.italic)),
+              Text(
+                context.l10n.actionIrreversibleWarning,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: destructiveColor, fontSize: 12, fontStyle: FontStyle.italic),
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -587,7 +621,10 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                     Navigator.pop(context);
                     _deleteStation(station);
                   },
-                  child: const Text("Remove Location", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    context.l10n.removeLocation,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -597,7 +634,10 @@ class _RefinedUserBikeViewState extends BaseStationMapViewState<RefinedUserBikeV
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: colorScheme.surface, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
                   onPressed: () => Navigator.pop(context),
-                  child: Text("Cancel", style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    context.l10n.cancel,
+                    style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],

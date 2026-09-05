@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:bike_renting_app/bike_station/osrm_service.dart';
 import 'package:bike_renting_app/bike_station/shared_map.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 
 export 'package:bike_renting_app/bike_station/osrm_service.dart';
 export 'package:bike_renting_app/bike_station/shared_map.dart' show GoogleMapsLocationMarker;
@@ -111,7 +112,7 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
       _positionSubscription = Geolocator.getPositionStream(
         locationSettings: settings,
       ).listen(
-        (Position position) {
+            (Position position) {
           if (!mounted) return;
           final newPos = LatLng(position.latitude, position.longitude);
           double? heading = position.heading;
@@ -265,7 +266,7 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
 
       List<Map<String, dynamic>> fetched = List<Map<String, dynamic>>.from(response);
 
-      // 🟢 Exclude Terminated stations in User View
+      // Exclude Terminated stations in User View
       if (!widget.isAdminMode) {
         fetched.removeWhere((s) => s['status']?.toString().trim().toLowerCase() == 'terminated');
       }
@@ -302,7 +303,7 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
       if (mounted) {
         setState(() => isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading stations: $e')),
+          SnackBar(content: Text(context.l10n.errorLoadingStations(e.toString()))),
         );
       }
     }
@@ -489,8 +490,8 @@ class StationPlaceholderRow extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isMaintenance = station?['status']?.toString().trim().toLowerCase() == 'under maintenance';
 
-    final String resolvedTitle = defaultTitle ?? (isOrigin ? "Station A" : "Station B");
-    final String resolvedSubtitle = defaultSubtitle ?? (isOrigin ? "Select origin station" : "Select destination station");
+    final String resolvedTitle = defaultTitle ?? (isOrigin ? context.l10n.stationA : context.l10n.stationB);
+    final String resolvedSubtitle = defaultSubtitle ?? (isOrigin ? context.l10n.selectOriginStation : context.l10n.selectDestinationStation);
 
     return Row(
       children: [
@@ -538,9 +539,9 @@ class StationPlaceholderRow extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(color: const Color(0xFFF97316), width: 1),
                       ),
-                      child: const Text(
-                        'Under Maintenance',
-                        style: TextStyle(
+                      child: Text(
+                        context.l10n.underMaintenance,
+                        style: const TextStyle(
                           color: Color(0xFFF97316),
                           fontWeight: FontWeight.w700,
                           fontSize: 10,
@@ -585,7 +586,7 @@ class StationRouteDisplay extends StatelessWidget {
     this.routeResult,
   });
 
-  // 🟢 Enforce UTC+8 (Malaysia Time - MYT)
+  // Enforce UTC+8 (Malaysia Time - MYT)
   static String formatEtaRange(int durationMinutes) {
     final nowMyt = DateTime.now().toUtc().add(const Duration(hours: 8));
     final arrivalMyt = nowMyt.add(Duration(minutes: durationMinutes));
@@ -607,9 +608,9 @@ class StationRouteDisplay extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            "Selected Station are too far away",
-            style: TextStyle(
+          Text(
+            context.l10n.selectedStationTooFar,
+            style: const TextStyle(
               color: Color(0xFFDC2626),
               fontWeight: FontWeight.bold,
               fontSize: 15,
@@ -619,7 +620,7 @@ class StationRouteDisplay extends StatelessWidget {
           Row(
             children: [
               Text(
-                "ETA: ",
+                "${context.l10n.etaLabel} ",
                 style: TextStyle(
                   color: colorScheme.onSurface.withValues(alpha: 0.7),
                   fontWeight: FontWeight.bold,
@@ -639,7 +640,7 @@ class StationRouteDisplay extends StatelessWidget {
           if (routeResult != null) ...[
             const SizedBox(height: 6),
             Text(
-              "Total Distance: ${routeResult!.distanceKm.toStringAsFixed(2)} km",
+              context.l10n.totalDistanceKm(routeResult!.distanceKm.toStringAsFixed(2)),
               style: TextStyle(
                 color: colorScheme.onSurface.withValues(alpha: 0.8),
                 fontWeight: FontWeight.bold,
@@ -657,7 +658,7 @@ class StationRouteDisplay extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            "Estimated Arrival Time (ETA)",
+            context.l10n.estimatedArrivalTime,
             style: TextStyle(
               color: colorScheme.onSurface,
               fontWeight: FontWeight.bold,
@@ -674,7 +675,7 @@ class StationRouteDisplay extends StatelessWidget {
             ),
           ),
           Text(
-            "${routeResult!.durationMinutes} minutes",
+            context.l10n.durationInMinutes(routeResult!.durationMinutes),
             style: TextStyle(
               color: colorScheme.onSurface.withValues(alpha: 0.6),
               fontSize: 12,
@@ -682,7 +683,7 @@ class StationRouteDisplay extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            "Total Distance: ${routeResult!.distanceKm.toStringAsFixed(2)} km",
+            context.l10n.totalDistanceKm(routeResult!.distanceKm.toStringAsFixed(2)),
             style: TextStyle(
               color: colorScheme.onSurface,
               fontWeight: FontWeight.bold,
@@ -694,7 +695,7 @@ class StationRouteDisplay extends StatelessWidget {
     }
 
     return Text(
-      "Select Station A & Station B to calculate route.",
+      context.l10n.selectStationsToCalculateRoutePrompt,
       style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5)),
     );
   }

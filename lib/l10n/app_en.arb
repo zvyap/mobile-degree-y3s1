@@ -484,7 +484,6 @@
   "noStationAssigned": "No station assigned",
   "reportInformation": "Report information",
   "problem": "Problem",
-  "reported": "Reported",
   "reportIdLabel": "Report ID",
   "photo": "Photo",
   "photoUnavailable": "Photo unavailable",
@@ -672,5 +671,183 @@
       }
     }
   },
-  "contactSupport": "Questions? Contact support@bikerent.app"
+  "contactSupport": "Questions? Contact support@bikerent.app",
+
+  "errorLoadingStations": "Error loading stations: {error}",
+    "@errorLoadingStations": {
+      "description": "Error message when stations fail to fetch from database",
+      "placeholders": {
+        "error": { "type": "String" }
+      }
+    },
+
+    "stationA": "Station A",
+    "stationB": "Station B",
+    "selectOriginStation": "Select origin station",
+    "selectDestinationStation": "Select destination station",
+    "underMaintenance": "Under Maintenance",
+
+    "selectedStationTooFar": "Selected Station are too far away",
+    "etaLabel": "ETA:",
+    "estimatedArrivalTime": "Estimated Arrival Time (ETA)",
+    "durationInMinutes": "{minutes} minutes",
+    "@durationInMinutes": {
+      "description": "Duration display in minutes for route calculation",
+      "placeholders": {
+        "minutes": { "type": "int" }
+      }
+    },
+
+    "totalDistanceKm": "Total Distance: {distance} km",
+    "@totalDistanceKm": {
+      "description": "Calculated route distance in kilometers",
+      "placeholders": {
+        "distance": { "type": "String" }
+      }
+    },
+
+    "selectStationsToCalculateRoutePrompt": "Select Station A & Station B to calculate route.",
+
+    "failedToLoadBikes": "Failed to load bikes: {error}",
+      "@failedToLoadBikes": {
+        "description": "Error message when fetching station bikes fails",
+        "placeholders": {
+          "error": { "type": "String" }
+        }
+      },
+
+      "invalidBikeIdError": "Unable to open: Invalid Bike ID",
+
+      "stationBikes": "Station Bikes",
+      "locationCoordinatesNotProvided": "Location coordinates not provided",
+
+      "searchBikesCodeOrId": "Search bikes by code or ID",
+
+      "noBikesInStationYet": "there is no bikes in this station yet",
+      "noBikesMatchSearch": "No bikes match your search.",
+
+      "unknownStatus": "Unknown",
+      "bikeStatus": "Status: {status}",
+      "@bikeStatus": {
+        "description": "Label indicating the operational status of a bike",
+        "placeholders": {
+          "status": { "type": "String" }
+        }
+      },
+
+  "failedToLoadStations": "Failed to load stations: {error}",
+    "@failedToLoadStations": {
+      "description": "Error message shown in SnackBar when station fetching fails",
+      "placeholders": {
+        "error": { "type": "String" }
+      }
+    },
+
+    "searchStationHint": "Search station code, name or address...",
+    "longPressMapToAddStation": "Long-press map to add new station",
+    "noMatchingStationsFound": "No matching stations found.",
+    "unnamedStation": "Unnamed Station",
+    "noAddress": "No address",
+
+    "stationNameEmptyError": "Station name cannot be empty.",
+      "stationAddressEmptyError": "Station address cannot be empty.",
+      "validCapacityError": "Please enter a valid number for max capacity.",
+      "maxCapacityExceededError": "Max capacity ({capacity}) cannot be less than current docked bikes ({bikes}).",
+      "@maxCapacityExceededError": {
+        "description": "Error message shown when the entered capacity is lower than current bikes",
+        "placeholders": {
+          "capacity": { "type": "int" },
+          "bikes": { "type": "int" }
+        }
+      },
+
+      "stationUpdatedSuccess": "Station updated successfully!",
+      "stationAddedSuccess": "Station added successfully!",
+      "failedToSaveStation": "Failed to save station: {error}",
+      "@failedToSaveStation": {
+        "description": "Error notification when saving station fails",
+        "placeholders": {
+          "error": { "type": "String" }
+        }
+      },
+
+      "removeStation": "Remove Station",
+      "confirmRemoveStationBody": "Are you sure you want to remove this station?",
+      "stationRemovedSuccess": "Station removed successfully!",
+      "failedToRemoveStation": "Failed to remove station: {error}",
+      "@failedToRemoveStation": {
+        "description": "Error notification when deleting a station fails",
+        "placeholders": {
+          "error": { "type": "String" }
+        }
+      },
+
+      "changePhoto": "Change Photo",
+      "stationName": "Station Name",
+      "enterStationNameHint": "Enter station name...",
+      "stationCode": "Station Code",
+      "readOnly": "Read-Only",
+      "address": "Address",
+      "enterStationAddressHint": "Enter station address...",
+      "operatingStatus": "Operating status",
+      "currentDockedBikes": "Current Docked Bikes",
+      "maxBikesPerStation": "Max bike per station",
+      "addStation": "Add Station",
+      "updateStation": "Update Station",
+      "viewBikesAtStation": "View Bikes at Station",
+
+      "noAddressSet": "No address set",
+
+      "noBikesAtStation": "No bikes at this station.",
+      "stationDeactivatedSuccess": "{stationName} deactivated successfully",
+        "@stationDeactivatedSuccess": {
+          "description": "Notification when a station is successfully deactivated by an admin",
+          "placeholders": {
+            "stationName": { "type": "String" }
+          }
+        },
+
+
+        "searchStationToRemove": "Search station to remove...",
+        "searchStationNameOrAddress": "Search station name or address...",
+        "noStationsFound": "No stations found.",
+
+
+        "bikesCount": "{count, plural, =1{1 bike} other{{count} bikes}}",
+        "@bikesCount": {
+          "description": "Pluralized count of available bikes",
+          "placeholders": {
+            "count": { "type": "int" }
+          }
+        },
+
+        "currentlySelected": "Currently Selected",
+        "targetStationToRemove": "Target Station to Remove",
+        "closestToYou": "Closest to you",
+        "reset": "Reset",
+        "allActiveStations": "All Active Stations",
+        "nearbyStations": "Nearby Stations",
+
+        "stationSummarySubtitle": "{address} • {count} Bikes{distance}",
+        "@stationSummarySubtitle": {
+          "description": "Subtitle format for featured station displaying address, bike count, and optional distance",
+          "placeholders": {
+            "address": { "type": "String" },
+            "count": { "type": "int" },
+            "distance": { "type": "String" }
+          }
+        },
+
+        "confirmRemoveStationTitle": "Are you sure to remove\n{stationName}?",
+        "@confirmRemoveStationTitle": {
+          "description": "Title prompt for admin station removal confirmation dialog",
+          "placeholders": {
+            "stationName": { "type": "String" }
+          }
+        },
+
+        "actionIrreversibleWarning": "This action is irreversible, are you sure to continue?",
+        "removeLocation": "Remove Location"
+
+
 }

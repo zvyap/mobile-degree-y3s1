@@ -1496,4 +1496,245 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contactSupport => 'Questions? Contact support@bikerent.app';
+
+  @override
+  String errorLoadingStations(String error) {
+    return 'Error loading stations: $error';
+  }
+
+  @override
+  String get stationA => 'Station A';
+
+  @override
+  String get stationB => 'Station B';
+
+  @override
+  String get selectOriginStation => 'Select origin station';
+
+  @override
+  String get selectDestinationStation => 'Select destination station';
+
+  @override
+  String get underMaintenance => 'Under Maintenance';
+
+  @override
+  String get selectedStationTooFar => 'Selected Station are too far away';
+
+  @override
+  String get etaLabel => 'ETA:';
+
+  @override
+  String get estimatedArrivalTime => 'Estimated Arrival Time (ETA)';
+
+  @override
+  String durationInMinutes(int minutes) {
+    return '$minutes minutes';
+  }
+
+  @override
+  String totalDistanceKm(String distance) {
+    return 'Total Distance: $distance km';
+  }
+
+  @override
+  String get selectStationsToCalculateRoutePrompt =>
+      'Select Station A & Station B to calculate route.';
+
+  @override
+  String failedToLoadBikes(String error) {
+    return 'Failed to load bikes: $error';
+  }
+
+  @override
+  String get invalidBikeIdError => 'Unable to open: Invalid Bike ID';
+
+  @override
+  String get stationBikes => 'Station Bikes';
+
+  @override
+  String get locationCoordinatesNotProvided =>
+      'Location coordinates not provided';
+
+  @override
+  String get searchBikesCodeOrId => 'Search bikes by code or ID';
+
+  @override
+  String get noBikesInStationYet => 'there is no bikes in this station yet';
+
+  @override
+  String get noBikesMatchSearch => 'No bikes match your search.';
+
+  @override
+  String get unknownStatus => 'Unknown';
+
+  @override
+  String bikeStatus(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String failedToLoadStations(String error) {
+    return 'Failed to load stations: $error';
+  }
+
+  @override
+  String get searchStationHint => 'Search station code, name or address...';
+
+  @override
+  String get longPressMapToAddStation => 'Long-press map to add new station';
+
+  @override
+  String get noMatchingStationsFound => 'No matching stations found.';
+
+  @override
+  String get unnamedStation => 'Unnamed Station';
+
+  @override
+  String get noAddress => 'No address';
+
+  @override
+  String get stationNameEmptyError => 'Station name cannot be empty.';
+
+  @override
+  String get stationAddressEmptyError => 'Station address cannot be empty.';
+
+  @override
+  String get validCapacityError =>
+      'Please enter a valid number for max capacity.';
+
+  @override
+  String maxCapacityExceededError(int capacity, int bikes) {
+    return 'Max capacity ($capacity) cannot be less than current docked bikes ($bikes).';
+  }
+
+  @override
+  String get stationUpdatedSuccess => 'Station updated successfully!';
+
+  @override
+  String get stationAddedSuccess => 'Station added successfully!';
+
+  @override
+  String failedToSaveStation(String error) {
+    return 'Failed to save station: $error';
+  }
+
+  @override
+  String get removeStation => 'Remove Station';
+
+  @override
+  String get confirmRemoveStationBody =>
+      'Are you sure you want to remove this station?';
+
+  @override
+  String get stationRemovedSuccess => 'Station removed successfully!';
+
+  @override
+  String failedToRemoveStation(String error) {
+    return 'Failed to remove station: $error';
+  }
+
+  @override
+  String get changePhoto => 'Change Photo';
+
+  @override
+  String get stationName => 'Station Name';
+
+  @override
+  String get enterStationNameHint => 'Enter station name...';
+
+  @override
+  String get stationCode => 'Station Code';
+
+  @override
+  String get readOnly => 'Read-Only';
+
+  @override
+  String get address => 'Address';
+
+  @override
+  String get enterStationAddressHint => 'Enter station address...';
+
+  @override
+  String get operatingStatus => 'Operating status';
+
+  @override
+  String get currentDockedBikes => 'Current Docked Bikes';
+
+  @override
+  String get maxBikesPerStation => 'Max bike per station';
+
+  @override
+  String get addStation => 'Add Station';
+
+  @override
+  String get updateStation => 'Update Station';
+
+  @override
+  String get viewBikesAtStation => 'View Bikes at Station';
+
+  @override
+  String get noAddressSet => 'No address set';
+
+  @override
+  String get noBikesAtStation => 'No bikes at this station.';
+
+  @override
+  String stationDeactivatedSuccess(String stationName) {
+    return '$stationName deactivated successfully';
+  }
+
+  @override
+  String get searchStationToRemove => 'Search station to remove...';
+
+  @override
+  String get searchStationNameOrAddress => 'Search station name or address...';
+
+  @override
+  String get noStationsFound => 'No stations found.';
+
+  @override
+  String bikesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bikes',
+      one: '1 bike',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get currentlySelected => 'Currently Selected';
+
+  @override
+  String get targetStationToRemove => 'Target Station to Remove';
+
+  @override
+  String get closestToYou => 'Closest to you';
+
+  @override
+  String get reset => 'Reset';
+
+  @override
+  String get allActiveStations => 'All Active Stations';
+
+  @override
+  String get nearbyStations => 'Nearby Stations';
+
+  @override
+  String stationSummarySubtitle(String address, int count, String distance) {
+    return '$address • $count Bikes$distance';
+  }
+
+  @override
+  String confirmRemoveStationTitle(String stationName) {
+    return 'Are you sure to remove\n$stationName?';
+  }
+
+  @override
+  String get actionIrreversibleWarning =>
+      'This action is irreversible, are you sure to continue?';
+
+  @override
+  String get removeLocation => 'Remove Location';
 }
