@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:bike_renting_app/bike_station/base_station_map.dart';
+import 'package:bike_renting_app/bike_station/shared_map.dart';
 import 'package:bike_renting_app/bike_station/station_details.dart';
 import 'package:bike_renting_app/bike_station/station_map.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';

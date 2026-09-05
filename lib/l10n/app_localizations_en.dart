@@ -893,6 +893,31 @@ class AppLocalizationsEn extends AppLocalizations {
       'This rider already has an unfinished rental. Resume or finish it first.';
 
   @override
+  String errorStationMaintenance(String station) {
+    return 'Station $station is currently under maintenance. You cannot rent or return bikes here.';
+  }
+
+  @override
+  String errorStationTerminated(String station) {
+    return 'Station $station has been terminated. You cannot rent or return bikes here.';
+  }
+
+  @override
+  String get errorStationMaintenanceGeneral =>
+      'This station is currently under maintenance. You cannot rent or return bikes here.';
+
+  @override
+  String get errorStationTerminatedGeneral =>
+      'This station has been terminated. You cannot rent or return bikes here.';
+
+  @override
+  String get stationUnderMaintenance => 'Under Maintenance';
+
+  @override
+  String get stationCannotReturnMaintenance =>
+      'This station is under maintenance. You cannot return bikes here.';
+
+  @override
   String get errorInvalidRentalTransition =>
       'The rental state changed on the server. Retry to restore it.';
 

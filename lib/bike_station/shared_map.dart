@@ -414,7 +414,7 @@ class SharedBikeMapState extends State<SharedBikeMap> {
     if (widget.initialCenter == null) {
       recenterToGps();
     }
-    if (widget.trackLiveLocation && widget.riderLocation == null) {
+    if (widget.trackLiveLocation && (widget.riderLocation == null || widget.riderHeading == null)) {
       _startLiveGpsStream();
     }
   }
@@ -491,10 +491,12 @@ class SharedBikeMapState extends State<SharedBikeMap> {
     if (widget.selectedStationId != oldWidget.selectedStationId && widget.selectedStationId != null) {
       _centerOnSelectedStation(widget.selectedStationId!);
     }
-    if (widget.trackLiveLocation != oldWidget.trackLiveLocation) {
-      if (widget.trackLiveLocation && widget.riderLocation == null) {
-        _startLiveGpsStream();
-      } else {
+    if (widget.trackLiveLocation != oldWidget.trackLiveLocation ||
+        widget.riderLocation != oldWidget.riderLocation ||
+        widget.riderHeading != oldWidget.riderHeading) {
+      if (widget.trackLiveLocation && (widget.riderLocation == null || widget.riderHeading == null)) {
+        if (_gpsStreamSub == null) _startLiveGpsStream();
+      } else if (!widget.trackLiveLocation) {
         _gpsStreamSub?.cancel();
         _gpsStreamSub = null;
       }
@@ -765,6 +767,27 @@ class SharedBikeMapState extends State<SharedBikeMap> {
                             : (isDestination ? Icons.flag : Icons.check),
                         size: effectiveSize * 0.28,
                         color: markerColor,
+                      ),
+                    ),
+                  )
+                else if (status.trim().toLowerCase() == 'under maintenance')
+                  Positioned(
+                    top: effectiveSize * 0.16,
+                    child: Container(
+                      width: effectiveSize * 0.36,
+                      height: effectiveSize * 0.36,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFF97316),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.build_rounded,
+                        size: effectiveSize * 0.22,
+                        color: const Color(0xFFF97316),
                       ),
                     ),
                   ),

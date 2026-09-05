@@ -80,6 +80,7 @@ class StationAvailabilityRecord {
     required this.isActive,
     required this.updatedAt,
     this.qrToken = '',
+    this.status = 'Normal',
   });
 
   factory StationAvailabilityRecord.fromJson(JsonMap json) {
@@ -96,6 +97,7 @@ class StationAvailabilityRecord {
       isActive: json['is_active'] as bool,
       updatedAt: DateTime.parse(json['updated_at'] as String),
       qrToken: json['qr_token'] as String? ?? '',
+      status: (json['status'] as String?)?.trim() ?? 'Normal',
     );
   }
 
@@ -111,6 +113,44 @@ class StationAvailabilityRecord {
   final bool isActive;
   final DateTime updatedAt;
   final String qrToken;
+  final String status;
+
+  bool get isUnderMaintenance =>
+      status.trim().toLowerCase() == 'under maintenance';
+  bool get isTerminated => status.trim().toLowerCase() == 'terminated';
+  bool get isNormal => !isUnderMaintenance && !isTerminated;
+
+  StationAvailabilityRecord copyWith({
+    int? id,
+    String? code,
+    String? name,
+    String? address,
+    double? latitude,
+    double? longitude,
+    int? capacity,
+    int? availableBikes,
+    int? availableDocks,
+    bool? isActive,
+    DateTime? updatedAt,
+    String? qrToken,
+    String? status,
+  }) {
+    return StationAvailabilityRecord(
+      id: id ?? this.id,
+      code: code ?? this.code,
+      name: name ?? this.name,
+      address: address ?? this.address,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      capacity: capacity ?? this.capacity,
+      availableBikes: availableBikes ?? this.availableBikes,
+      availableDocks: availableDocks ?? this.availableDocks,
+      isActive: isActive ?? this.isActive,
+      updatedAt: updatedAt ?? this.updatedAt,
+      qrToken: qrToken ?? this.qrToken,
+      status: status ?? this.status,
+    );
+  }
 }
 
 class BikeDatabaseRecord {

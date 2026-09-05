@@ -41,6 +41,8 @@ abstract interface class RentalSessionRepository {
 
   Future<BikeDatabaseRecord?> findBikeByQrToken(String qrToken);
 
+  Future<StationAvailabilityRecord?> getStation(int stationId);
+
   Future<RentalDatabaseRecord?> getRental(int rentalId);
 
   Future<List<AdminRentalSession>> listActiveRentals({bool includeEnded = false});
@@ -95,6 +97,11 @@ class RentalRepository
   final BikeRepository _bikes;
   final StationRepository _stations;
   final ProfileRepository _profiles;
+
+  @override
+  Future<StationAvailabilityRecord?> getStation(int stationId) {
+    return _stations.findById(stationId);
+  }
 
   @override
   Future<List<StationAvailabilityRecord>> listReturnStations() {

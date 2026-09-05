@@ -10,9 +10,10 @@ class _RideStage extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final availableStations =
-        controller.stations.where((station) => station.availableDocks > 0);
-    final nearestStation =
-        availableStations.firstOrNull ?? controller.stations.firstOrNull;
+        controller.stations.where((station) => station.canAcceptReturn);
+    final nearestStation = availableStations.firstOrNull ??
+        controller.stations.where((s) => !s.isUnderMaintenance).firstOrNull ??
+        controller.stations.firstOrNull;
     final otherNearbyStations = nearestStation == null
         ? const <ReturnStation>[]
         : controller.stations
@@ -52,6 +53,7 @@ class _RideStage extends StatelessWidget {
               _RideSessionMap(
                 stations: controller.stations,
                 riderLocation: controller.riderLatLng,
+                riderHeading: controller.riderHeading,
                 routePoints: controller.rideRoutePoints,
                 nearestStation: nearestStation,
               ),
@@ -120,49 +122,43 @@ class _RideStage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        if (nearestStation != null)
-          Container(
-            key: const ValueKey<String>('rent-nearest-station'),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            decoration: BoxDecoration(
-              color: scheme.secondary.withValues(alpha: 0.08),
-              border:
-                  Border.all(color: scheme.secondary.withValues(alpha: 0.72)),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.location_on_rounded, color: scheme.secondary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        context.l10n.nearestReturnStation,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.68),
-                        ),
-                      ),
-                      Text(
-                        _stationName(context.l10n, nearestStation),
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  context.l10n.stationDistance(nearestStation.distanceMeters),
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: scheme.secondary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
+        if (controller.startStation != null) ...[
+          StationPlaceholderRow(
+            station: <String, dynamic>{
+              'id': controller.startStation!.id,
+              'name': _stationName(context.l10n, controller.startStation!),
+              'address': context.l10n.stationDistance(controller.startStation!.distanceMeters),
+              'status': controller.startStation!.status,
+            },
+            isOrigin: true,
+            defaultTitle: 'Origin Station',
+            defaultSubtitle: 'Trip started here',
+            onEdit: () {},
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 12.0, top: 4.0, bottom: 4.0),
+            child: Icon(
+              Icons.arrow_downward_rounded,
+              color: scheme.onSurface.withValues(alpha: 0.6),
+              size: 20,
             ),
           ),
+        ],
+        StationPlaceholderRow(
+          key: const ValueKey<String>('rent-nearest-station'),
+          station: nearestStation != null
+              ? <String, dynamic>{
+                  'id': nearestStation.id,
+                  'name': _stationName(context.l10n, nearestStation),
+                  'address': context.l10n.stationDistance(nearestStation.distanceMeters),
+                  'status': nearestStation.status,
+                }
+              : null,
+          isOrigin: false,
+          defaultTitle: context.l10n.nearestReturnStation,
+          defaultSubtitle: context.l10n.chooseReturnStationDescription,
+          onEdit: controller.findReturnStation,
+        ),
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerLeft,
@@ -280,21 +276,33 @@ class _NearbyStationRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final available = station.availableDocks > 0;
-    final statusColor = available ? scheme.secondary : scheme.error;
+    final isMaintenance = station.isUnderMaintenance;
+    final available = station.canAcceptReturn;
+    final statusColor = isMaintenance
+        ? const Color(0xFFF97316)
+        : (available ? scheme.secondary : scheme.error);
 
     return Container(
       key: ValueKey<String>('rent-nearby-station-${station.id}'),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.36),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.6)),
+        color: isMaintenance
+            ? const Color(0xFFF97316).withValues(alpha: 0.08)
+            : scheme.surfaceContainerHighest.withValues(alpha: 0.36),
+        border: Border.all(
+          color: isMaintenance
+              ? const Color(0xFFF97316)
+              : scheme.outline.withValues(alpha: 0.6),
+          width: isMaintenance ? 1.5 : 1.0,
+        ),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
           Icon(
-            available ? Icons.local_parking_rounded : Icons.block_rounded,
+            isMaintenance
+                ? Icons.build_circle_outlined
+                : (available ? Icons.local_parking_rounded : Icons.block_rounded),
             color: statusColor,
           ),
           const SizedBox(width: 10),
@@ -302,20 +310,54 @@ class _NearbyStationRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _stationName(context.l10n, station),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _stationName(context.l10n, station),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    if (isMaintenance) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF97316).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: const Color(0xFFF97316),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          context.l10n.stationUnderMaintenance,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: const Color(0xFFF97316),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 Text(context.l10n.stationDistance(station.distanceMeters)),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Text(
-            available
-                ? context.l10n.dockCount(station.availableDocks)
-                : context.l10n.full,
+            isMaintenance
+                ? context.l10n.stationUnderMaintenance
+                : (available
+                    ? context.l10n.dockCount(station.availableDocks)
+                    : context.l10n.full),
             style: theme.textTheme.labelMedium?.copyWith(
               color: statusColor,
               fontWeight: FontWeight.w800,

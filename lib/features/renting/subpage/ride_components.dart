@@ -104,11 +104,14 @@ class _RideSessionMap extends BaseStationMapView {
   _RideSessionMap({
     required List<ReturnStation> stations,
     super.riderLocation,
+    super.riderHeading,
     super.routePoints,
     ReturnStation? nearestStation,
   }) : super(
           isEmbedded: true,
           height: 200,
+          trackLiveLocation: true,
+          showDirectionIndicator: true,
           initialCenter: riderLocation ??
               (stations.isNotEmpty
                   ? LatLng(stations.first.latitude, stations.first.longitude)
@@ -118,17 +121,18 @@ class _RideSessionMap extends BaseStationMapView {
           showHeader: false,
           showRecenterButton: true,
           initialStations: stations
+              .where((s) => !s.isTerminated)
               .map<Map<String, dynamic>>((s) => <String, dynamic>{
                     'id': s.id,
                     'backendId': s.backendId,
                     'name': s.name,
                     'latitude': s.latitude,
                     'longitude': s.longitude,
-                    'status': s.availableDocks > 0
-                        ? 'Normal'
-                        : 'Under Maintenance',
-                    'available_bikes': 0,
-                    'capacity': s.availableDocks,
+                    'status': s.isUnderMaintenance
+                        ? 'Under Maintenance'
+                        : 'Normal',
+                    'available_bikes': s.availableBikes,
+                    'capacity': s.capacity,
                     'distance_meters': s.distanceMeters,
                   })
               .toList(growable: false),

@@ -1530,6 +1530,42 @@ abstract class AppLocalizations {
   /// **'This rider already has an unfinished rental. Resume or finish it first.'**
   String get errorActiveRentalExists;
 
+  /// No description provided for @errorStationMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Station {station} is currently under maintenance. You cannot rent or return bikes here.'**
+  String errorStationMaintenance(String station);
+
+  /// No description provided for @errorStationTerminated.
+  ///
+  /// In en, this message translates to:
+  /// **'Station {station} has been terminated. You cannot rent or return bikes here.'**
+  String errorStationTerminated(String station);
+
+  /// No description provided for @errorStationMaintenanceGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'This station is currently under maintenance. You cannot rent or return bikes here.'**
+  String get errorStationMaintenanceGeneral;
+
+  /// No description provided for @errorStationTerminatedGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'This station has been terminated. You cannot rent or return bikes here.'**
+  String get errorStationTerminatedGeneral;
+
+  /// No description provided for @stationUnderMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Under Maintenance'**
+  String get stationUnderMaintenance;
+
+  /// No description provided for @stationCannotReturnMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'This station is under maintenance. You cannot return bikes here.'**
+  String get stationCannotReturnMaintenance;
+
   /// No description provided for @errorInvalidRentalTransition.
   ///
   /// In en, this message translates to:

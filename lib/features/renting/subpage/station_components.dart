@@ -15,15 +15,20 @@ class _StationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final available = station.availableDocks > 0;
+    final isMaintenance = station.isUnderMaintenance;
+    final available = station.canAcceptReturn;
     final selectable = available;
-    final highlighted = selected || selectable;
-    final selectionLabel = selected
-        ? context.l10n.selected
-        : selectable
-        ? context.l10n.selectable
-        : null;
-    final badgeColor = available ? scheme.secondary : scheme.error;
+    final highlighted = selected || (selectable && !isMaintenance);
+    final selectionLabel = isMaintenance
+        ? context.l10n.stationUnderMaintenance
+        : (selected
+            ? context.l10n.selected
+            : selectable
+                ? context.l10n.selectable
+                : null);
+    final badgeColor = isMaintenance
+        ? const Color(0xFFF97316)
+        : (available ? scheme.secondary : scheme.error);
 
     Widget buildBadge(String label, Color color) {
       return Container(
@@ -45,11 +50,13 @@ class _StationTile extends StatelessWidget {
     return Semantics(
       selected: selected,
       button: true,
-      enabled: available,
+      enabled: available && !isMaintenance,
       child: Material(
-        color: selected
-            ? scheme.secondary.withValues(alpha: 0.09)
-            : scheme.surfaceContainerHighest.withValues(alpha: 0.36),
+        color: isMaintenance
+            ? const Color(0xFFF97316).withValues(alpha: 0.08)
+            : (selected
+                ? scheme.secondary.withValues(alpha: 0.09)
+                : scheme.surfaceContainerHighest.withValues(alpha: 0.36)),
         borderRadius: BorderRadius.circular(9),
         child: InkWell(
           key: ValueKey<String>('rent-station-${station.id}'),
@@ -60,18 +67,24 @@ class _StationTile extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               border: Border.all(
-                color: highlighted
-                    ? scheme.secondary
-                    : scheme.outline.withValues(alpha: 0.6),
-                width: highlighted ? 2 : 1,
+                color: isMaintenance
+                    ? const Color(0xFFF97316)
+                    : (highlighted
+                        ? scheme.secondary
+                        : scheme.outline.withValues(alpha: 0.6)),
+                width: isMaintenance ? 2 : (highlighted ? 2 : 1),
               ),
               borderRadius: BorderRadius.circular(9),
             ),
             child: Row(
               children: [
                 Icon(
-                  available ? Icons.local_parking_rounded : Icons.block_rounded,
-                  color: available ? scheme.primary : scheme.error,
+                  isMaintenance
+                      ? Icons.build_circle_outlined
+                      : (available ? Icons.local_parking_rounded : Icons.block_rounded),
+                  color: isMaintenance
+                      ? const Color(0xFFF97316)
+                      : (available ? scheme.primary : scheme.error),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -99,9 +112,11 @@ class _StationTile extends StatelessWidget {
                       const SizedBox(height: 4),
                     ],
                     buildBadge(
-                      available
-                          ? context.l10n.dockCount(station.availableDocks)
-                          : context.l10n.full,
+                      isMaintenance
+                          ? context.l10n.stationUnderMaintenance
+                          : (available
+                              ? context.l10n.dockCount(station.availableDocks)
+                              : context.l10n.full),
                       badgeColor,
                     ),
                   ],
@@ -124,9 +139,9 @@ class _StationTile extends StatelessWidget {
                             'address': station.name,
                             'latitude': station.latitude,
                             'longitude': station.longitude,
-                            'available_bikes': 0,
-                            'capacity': station.availableDocks,
-                            'status': 'Normal',
+                            'available_bikes': station.availableBikes,
+                            'capacity': station.capacity,
+                            'status': station.status,
                           },
                           isViewOnly: true,
                         ),
@@ -149,28 +164,33 @@ class _ReturnStationMap extends BaseStationMapView {
     required this.selectedStation,
     required this.onSelectStation,
     required this.isAtStation,
+    super.riderLocation,
+    super.riderHeading,
   }) : super(
           isEmbedded: true,
           height: 200,
+          trackLiveLocation: true,
+          showDirectionIndicator: true,
           selectedStationId: selectedStation?.id,
           geofenceRadiusMeters: 250,
           initialCenter: selectedStation != null
               ? LatLng(selectedStation.latitude, selectedStation.longitude)
-              : null,
+              : riderLocation,
           showHeader: false,
           showRecenterButton: true,
           initialStations: stations
+              .where((s) => !s.isTerminated)
               .map<Map<String, dynamic>>((s) => <String, dynamic>{
                     'id': s.id,
                     'backendId': s.backendId,
                     'name': s.name,
                     'latitude': s.latitude,
                     'longitude': s.longitude,
-                    'status': s.availableDocks > 0
-                        ? 'Normal'
-                        : 'Under Maintenance',
-                    'available_bikes': 0,
-                    'capacity': s.availableDocks,
+                    'status': s.isUnderMaintenance
+                        ? 'Under Maintenance'
+                        : 'Normal',
+                    'available_bikes': s.availableBikes,
+                    'capacity': s.capacity,
                     'distance_meters': s.distanceMeters,
                   })
               .toList(growable: false),
@@ -188,10 +208,19 @@ class _ReturnStationMap extends BaseStationMapView {
 
 class _ReturnStationMapState
     extends BaseStationMapViewState<_ReturnStationMap> {
+  final GlobalKey<SharedBikeMapState> _mapTileKey =
+      GlobalKey<SharedBikeMapState>();
+  OsrmRouteResult? routeResult;
+  bool isCalculating = false;
+  bool isRouteTooFar = false;
+
   @override
   void initState() {
     super.initState();
     _syncReturnStations();
+    if (widget.selectedStation != null) {
+      _calculateRoute();
+    }
   }
 
   @override
@@ -201,20 +230,27 @@ class _ReturnStationMapState
         widget.selectedStation != oldWidget.selectedStation) {
       _syncReturnStations();
     }
+    if (widget.selectedStation != oldWidget.selectedStation ||
+        widget.riderLocation != oldWidget.riderLocation) {
+      _calculateRoute();
+    }
   }
 
   void _syncReturnStations() {
     setState(() {
       stations = widget.stations
+          .where((s) => !s.isTerminated)
           .map<Map<String, dynamic>>((s) => <String, dynamic>{
                 'id': s.id,
                 'backendId': s.backendId,
                 'name': s.name,
                 'latitude': s.latitude,
                 'longitude': s.longitude,
-                'status': s.availableDocks > 0 ? 'Normal' : 'Under Maintenance',
-                'available_bikes': 0,
-                'capacity': s.availableDocks,
+                'status': s.isUnderMaintenance
+                    ? 'Under Maintenance'
+                    : 'Normal',
+                'available_bikes': s.availableBikes,
+                'capacity': s.capacity,
                 'distance_meters': s.distanceMeters,
               })
           .toList(growable: false);
@@ -226,6 +262,69 @@ class _ReturnStationMapState
     });
   }
 
+  Future<void> _calculateRoute() async {
+    final target = widget.selectedStation;
+    if (target == null) {
+      if (mounted) {
+        setState(() {
+          routeResult = null;
+          isCalculating = false;
+          isRouteTooFar = false;
+        });
+      }
+      return;
+    }
+
+    final LatLng? start = widget.riderLocation ?? userLocation;
+    if (start == null) return;
+
+    if (mounted) {
+      setState(() {
+        isCalculating = true;
+        isRouteTooFar = false;
+      });
+    }
+
+    final end = LatLng(target.latitude, target.longitude);
+    OsrmRouteResult? result = await OsrmService.fetchBikingRoute(start, end);
+
+    if (!mounted) return;
+
+    // Fallback to direct path calculation if offline or OSRM route is unavailable
+    if (result == null) {
+      final directDist = Geolocator.distanceBetween(
+        start.latitude,
+        start.longitude,
+        end.latitude,
+        end.longitude,
+      );
+      final estSeconds = directDist / 4.16; // ~15 km/h biking estimate
+      result = OsrmRouteResult(
+        polylinePoints: [start, end],
+        distanceMeters: directDist,
+        durationSeconds: estSeconds,
+      );
+    }
+
+    bool checkTooFar = false;
+    if (result.distanceKm > 80.0 || result.durationMinutes > (24 * 60)) {
+      checkTooFar = true;
+    }
+
+    setState(() {
+      routeResult = result;
+      isRouteTooFar = checkTooFar;
+      isCalculating = false;
+    });
+
+    if (!checkTooFar && result.polylinePoints.isNotEmpty) {
+      _mapTileKey.currentState?.fitBounds(
+        result.polylinePoints,
+        padding: const EdgeInsets.all(28.0),
+      );
+    }
+  }
+
   @override
   void handleStationTap(String stationId) {
     final matched = widget.stations
@@ -233,31 +332,112 @@ class _ReturnStationMapState
         .firstOrNull;
     if (matched != null) {
       widget.onSelectStation(matched);
+      _calculateRoute();
     }
   }
 
   @override
+  Widget buildMapLayer(BuildContext context) {
+    return SharedBikeMap(
+      key: _mapTileKey,
+      stations: stations,
+      riderLocation: widget.riderLocation ?? userLocation,
+      riderHeading: widget.riderHeading ?? userHeading,
+      showDirectionIndicator: widget.showDirectionIndicator,
+      trackLiveLocation: widget.trackLiveLocation,
+      selectedStationId: widget.selectedStation?.id ??
+          widget.selectedStationId ??
+          selectedStation?['id']?.toString(),
+      isAdminMode: widget.isAdminMode,
+      geofenceRadiusMeters: widget.geofenceRadiusMeters,
+      routePoints: isRouteTooFar
+          ? null
+          : routeResult?.polylinePoints ?? widget.routePoints,
+      initialCenter: widget.initialCenter,
+      initialZoom: widget.initialZoom,
+      onStationTap: handleStationTap,
+      onMapLongPress: widget.onMapLongPress,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: context.l10n.cityMapSemantics,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: SizedBox(
-          width: double.infinity,
-          height: widget.height ?? 200,
-          child: Stack(
-            children: [
-              Positioned.fill(child: buildMapLayer(context)),
-              if (widget.showRecenterButton)
-                Positioned(
-                  right: 10,
-                  bottom: 10,
-                  child: buildRecenterButton(context),
-                ),
-            ],
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final selectedStationMap = widget.selectedStation != null
+        ? <String, dynamic>{
+            'id': widget.selectedStation!.id,
+            'name': _stationName(context.l10n, widget.selectedStation!),
+            'address': context.l10n.stationDistance(widget.selectedStation!.distanceMeters),
+            'status': widget.selectedStation!.status,
+          }
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Semantics(
+          label: context.l10n.cityMapSemantics,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: SizedBox(
+              width: double.infinity,
+              height: widget.height ?? 200,
+              child: Stack(
+                children: [
+                  Positioned.fill(child: buildMapLayer(context)),
+                  if (widget.showRecenterButton)
+                    Positioned(
+                      right: 10,
+                      bottom: 10,
+                      child: buildRecenterButton(context),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: 10),
+        StationPlaceholderRow(
+          station: null,
+          isOrigin: true,
+          defaultTitle: 'Current Location',
+          defaultSubtitle: 'Your GPS position',
+          onEdit: recenterToGps,
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 12.0, top: 4.0, bottom: 4.0),
+          child: Icon(
+            Icons.arrow_downward_rounded,
+            color: scheme.onSurface.withValues(alpha: 0.6),
+            size: 20,
+          ),
+        ),
+        StationPlaceholderRow(
+          key: const ValueKey<String>('rent-return-station-placeholder'),
+          station: selectedStationMap,
+          isOrigin: false,
+          defaultTitle: context.l10n.nearestReturnStation,
+          defaultSubtitle: context.l10n.chooseReturnStationDescription,
+          onEdit: () {},
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.36),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
+          ),
+          child: StationRouteDisplay(
+            isCalculating: isCalculating,
+            isRouteTooFar: isRouteTooFar,
+            routeResult: routeResult,
+          ),
+        ),
+      ],
     );
   }
 }

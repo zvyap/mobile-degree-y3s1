@@ -130,6 +130,7 @@ class RentingController extends ChangeNotifier {
   RiderPosition? _arrivalPosition;
 
   LatLng? riderLatLng;
+  double? riderHeading;
   final List<LatLng> rideRoutePoints = [];
   bool isTrackingPaused = false;
   StreamSubscription<Position>? _positionSubscription;
@@ -339,8 +340,11 @@ class RentingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setRiderLocation(LatLng location) {
+  void setRiderLocation(LatLng location, [double? heading]) {
     riderLatLng = location;
+    if (heading != null) {
+      riderHeading = heading;
+    }
     notifyListeners();
   }
 
@@ -366,6 +370,7 @@ class RentingController extends ChangeNotifier {
       final results = await _loadInitializationData();
       stations = (results[0] as List<StationAvailabilityRecord>)
           .map(_stationFromDatabase)
+          .where((s) => !s.isTerminated)
           .toList()
         ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
       final active = results[1] as RentalSessionSnapshot?;
@@ -585,11 +590,42 @@ class RentingController extends ChangeNotifier {
           notifyListeners();
           return;
         }
+
+        if (bikeRecord.currentStationId != null) {
+          final station = await _findStationById(bikeRecord.currentStationId!);
+          if (station != null) {
+            if (station.isUnderMaintenance) {
+              errorStation = station;
+              error = RentalError.stationMaintenance;
+              notifyListeners();
+              return;
+            }
+            if (station.isTerminated) {
+              errorStation = station;
+              error = RentalError.stationTerminated;
+              notifyListeners();
+              return;
+            }
+          }
+        }
       }
     } catch (_) {}
 
     await _run(() async {
       final snapshot = await repository.reserveSession(token);
+      final stationStatus = snapshot.startStation.status.trim().toLowerCase();
+      if (stationStatus == 'under maintenance' || stationStatus == 'terminated') {
+        errorStation = _stationFromDatabase(snapshot.startStation);
+        error = stationStatus == 'under maintenance'
+            ? RentalError.stationMaintenance
+            : RentalError.stationTerminated;
+        try {
+          await repository.cancelSession(snapshot.rental.id);
+        } catch (_) {}
+        _session = null;
+        stage = RentalStage.scan;
+        return;
+      }
       _applySnapshot(snapshot);
     });
   }
@@ -692,6 +728,16 @@ class RentingController extends ChangeNotifier {
   }
 
   Future<RentalError?> verifyCurrentBikeRentable() async {
+    final startStation = _session?.startStation;
+    if (startStation != null) {
+      final status = startStation.status.trim().toLowerCase();
+      if (status == 'under maintenance') {
+        return RentalError.stationMaintenance;
+      }
+      if (status == 'terminated') {
+        return RentalError.stationTerminated;
+      }
+    }
     final bikeId = _session?.rental.bikeId;
     if (bikeId == null) return null;
     try {
@@ -1066,6 +1112,18 @@ class RentingController extends ChangeNotifier {
   }
 
   void selectStation(ReturnStation station) {
+    if (station.isUnderMaintenance) {
+      error = RentalError.stationMaintenance;
+      errorStation = station;
+      notifyListeners();
+      return;
+    }
+    if (station.isTerminated) {
+      error = RentalError.stationTerminated;
+      errorStation = station;
+      notifyListeners();
+      return;
+    }
     if (station.availableDocks == 0) {
       error = RentalError.stationFull;
       errorStation = station;
@@ -1096,6 +1154,18 @@ class RentingController extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (station.isUnderMaintenance) {
+      error = RentalError.stationMaintenance;
+      errorStation = station;
+      notifyListeners();
+      return;
+    }
+    if (station.isTerminated) {
+      error = RentalError.stationTerminated;
+      errorStation = station;
+      notifyListeners();
+      return;
+    }
     selectStation(station);
     stationQrToken =
         station.qrToken.isEmpty ? rawInput.trim() : station.qrToken;
@@ -1107,6 +1177,18 @@ class RentingController extends ChangeNotifier {
     final station = selectedStation;
     if (station == null) {
       error = RentalError.chooseStation;
+      notifyListeners();
+      return;
+    }
+    if (station.isUnderMaintenance) {
+      error = RentalError.stationMaintenance;
+      errorStation = station;
+      notifyListeners();
+      return;
+    }
+    if (station.isTerminated) {
+      error = RentalError.stationTerminated;
+      errorStation = station;
       notifyListeners();
       return;
     }
@@ -1159,6 +1241,18 @@ class RentingController extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (station.isUnderMaintenance) {
+      error = RentalError.stationMaintenance;
+      errorStation = station;
+      notifyListeners();
+      return;
+    }
+    if (station.isTerminated) {
+      error = RentalError.stationTerminated;
+      errorStation = station;
+      notifyListeners();
+      return;
+    }
     if (!isAtStation) {
       error = RentalError.outsideReturnZone;
       notifyListeners();
@@ -1206,6 +1300,18 @@ class RentingController extends ChangeNotifier {
   Future<void> confirmDock({bool fail = false}) async {
     final id = rentalId;
     if (isBusy || id == null) return;
+    if (selectedStation?.isUnderMaintenance == true) {
+      error = RentalError.stationMaintenance;
+      errorStation = selectedStation;
+      notifyListeners();
+      return;
+    }
+    if (selectedStation?.isTerminated == true) {
+      error = RentalError.stationTerminated;
+      errorStation = selectedStation;
+      notifyListeners();
+      return;
+    }
     _beginBusy();
     try {
       // TODO(dock): Replace manual confirmation with station dock telemetry.
@@ -1471,7 +1577,19 @@ class RentingController extends ChangeNotifier {
       qrToken: station.qrToken,
       latitude: station.latitude,
       longitude: station.longitude,
+      status: station.status,
     );
+  }
+
+  Future<ReturnStation?> _findStationById(int stationId) async {
+    for (final existing in stations) {
+      if (existing.backendId == stationId) return existing;
+    }
+    try {
+      final record = await repository.getStation(stationId);
+      if (record != null) return _stationFromDatabase(record);
+    } catch (_) {}
+    return null;
   }
 
   int _calculateDistanceMeters(double lat, double lon) {
@@ -1514,6 +1632,7 @@ class RentingController extends ChangeNotifier {
       DatabaseErrorCode.bikeMaintenance => RentalError.bikeMaintenance,
       DatabaseErrorCode.bikeUnavailable => RentalError.bikeUnavailable,
       DatabaseErrorCode.bikeReserved => RentalError.bikeReserved,
+      DatabaseErrorCode.stationUnavailable => RentalError.stationMaintenance,
       DatabaseErrorCode.notFound => RentalError.invalidQr,
       DatabaseErrorCode.stationFull => RentalError.stationFull,
       DatabaseErrorCode.stationQrMismatch => RentalError.stationQrMismatch,
@@ -1587,6 +1706,8 @@ class RentingController extends ChangeNotifier {
     _stopLocationTracking();
     if (!enableClock || isTrackingPaused) return;
 
+    unawaited(_fetchInitialGpsPosition());
+
     try {
       const settings = LocationSettings(
         accuracy: LocationAccuracy.high,
@@ -1605,6 +1726,22 @@ class RentingController extends ChangeNotifier {
       );
     } catch (e) {
       debugPrint('Error starting GPS tracking: $e');
+    }
+  }
+
+  Future<void> _fetchInitialGpsPosition() async {
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      ).timeout(const Duration(seconds: 4));
+      _onPositionUpdate(pos);
+    } catch (_) {
+      try {
+        final lastPos = await Geolocator.getLastKnownPosition();
+        if (lastPos != null) {
+          _onPositionUpdate(lastPos);
+        }
+      } catch (_) {}
     }
   }
 
@@ -1635,6 +1772,22 @@ class RentingController extends ChangeNotifier {
 
     final newLatLng = LatLng(position.latitude, position.longitude);
     riderLatLng = newLatLng;
+
+    double? heading = position.heading;
+    if (heading == 0.0 && _lastGpsPosition != null) {
+      final calcBearing = Geolocator.bearingBetween(
+        _lastGpsPosition!.latitude,
+        _lastGpsPosition!.longitude,
+        position.latitude,
+        position.longitude,
+      );
+      if (calcBearing != 0.0) {
+        heading = calcBearing;
+      }
+    }
+    if (heading != 0.0) {
+      riderHeading = heading;
+    }
 
     // Accumulate distance moved during active riding
     if (_lastGpsPosition != null && stage == RentalStage.riding) {
@@ -1801,6 +1954,7 @@ class RentingController extends ChangeNotifier {
     _paypalAuthorizationId = null;
     _scannedBikeCode = null;
     riderLatLng = null;
+    riderHeading = null;
     rideRoutePoints.clear();
     _lastGpsPosition = null;
     isTrackingPaused = false;
