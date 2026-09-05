@@ -148,7 +148,7 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
     return 'All User Rental';
   }
 
-  List<AdminRentalSession> get _filteredSessions {
+  List<AdminRentalSession> get _scopedSessions {
     final query = _searchQuery.trim().toLowerCase();
     return _userSessions.where((session) {
       // Default only show ongoing sessions
@@ -156,20 +156,9 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
         return false;
       }
 
-      // Status filter
-      final matchesFilter = switch (_filter) {
-        _RentalFilter.all => true,
-        _RentalFilter.active => session.status == RentalDatabaseStatus.active,
-        _RentalFilter.returning => session.status == RentalDatabaseStatus.returning,
-        _RentalFilter.reserved => session.status == RentalDatabaseStatus.reserved ||
-            session.status == RentalDatabaseStatus.pendingAuthorization,
-        _RentalFilter.ended => session.isEnded,
-      };
-      if (!matchesFilter) return false;
-
       // Date range filter
       if (_selectedDateRange != null) {
-        final sessionDate = session.startedAt ?? session.createdAt;
+        final sessionDate = (session.startedAt ?? session.createdAt).toLocal();
         final start = DateTime(
           _selectedDateRange!.start.year,
           _selectedDateRange!.start.month,
@@ -190,20 +179,37 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
       }
 
       // Text search
-      if (query.isEmpty) return true;
-      final bikeCode = session.bike?.code.toLowerCase() ?? '';
-      final publicId = session.publicId.toLowerCase();
-      final userName = session.user?.displayName.toLowerCase() ?? '';
-      final userPhone = session.user?.phone?.toLowerCase() ?? '';
-      final startStation = session.startStation?.name.toLowerCase() ?? '';
-      final endStation = session.endStation?.name.toLowerCase() ?? '';
+      if (query.isNotEmpty) {
+        final bikeCode = session.bike?.code.toLowerCase() ?? '';
+        final publicId = session.publicId.toLowerCase();
+        final userName = session.user?.displayName.toLowerCase() ?? '';
+        final userPhone = session.user?.phone?.toLowerCase() ?? '';
+        final startStation = session.startStation?.name.toLowerCase() ?? '';
+        final endStation = session.endStation?.name.toLowerCase() ?? '';
 
-      return bikeCode.contains(query) ||
-          publicId.contains(query) ||
-          userName.contains(query) ||
-          userPhone.contains(query) ||
-          startStation.contains(query) ||
-          endStation.contains(query);
+        final matchesSearch = bikeCode.contains(query) ||
+            publicId.contains(query) ||
+            userName.contains(query) ||
+            userPhone.contains(query) ||
+            startStation.contains(query) ||
+            endStation.contains(query);
+        if (!matchesSearch) return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
+  List<AdminRentalSession> _filterSessions(List<AdminRentalSession> scoped) {
+    return scoped.where((session) {
+      return switch (_filter) {
+        _RentalFilter.all => true,
+        _RentalFilter.active => session.status == RentalDatabaseStatus.active,
+        _RentalFilter.returning => session.status == RentalDatabaseStatus.returning,
+        _RentalFilter.reserved => session.status == RentalDatabaseStatus.reserved ||
+            session.status == RentalDatabaseStatus.pendingAuthorization,
+        _RentalFilter.ended => session.isEnded,
+      };
     }).toList();
   }
 
@@ -211,7 +217,8 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final filtered = _filteredSessions;
+    final scoped = _scopedSessions;
+    final filtered = _filterSessions(scoped);
 
     return Scaffold(
       body: RefreshIndicator(
@@ -370,26 +377,26 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildFilterChip('All ($_totalCount)', _RentalFilter.all),
+                  _buildFilterChip('All (${_totalCount(scoped)})', _RentalFilter.all),
                   const SizedBox(width: 8),
                   _buildFilterChip(
-                    'Riding (${_countByStatus(RentalDatabaseStatus.active)})',
+                    'Riding (${_countByStatus(scoped, RentalDatabaseStatus.active)})',
                     _RentalFilter.active,
                   ),
                   const SizedBox(width: 8),
                   _buildFilterChip(
-                    'Returning (${_countByStatus(RentalDatabaseStatus.returning)})',
+                    'Returning (${_countByStatus(scoped, RentalDatabaseStatus.returning)})',
                     _RentalFilter.returning,
                   ),
                   const SizedBox(width: 8),
                   _buildFilterChip(
-                    'Reserved (${_countReserved()})',
+                    'Reserved (${_countReserved(scoped)})',
                     _RentalFilter.reserved,
                   ),
                   if (_showEndedSessions) ...[
                     const SizedBox(width: 8),
                     _buildFilterChip(
-                      'Ended (${_countEnded()})',
+                      'Ended (${_countEnded(scoped)})',
                       _RentalFilter.ended,
                     ),
                   ],
@@ -438,22 +445,14 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        _searchQuery.isNotEmpty
-                            ? 'No rentals match your search'
-                            : (widget.userId != null
-                                ? 'No rentals found for this user'
-                                : 'No Active Renting Sessions'),
+                        _emptyStateTitle,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _searchQuery.isNotEmpty
-                            ? 'Try adjusting your search or filter criteria'
-                            : (widget.userId != null
-                                ? 'This user has no recorded rentals.'
-                                : 'There are currently no bikes being rented or reserved.'),
+                        _emptyStateSubtitle,
                         style: TextStyle(
                           color: scheme.onSurface.withValues(alpha: 0.60),
                         ),
@@ -477,28 +476,75 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
     );
   }
 
-  int get _totalCount {
-    if (_showEndedSessions) return _userSessions.length;
-    return _userSessions.where((s) => !s.isEnded).length;
+  int _totalCount(List<AdminRentalSession> scoped) => scoped.length;
+
+  int _countByStatus(List<AdminRentalSession> scoped, RentalDatabaseStatus status) {
+    return scoped.where((s) => s.status == status).length;
   }
 
-  int _countByStatus(RentalDatabaseStatus status) {
-    return _userSessions.where((s) => s.status == status).length;
-  }
-
-  int _countReserved() {
-    return _userSessions.where((s) =>
+  int _countReserved(List<AdminRentalSession> scoped) {
+    return scoped.where((s) =>
         s.status == RentalDatabaseStatus.reserved ||
         s.status == RentalDatabaseStatus.pendingAuthorization).length;
   }
 
-  int _countEnded() {
-    return _userSessions.where((s) => s.isEnded).length;
+  int _countEnded(List<AdminRentalSession> scoped) {
+    return scoped.where((s) => s.isEnded).length;
+  }
+
+  String get _filterTitle => switch (_filter) {
+    _RentalFilter.all => '',
+    _RentalFilter.active => 'riding',
+    _RentalFilter.returning => 'returning',
+    _RentalFilter.reserved => 'reserved',
+    _RentalFilter.ended => 'ended',
+  };
+
+  String get _emptyStateTitle {
+    if (_searchQuery.isNotEmpty) {
+      return 'No rentals match your search';
+    }
+    if (_selectedDateRange != null) {
+      if (_filter != _RentalFilter.all) {
+        return 'No $_filterTitle rentals in date range';
+      }
+      return 'No rentals in date range';
+    }
+    if (_filter != _RentalFilter.all) {
+      return 'No $_filterTitle rentals';
+    }
+    if (widget.userId != null) {
+      return 'No rentals found for this user';
+    }
+    if (_showEndedSessions) {
+      return 'No rentals found';
+    }
+    return 'No Active Renting Sessions';
+  }
+
+  String get _emptyStateSubtitle {
+    if (_searchQuery.isNotEmpty) {
+      return 'Try adjusting your search or filter criteria';
+    }
+    if (_selectedDateRange != null) {
+      return 'Try choosing a different date range or clearing the filter.';
+    }
+    if (_filter != _RentalFilter.all) {
+      return 'There are currently no rentals matching this status.';
+    }
+    if (widget.userId != null) {
+      return 'This user has no recorded rentals.';
+    }
+    if (_showEndedSessions) {
+      return 'There are currently no rental records.';
+    }
+    return 'There are currently no bikes being rented or reserved.';
   }
 
   Widget _buildFilterChip(String label, _RentalFilter filter) {
     final selected = _filter == filter;
     return FilterChip(
+      key: ValueKey('admin-rentals-filter-${filter.name}'),
       label: Text(label),
       selected: selected,
       onSelected: (_) => setState(() => _filter = filter),
