@@ -30,35 +30,28 @@ class _EditUserPageState extends State<EditUserPage> {
   void initState() {
     super.initState();
 
-    final user = widget.userCTRL.users.cast<UserProfileRecord?>().firstWhere(
-          (user) => user?.id == widget.userId,
-      orElse: () => null,
-    );
+    _displayNameController = TextEditingController();
+    _phoneController = TextEditingController();
 
-    _displayNameController = TextEditingController(
-      text: user?.displayName ?? '',
-    );
-    _phoneController = TextEditingController(
-      text: user?.phone ?? '',
-    );
-
-    _selectedRole = user?.role;
-    _selectedStatus = user?.accountStatus;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (user == null) {
-        _loadUser();
-      }
-    });
+    _loadUser();
   }
 
   Future<void> _loadUser() async {
-    // The current controller does not expose a getUserById() method.
-    // Since the user normally comes from the management list,
-    // this should rarely be needed.
-    //
-    // TODO: Add UserController.loadUser(userId) if direct loading
-    // is required for this page.
+    await widget.userCTRL.loadUser(widget.userId);
+
+    if (!mounted) return;
+
+    final user = widget.userCTRL.selectedUser;
+
+    if (user == null) return;
+
+    _displayNameController.text = user.displayName;
+    _phoneController.text = user.phone ?? '';
+
+    setState(() {
+      _selectedRole = user.role;
+      _selectedStatus = user.accountStatus;
+    });
   }
 
   @override
@@ -93,8 +86,10 @@ class _EditUserPageState extends State<EditUserPage> {
       Navigator.of(context).pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to update user.'),
+        SnackBar(
+          content: Text(
+            widget.userCTRL.debugError ?? 'Failed to update user.',
+          ),
         ),
       );
     }
@@ -105,11 +100,7 @@ class _EditUserPageState extends State<EditUserPage> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit User'),
-      ),
-      body: AnimatedBuilder(
+    return AnimatedBuilder(
         animation: widget.userCTRL,
         builder: (context, _) {
           return ListView(
@@ -264,8 +255,7 @@ class _EditUserPageState extends State<EditUserPage> {
             ],
           );
         },
-      ),
-    );
+      );
   }
 
   String _roleLabel(AppUserRole role) {

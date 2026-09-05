@@ -10,6 +10,7 @@ class UserController extends ChangeNotifier {
 
   bool isBusy = false;
   UserError? error;
+  String? debugError; // debug
 
   List<UserProfileRecord> users = [];
   UserProfileRecord? selectedUser;
@@ -83,6 +84,7 @@ class UserController extends ChangeNotifier {
   }) async {
     if (isBusy) return;
 
+    debugError = null;
     error = null;
 
     if (displayName.trim().isEmpty) {
@@ -118,8 +120,12 @@ class UserController extends ChangeNotifier {
       if (selectedUser?.id == userId) {
         selectedUser = updatedUser;
       }
-    } catch (caught) {
+    } catch (caught, stackTrace) {
+      debugError = caught.toString();
+
       debugPrint('UPDATE USER FAILED: $caught');
+      debugPrintStack(stackTrace: stackTrace);
+
       error = UserError.userUpdateFailed;
     } finally {
       isBusy = false;
@@ -248,10 +254,6 @@ class UserController extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-  // =========================
-  // BUSY STATE
-  // =========================
 
   void _beginBusy() {
     isBusy = true;
