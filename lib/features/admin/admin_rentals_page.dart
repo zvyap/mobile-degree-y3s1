@@ -166,26 +166,44 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
     final filtered = _filteredSessions;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Active Rentals',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loadSessions,
-          ),
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: _loadSessions,
         child: ListView(
           key: const ValueKey<String>('admin-rentals-page'),
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Rental Management',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Monitor active renting sessions and rental history',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.68),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  key: const ValueKey('admin-rentals-refresh-btn'),
+                  tooltip: 'Refresh',
+                  icon: const Icon(Icons.refresh_rounded),
+                  onPressed: _loadSessions,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             // Search field
             TextField(
               key: const ValueKey('admin-rentals-search'),
@@ -345,7 +363,7 @@ class _AdminRentalsPageState extends State<AdminRentalsPage> {
                     children: [
                       Icon(Icons.error_outline_rounded, size: 48, color: scheme.error),
                       const SizedBox(height: 12),
-                      Text('Failed to load active rentals', style: theme.textTheme.titleMedium),
+                      Text('Failed to load rentals', style: theme.textTheme.titleMedium),
                       const SizedBox(height: 6),
                       Text(_error!, style: TextStyle(color: scheme.error), textAlign: TextAlign.center),
                       const SizedBox(height: 16),
