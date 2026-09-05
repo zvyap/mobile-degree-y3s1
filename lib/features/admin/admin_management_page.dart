@@ -6,13 +6,17 @@ class AdminManagementPage extends StatelessWidget {
   const AdminManagementPage({
     super.key,
     required this.onNavigate,
+    required this.onOpenUserManagement,
     required this.onOpenBikeManagement,
     this.onOpenStationManagement,
+    this.onOpenRentingManagement,
   });
 
   final ValueChanged<AppPage> onNavigate;
+  final VoidCallback onOpenUserManagement;
   final VoidCallback onOpenBikeManagement;
   final VoidCallback? onOpenStationManagement;
+  final VoidCallback? onOpenRentingManagement;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +42,13 @@ class AdminManagementPage extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _AdminDestination(
+          actionKey: 'admin-rentals',
+          icon: Icons.pedal_bike_rounded,
+          title: 'Active Rentals',
+          subtitle: 'Monitor active renting sessions and end rides',
+          onTap: onOpenRentingManagement ?? () => onNavigate(AppPage.rentingManagement),
+        ),
+        _AdminDestination(
           actionKey: 'admin-stations',
           icon: Icons.map_rounded,
           title: context.l10n.stationManagement,
@@ -56,7 +67,7 @@ class AdminManagementPage extends StatelessWidget {
           icon: Icons.manage_accounts_rounded,
           title: context.l10n.userManagement,
           subtitle: context.l10n.userManagementDescription,
-          onTap: () => onNavigate(AppPage.profile),
+          onTap: onOpenUserManagement ?? () => onNavigate(AppPage.userManagement),
         ),
       ],
     );

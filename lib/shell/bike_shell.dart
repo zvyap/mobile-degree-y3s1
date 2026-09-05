@@ -5,6 +5,7 @@ import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/features/user/profile_controller.dart';
+import 'package:bike_renting_app/features/user/user_controller.dart';
 import 'package:bike_renting_app/navigation/app_navigator.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/navigation/bike_bottom_nav_bar.dart';
@@ -27,10 +28,13 @@ class _BikeShellState extends State<BikeShell> {
   late final AppNavigatorObserver _navigatorObserver;
   late final RentingController _rentingController;
   late final ProfileController _profileController;
+  late final UserController _userController;
   late final AppLifecycleListener _lifecycleListener;
 
   AppPage _currentPage = AppPage.home;
   AppPage _selectedRootPage = AppPage.home;
+
+  StreamSubscription<String>? _forceEndSubscription;
 
   bool get _isAdmin =>
       kDebugMode ||
@@ -49,15 +53,66 @@ class _BikeShellState extends State<BikeShell> {
       bypassGeofence: kDebugMode,
     );
     unawaited(_rentingController.initialize());
+    _forceEndSubscription = _rentingController.onRentalForceEnded.listen((message) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showGlobalForceEndAlert(message);
+      });
+    });
     _profileController = ProfileController(repositories.profiles)
       ..addListener(_handleProfileChanged)
       ..loadProfile();
+    _userController = UserController(repositories.profiles);
     _navigatorObserver = AppNavigatorObserver(_handleRouteChanged);
     _lifecycleListener = AppLifecycleListener(
       onPause: _handleAppLifecycleExit,
       onDetach: _handleAppLifecycleExit,
       onHide: _handleAppLifecycleExit,
     );
+  }
+
+  Future<void> _showGlobalForceEndAlert(String message) async {
+    if (!mounted || _currentPage == AppPage.scan || _rentingController.isForceEndDialogShowing) return;
+    _rentingController.isForceEndDialogShowing = true;
+    final dialogContext = _navigatorKey.currentContext ?? context;
+    try {
+      await showDialog<void>(
+        context: dialogContext,
+        useRootNavigator: true,
+        barrierDismissible: false,
+        builder: (ctx) {
+          final theme = Theme.of(ctx);
+          return AlertDialog(
+            icon: Icon(
+              Icons.warning_amber_rounded,
+              size: 44,
+              color: theme.colorScheme.error,
+            ),
+            title: const Text(
+              'Session Ended by Admin',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              message,
+              textAlign: TextAlign.center,
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              FilledButton(
+                key: const ValueKey('rent-force-ended-modal-ok'),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _selectRootPage(AppPage.home);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      _rentingController.isForceEndDialogShowing = false;
+    }
   }
 
   void _handleAppLifecycleExit() {
@@ -71,9 +126,11 @@ class _BikeShellState extends State<BikeShell> {
 
   @override
   void dispose() {
+    _forceEndSubscription?.cancel();
     _lifecycleListener.dispose();
     _profileController.removeListener(_handleProfileChanged);
     _profileController.dispose();
+    _userController.dispose();
     _rentingController.dispose();
     super.dispose();
   }
@@ -172,7 +229,8 @@ class _BikeShellState extends State<BikeShell> {
                     navigatorKey: _navigatorKey,
                     observer: _navigatorObserver,
                     rentingController: _rentingController,
-                    userController: _profileController,
+                    profileController: _profileController,
+                    userController: _userController,
                     onSelectRootPage: _selectRootPage,
                     onOpenPage: _openPage,
                     onToggleTheme: widget.onToggleTheme,

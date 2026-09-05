@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,7 @@ class LocationSafeguard extends StatefulWidget {
     this.isServiceEnabledChecker,
     this.permissionChecker,
     this.permissionRequester,
+    this.serviceStatusStream,
     this.onOpenSettings,
     this.onQuit,
     this.autoCheck = true,
@@ -28,6 +30,7 @@ class LocationSafeguard extends StatefulWidget {
   final Future<bool> Function()? isServiceEnabledChecker;
   final Future<LocationPermission> Function()? permissionChecker;
   final Future<LocationPermission> Function()? permissionRequester;
+  final Stream<ServiceStatus>? serviceStatusStream;
   final Future<void> Function(GpsIssueType issue)? onOpenSettings;
   final VoidCallback? onQuit;
   final bool autoCheck;
@@ -41,6 +44,8 @@ class _LocationSafeguardState extends State<LocationSafeguard>
   GpsIssueType? _activeIssue;
   bool _isChecking = false;
   late final bool _isTest;
+  StreamSubscription<ServiceStatus>? _serviceStatusSubscription;
+  Timer? _periodicCheckTimer;
 
   @override
   void initState() {
@@ -48,24 +53,103 @@ class _LocationSafeguardState extends State<LocationSafeguard>
     WidgetsBinding.instance.addObserver(this);
     _isTest = Platform.environment.containsKey('FLUTTER_TEST');
 
+    _setupServiceStatusListener();
+
     if (widget.autoCheck && !_isTest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         checkStatus();
       });
+      _startPeriodicCheck();
+    }
+  }
+
+  void _setupServiceStatusListener() {
+    _serviceStatusSubscription?.cancel();
+    final stream = widget.serviceStatusStream ??
+        (!_isTest ? Geolocator.getServiceStatusStream() : null);
+
+    if (stream != null) {
+      _serviceStatusSubscription = stream.listen(
+        _handleServiceStatusChanged,
+        onError: (err) {
+          debugPrint('LocationSafeguard service status stream error: $err');
+        },
+      );
+    }
+  }
+
+  void _handleServiceStatusChanged(ServiceStatus status) {
+    if (!mounted) return;
+    if (status == ServiceStatus.disabled) {
+      setState(() {
+        _activeIssue = GpsIssueType.serviceDisabled;
+        _isChecking = false;
+      });
+    } else if (status == ServiceStatus.enabled) {
+      checkStatus();
+    }
+  }
+
+  void _startPeriodicCheck() {
+    if (_isTest || !widget.autoCheck) return;
+    _periodicCheckTimer?.cancel();
+    _periodicCheckTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _pollServiceStatus();
+    });
+  }
+
+  void _stopPeriodicCheck() {
+    _periodicCheckTimer?.cancel();
+    _periodicCheckTimer = null;
+  }
+
+  Future<void> _pollServiceStatus() async {
+    if (!mounted || _isChecking) return;
+    try {
+      final serviceEnabled = widget.isServiceEnabledChecker != null
+          ? await widget.isServiceEnabledChecker!()
+          : await Geolocator.isLocationServiceEnabled();
+
+      if (!serviceEnabled) {
+        if (mounted && _activeIssue != GpsIssueType.serviceDisabled) {
+          setState(() {
+            _activeIssue = GpsIssueType.serviceDisabled;
+          });
+        }
+      } else if (_activeIssue == GpsIssueType.serviceDisabled) {
+        checkStatus();
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void didUpdateWidget(LocationSafeguard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.serviceStatusStream != widget.serviceStatusStream) {
+      _setupServiceStatusListener();
     }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // When returning to app after changing settings, re-check GPS status.
-    if (state == AppLifecycleState.resumed && widget.autoCheck && !_isTest) {
-      checkStatus();
+    if (state == AppLifecycleState.resumed) {
+      if (widget.autoCheck && !_isTest) {
+        checkStatus();
+        _startPeriodicCheck();
+      }
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      _stopPeriodicCheck();
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _serviceStatusSubscription?.cancel();
+    _stopPeriodicCheck();
     super.dispose();
   }
 
@@ -215,6 +299,7 @@ class _GpsBlockedModal extends StatelessWidget {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 400),
                 child: Material(
+                  key: const ValueKey<String>('gps-alert-box'),
                   color: scheme.surface,
                   borderRadius: BorderRadius.circular(24),
                   elevation: 8,
@@ -237,7 +322,28 @@ class _GpsBlockedModal extends StatelessWidget {
                             color: scheme.onErrorContainer,
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 14),
+
+                        // GPS Required badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: scheme.errorContainer.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            'GPS REQUIRED',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: scheme.onErrorContainer,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
 
                         // Title
                         Text(

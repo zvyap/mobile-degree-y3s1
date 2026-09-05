@@ -8,10 +8,10 @@ import 'package:flutter/material.dart';
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
     super.key,
-    required this.userCTRL,
+    required this.profileCTRL,
   });
 
-  final ProfileController userCTRL;
+  final ProfileController profileCTRL;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -25,7 +25,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadProfile() async {
-    await widget.userCTRL.loadProfile();
+    await widget.profileCTRL.loadProfile();
   }
 
   @override
@@ -34,12 +34,12 @@ class _ProfilePageState extends State<ProfilePage> {
     final scheme = theme.colorScheme;
 
     return AnimatedBuilder(
-      animation: widget.userCTRL,
+      animation: widget.profileCTRL,
       builder: (context, child) {
-        final profile = widget.userCTRL.profile;
-        final error = widget.userCTRL.error;
+        final profile = widget.profileCTRL.profile;
+        final error = widget.profileCTRL.error;
 
-        if (widget.userCTRL.isBusy && profile == null) {
+        if (widget.profileCTRL.isBusy && profile == null) {
           return const Center(
             child: CircularProgressIndicator(),
           );

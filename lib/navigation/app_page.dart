@@ -9,6 +9,9 @@ enum AppPage {
   rideDetails(routeName: '/history/details', icon: Icons.receipt_long_rounded),
   profile(routeName: '/profile', icon: Icons.person_rounded),
   admin(routeName: '/admin', icon: Icons.admin_panel_settings_rounded),
+  userManagement(routeName: '/admin/users', icon: Icons.manage_accounts_rounded),
+  editUser(routeName: '/admin/users/edit', icon: Icons.edit_rounded),
+  addUser(routeName: '/admin/users/add', icon: Icons.person_add_rounded),
   bikeManagement(routeName: '/admin/bikes', icon: Icons.directions_bike_rounded,),
   addbike(routeName: '/admin/bike/addBike', icon: Icons.add_rounded),
   editBike(routeName: '/admin/bike/editBike', icon: Icons.add_rounded),
@@ -22,7 +25,9 @@ enum AppPage {
   reportForm(routeName: '/admin/bikes/reports/new', icon: Icons.add_rounded,),
   pendingReportDetail(routeName: '/admin/bikes/reports/pending/detail',icon: Icons.description_outlined,),
   settings(routeName: '/settings', icon: Icons.settings_rounded),
-  paymentMethods(routeName: '/settings/payment-methods', icon: Icons.payment_rounded);
+  paymentMethods(routeName: '/settings/payment-methods', icon: Icons.payment_rounded),
+  rentingManagement(routeName: '/admin/rentals', icon: Icons.pedal_bike_rounded),
+  rentingDetail(routeName: '/admin/rentals/detail', icon: Icons.receipt_long_rounded);
 
   const AppPage({required this.routeName, required this.icon});
 
@@ -37,6 +42,9 @@ enum AppPage {
     rideDetails => l10n.rideDetails,
     profile => l10n.profile,
     admin => l10n.adminManagement,
+    userManagement => l10n.userManagement,
+    editUser => 'Edit User',
+    addUser => 'Add new User',
     bikeManagement => l10n.bikeManagement,
     stationManagement => l10n.stationManagement,
     addbike => 'Add Bike',
@@ -51,6 +59,8 @@ enum AppPage {
     reportForm => 'New Report',
     pendingReportDetail => 'Pending Report Details',
     paymentMethods => 'Payment Methods',
+    rentingManagement => 'Active Rentals',
+    rentingDetail => 'Rental Details',
   };
 
   String navigationLabel(AppLocalizations l10n) => switch (this) {
