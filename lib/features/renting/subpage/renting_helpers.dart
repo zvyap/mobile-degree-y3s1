@@ -55,9 +55,9 @@ String _rentalError(BuildContext context, RentingController controller) {
     RentalError.paymentCaptureFailed => l10n.errorPaymentCaptureFailed,
     RentalError.lockFailed => l10n.errorLockFailed,
     RentalError.gpsLost => l10n.errorGpsLost,
-    RentalError.stationFull => l10n.errorStationFull(
-      _stationName(l10n, controller.errorStation!),
-    ),
+    RentalError.stationFull => controller.errorStation != null
+        ? l10n.errorStationFull(_stationName(l10n, controller.errorStation!))
+        : l10n.errorStationFullGeneral,
     RentalError.chooseStation => l10n.errorChooseStation,
     RentalError.outsideReturnZone => l10n.errorOutsideReturnZone,
     RentalError.stationQrMismatch => l10n.errorStationQrMismatch,

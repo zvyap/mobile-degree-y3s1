@@ -122,13 +122,10 @@ class _BikeCheckStage extends StatelessWidget {
                   key: const ValueKey<String>('rent-report-issue-bike-check'),
                   style: _dangerTextButtonStyle(context),
                   onPressed: () {
-                    final bikeCode = controller.bike?.id;
-                    if (bikeCode != null) {
-                      Navigator.of(context).pushNamed(
-                        AppPage.bikeReport.routeName,
-                        arguments: bikeCode,
-                      );
-                    }
+                    Navigator.of(context).pushNamed(
+                      AppPage.reportForm.routeName,
+                      arguments: controller.sessionBikeId,
+                    );
                   },
                   icon: const Icon(Icons.report_problem_outlined),
                   label: Text(context.l10n.reportBikeIssue),
@@ -253,25 +250,24 @@ class _TermsAndPrivacyNoticeState extends State<_TermsAndPrivacyNotice> {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Text.rich(
         TextSpan(
-          text:
-              'By proceeding with the renting process, you are considered to accept and clear the ',
+          text: context.l10n.termsNoticePrefix,
           style: textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
             height: 1.35,
           ),
           children: [
             TextSpan(
-              text: 'Terms & Condition',
+              text: context.l10n.termsOfService,
               style: linkStyle,
               recognizer: _tosRecognizer,
             ),
-            const TextSpan(text: ' and '),
+            TextSpan(text: context.l10n.termsNoticeMiddle),
             TextSpan(
-              text: 'Privacy Policy',
+              text: context.l10n.privacyPolicy,
               style: linkStyle,
               recognizer: _ppRecognizer,
             ),
-            const TextSpan(text: ' of the app.'),
+            TextSpan(text: context.l10n.termsNoticeSuffix),
           ],
         ),
         textAlign: TextAlign.center,

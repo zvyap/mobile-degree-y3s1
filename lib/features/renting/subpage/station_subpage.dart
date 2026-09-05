@@ -114,7 +114,7 @@ class _StationStage extends StatelessWidget {
               key: const ValueKey('rent-begin-return'),
               label: controller.isAtStation
                   ? context.l10n.continueToDock
-                  : 'Return at ${controller.selectedStation!.name}',
+                  : context.l10n.returnAtStation(controller.selectedStation!.name),
               icon: Icons.keyboard_double_arrow_down_rounded,
               onPressed: (controller.isBusy || cannotReturnHere)
                   ? null

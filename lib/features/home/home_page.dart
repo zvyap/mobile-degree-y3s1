@@ -33,7 +33,10 @@ class _HomePageState extends State<HomePage> {
     await Future.wait([
       if (widget.onRefresh != null) widget.onRefresh!(),
       _weatherPanelKey.currentState?.refresh(forceRefresh: true) ?? Future.value(),
-      widget.rentingController.reinitialize(),
+      // Never wipe an in-progress ride session with a full reinitialize.
+      widget.rentingController.isRideActive
+          ? widget.rentingController.refreshStations()
+          : widget.rentingController.reinitialize(),
     ]);
   }
 

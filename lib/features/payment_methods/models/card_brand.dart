@@ -9,6 +9,18 @@ enum CardBrand {
 
   final String displayName;
 
+  /// Detects the brand from a stored brand name (e.g. 'Visa', 'Mastercard').
+  static CardBrand fromName(String brand) {
+    final name = brand.toLowerCase();
+    if (name.contains('visa')) {
+      return CardBrand.visa;
+    }
+    if (name.contains('mastercard') || name.contains('master card')) {
+      return CardBrand.mastercard;
+    }
+    return CardBrand.unknown;
+  }
+
   static CardBrand detect(String input) {
     final digits = input.replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) return CardBrand.unknown;

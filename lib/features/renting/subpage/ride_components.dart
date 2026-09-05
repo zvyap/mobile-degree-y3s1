@@ -117,7 +117,10 @@ class _RideSessionMap extends BaseStationMapView {
                   ? LatLng(stations.first.latitude, stations.first.longitude)
                   : null),
           selectedStationId: nearestStation?.id,
-          geofenceRadiusMeters: nearestStation != null ? 250 : null,
+          geofenceRadiusMeters:
+              nearestStation != null
+                  ? RentingController.returnGeofenceRadiusMeters.toDouble()
+                  : null,
           showHeader: false,
           showRecenterButton: true,
           initialStations: stations

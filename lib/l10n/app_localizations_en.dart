@@ -439,52 +439,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportBikeIssue => 'Report bike issue';
 
   @override
-  String reportingBike(String bikeCode) {
-    return 'Reporting an issue for $bikeCode';
-  }
-
-  @override
-  String get chooseIssueType => 'What is wrong?';
-
-  @override
-  String get chooseIssueTypeError => 'Choose an issue type.';
-
-  @override
-  String get issueBrakes => 'Brakes';
-
-  @override
-  String get issueTyres => 'Tyres';
-
-  @override
-  String get issueLights => 'Lights';
-
-  @override
-  String get issueLock => 'Lock';
-
-  @override
-  String get issueOther => 'Other';
-
-  @override
-  String get issueNoteOptional => 'Note (optional)';
-
-  @override
-  String get issueNoteHint => 'Add a short detail that may help.';
-
-  @override
-  String get issueSessionOnly =>
-      'This note stays in the current app session and is not sent to support.';
-
-  @override
-  String get noteIssue => 'Note issue';
-
-  @override
-  String get issueNoted => 'Issue noted';
-
-  @override
-  String get issueNotSent =>
-      'Saved for this app session only. It was not sent to support.';
-
-  @override
   String get change => 'Change';
 
   @override
@@ -1753,4 +1707,242 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get removeLocation => 'Remove Location';
+
+  @override
+  String get okButton => 'OK';
+
+  @override
+  String get scanningLabel => 'Scanning…';
+
+  @override
+  String get flashlightTooltip => 'Flashlight';
+
+  @override
+  String get invalidQrTitle => 'Invalid QR Code';
+
+  @override
+  String reservationExpiresIn(String time) {
+    return 'Reservation expires in $time';
+  }
+
+  @override
+  String get rentalTimedOutTitle => 'Rental Timed Out';
+
+  @override
+  String rentalTimedOutBody(int minutes) {
+    return 'Your bike reservation timed out after the $minutes-minute limit. The bike has been released.';
+  }
+
+  @override
+  String get forceEndedTitle => 'Session Ended by Admin';
+
+  @override
+  String get rentalEndedTitle => 'Rental Ended';
+
+  @override
+  String get rentalEndedBody =>
+      'Your rental session has ended. Start a new ride whenever you\'re ready.';
+
+  @override
+  String returnAtStation(String station) {
+    return 'Return at $station';
+  }
+
+  @override
+  String get originStation => 'Origin Station';
+
+  @override
+  String get tripStartedHere => 'Trip started here';
+
+  @override
+  String get currentLocation => 'Current Location';
+
+  @override
+  String get yourGpsPosition => 'Your GPS position';
+
+  @override
+  String get stationDetailsTooltip => 'Station details';
+
+  @override
+  String get addPaymentMethod => 'Add Payment Method';
+
+  @override
+  String get lowBatteryFallbackBike => 'this bike';
+
+  @override
+  String get errorStationFullGeneral =>
+      'Nearby stations have no free docks right now. Please try again shortly.';
+
+  @override
+  String get termsNoticePrefix =>
+      'By proceeding with the renting process, you are considered to accept and clear the ';
+
+  @override
+  String get termsNoticeMiddle => ' and ';
+
+  @override
+  String get termsNoticeSuffix => ' of the app.';
+
+  @override
+  String get rideHistoryLoadFailed => 'Ride history could not be loaded.';
+
+  @override
+  String get noCompletedRides => 'No completed rides yet.';
+
+  @override
+  String get weatherConnectionFailedTitle => 'Connection failed';
+
+  @override
+  String get weatherConnectionFailedBody =>
+      'Unable to connect to the weather service. Please check your internet connection and try again.';
+
+  @override
+  String get weatherTimeoutTitle => 'Connection timed out';
+
+  @override
+  String get weatherTimeoutBody =>
+      'The weather service took too long to respond. Please check your connection and try again.';
+
+  @override
+  String get weatherRateLimitTitle => 'Rate limit reached';
+
+  @override
+  String get weatherRateLimitBody =>
+      'The weather service is temporarily busy. Please wait a moment and try again.';
+
+  @override
+  String get weatherLocationTitle => 'Location unavailable';
+
+  @override
+  String get weatherLocationBody =>
+      'Location access is required to show current weather. Please enable GPS and grant permission.';
+
+  @override
+  String get weatherOutsideMalaysiaTitle => 'Outside service area';
+
+  @override
+  String get weatherOutsideMalaysiaBody =>
+      'Weather forecast is only available for locations in Malaysia.';
+
+  @override
+  String get weatherServiceTitle => 'Service unavailable';
+
+  @override
+  String get weatherServiceBody =>
+      'The weather service is temporarily unavailable. Please try again later.';
+
+  @override
+  String get weatherNotFoundTitle => 'Weather unavailable';
+
+  @override
+  String get weatherNotFoundBody =>
+      'No weather forecast found for this location.';
+
+  @override
+  String get weatherGenericTitle => 'Weather unavailable';
+
+  @override
+  String get weatherGenericBody =>
+      'Unable to load ride conditions right now. Please try again.';
+
+  @override
+  String get aqiModerate => 'Moderate';
+
+  @override
+  String get aqiUnhealthy => 'Unhealthy';
+
+  @override
+  String get aqiVeryUnhealthy => 'Very Unhealthy';
+
+  @override
+  String get aqiHazardous => 'Hazardous';
+
+  @override
+  String get rideConditionsRateLimitSemantics =>
+      'Ride conditions. Rate limit reached.';
+
+  @override
+  String rideConditionsErrorSemantics(String title, String message) {
+    return 'Ride conditions. $title: $message.';
+  }
+
+  @override
+  String get pmSessionExpired => 'User session expired. Please log in again.';
+
+  @override
+  String get pmCardInUse =>
+      'Cannot delete card: it is currently attached to an active or pending rental.';
+
+  @override
+  String get pmDuplicateCard =>
+      'This card is already registered in your account.';
+
+  @override
+  String pmValidationError(String detail) {
+    return 'Validation error: $detail';
+  }
+
+  @override
+  String get pmUnknownError =>
+      'An unexpected error occurred. Please try again.';
+
+  @override
+  String get cvCardNumberRequired => 'Card number is required';
+
+  @override
+  String get cvCardDigitsOnly => 'Enter valid card digits';
+
+  @override
+  String get cvCardBrandUnsupported => 'Only Visa and Mastercard are supported';
+
+  @override
+  String cvCardNumberLength(int entered) {
+    return 'Card number must be 16 digits ($entered/16)';
+  }
+
+  @override
+  String get cvCardNumberTooLong => 'Card number exceeds 16 digits';
+
+  @override
+  String get cvCardChecksumFailed => 'Invalid card number (checksum failed)';
+
+  @override
+  String get cvExpiryRequired => 'Expiry date is required';
+
+  @override
+  String get cvExpiryFormat => 'Enter expiry date as MM/YY';
+
+  @override
+  String get cvExpiryInvalidMonth => 'Invalid month (must be 01–12)';
+
+  @override
+  String get cvExpiryInvalidYear => 'Invalid expiry year';
+
+  @override
+  String get cvCardExpired => 'Card has expired';
+
+  @override
+  String get cvExpiryTooFar => 'Expiry year too far in future';
+
+  @override
+  String get cvCvvRequired => 'CVV code is required';
+
+  @override
+  String get cvCvvLength => 'CVV must be 3 digits';
+
+  @override
+  String get cvNameRequired => 'Cardholder name is required';
+
+  @override
+  String get cvNameTooShort => 'Name must be at least 2 characters';
+
+  @override
+  String get cvNameTooLong => 'Name cannot exceed 50 characters';
+
+  @override
+  String get cvNameInvalidChars =>
+      'Only letters, spaces, hyphens, and dots allowed';
+
+  @override
+  String get cvNameNeedsTwoParts => 'Please enter first and last name';
 }

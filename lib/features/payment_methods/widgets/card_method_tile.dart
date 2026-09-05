@@ -21,7 +21,7 @@ class CardMethodTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final brand = CardBrand.detect(card.brand.toLowerCase());
+    final brand = CardBrand.fromName(card.brand);
 
     final expiryText = card.expiryMonth != null && card.expiryYear != null
         ? context.l10n.cardExpiry(

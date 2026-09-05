@@ -81,8 +81,8 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
                         color: Theme.of(context).colorScheme.error,
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Ride history could not be loaded.',
+                      Text(
+                        context.l10n.rideHistoryLoadFailed,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 12),
@@ -92,7 +92,7 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
                           minimumSize: const Size(0, 48),
                         ),
                         icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('Retry'),
+                        label: Text(context.l10n.retry),
                       ),
                     ],
                   ),
@@ -153,11 +153,11 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
           SurfacePanel(
             padding: EdgeInsets.zero,
             child: rides.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.all(24),
+                ? Padding(
+                    padding: const EdgeInsets.all(24),
                     child: Center(
                       child: Text(
-                        'No completed rides yet.',
+                        context.l10n.noCompletedRides,
                         textAlign: TextAlign.center,
                       ),
                     ),

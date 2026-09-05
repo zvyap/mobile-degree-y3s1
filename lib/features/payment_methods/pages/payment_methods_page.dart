@@ -36,6 +36,20 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
     super.dispose();
   }
 
+  String _paymentErrorText(
+    BuildContext context,
+    PaymentMethodsController controller,
+  ) {
+    return switch (controller.errorType) {
+      PaymentMethodErrorType.sessionExpired => context.l10n.pmSessionExpired,
+      PaymentMethodErrorType.cardInUse => context.l10n.pmCardInUse,
+      PaymentMethodErrorType.duplicate => context.l10n.pmDuplicateCard,
+      PaymentMethodErrorType.validation =>
+        context.l10n.pmValidationError(controller.errorDetail ?? ''),
+      PaymentMethodErrorType.unknown || null => context.l10n.pmUnknownError,
+    };
+  }
+
   void _openAddCard() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -86,8 +100,11 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
       if (success) {
         AppToast.show(context, message: context.l10n.cardRemovedSuccess);
       } else {
-        final error = _controller.errorMessage ?? context.l10n.failedToRemoveCard;
-        AppToast.show(context, message: error, variant: AppToastVariant.error);
+        AppToast.show(
+          context,
+          message: _paymentErrorText(context, _controller),
+          variant: AppToastVariant.error,
+        );
       }
     }
   }
@@ -98,8 +115,11 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
     if (success) {
       AppToast.show(context, message: context.l10n.cardSetAsDefault(card.brand));
     } else {
-      final error = _controller.errorMessage ?? context.l10n.failedToUpdateDefaultCard;
-      AppToast.show(context, message: error, variant: AppToastVariant.error);
+      AppToast.show(
+        context,
+        message: _paymentErrorText(context, _controller),
+        variant: AppToastVariant.error,
+      );
     }
   }
 
@@ -115,7 +135,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
           builder: (context, _) {
             final isLoading = _controller.isLoading;
             final cards = _controller.cards;
-            final errorMessage = _controller.errorMessage;
+            final errorType = _controller.errorType;
 
             return RefreshIndicator(
               onRefresh: _controller.load,
@@ -137,7 +157,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (errorMessage != null) ...[
+                  if (errorType != null) ...[
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       padding: const EdgeInsets.all(12),
@@ -152,7 +172,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              errorMessage,
+                              _paymentErrorText(context, _controller),
                               style: TextStyle(color: scheme.onErrorContainer),
                             ),
                           ),

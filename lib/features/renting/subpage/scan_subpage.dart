@@ -270,19 +270,21 @@ class _ScanStageState extends State<ScanStage> with WidgetsBindingObserver {
           ),
         ),
         const SizedBox(height: 12),
-        OutlinedButton.icon(
-          key: const ValueKey<String>('rent-choose-bike-button'),
-          onPressed: () => _handleCameraTap(
-            context,
-            widget.controller,
-            onInvalidQr: _showInvalidQrDialog,
+        if (kDebugMode) ...[
+          OutlinedButton.icon(
+            key: const ValueKey<String>('rent-choose-bike-button'),
+            onPressed: () => _handleCameraTap(
+              context,
+              widget.controller,
+              onInvalidQr: _showInvalidQrDialog,
+            ),
+            icon: const Icon(Icons.touch_app_rounded),
+            label: const Text('Choose Bike or Enter Code'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+            ),
           ),
-          icon: const Icon(Icons.touch_app_rounded),
-          label: const Text('Choose Bike or Enter Code'),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 48),
-          ),
-        ),
+        ],
       ],
     );
   }
@@ -452,7 +454,9 @@ class _ScanStageState extends State<ScanStage> with WidgetsBindingObserver {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  _isProcessing ? 'Scanning...' : context.l10n.cameraReady,
+                  _isProcessing
+                      ? context.l10n.scanningLabel
+                      : context.l10n.cameraReady,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -481,7 +485,7 @@ class _ScanStageState extends State<ScanStage> with WidgetsBindingObserver {
                 color: _torchOn ? Colors.amber : Colors.white,
                 size: 20,
               ),
-              tooltip: 'Flashlight',
+              tooltip: context.l10n.flashlightTooltip,
               onPressed: _toggleTorch,
             ),
           ),
@@ -668,7 +672,7 @@ Future<void> showInvalidQrDialog(
           size: 32,
           color: scheme.error,
         ),
-        title: const Text('Invalid QR Code'),
+        title: Text(dialogContext.l10n.invalidQrTitle),
         content: Text(
           dialogContext.l10n.errorInvalidQr,
           textAlign: TextAlign.center,
@@ -681,7 +685,7 @@ Future<void> showInvalidQrDialog(
               minimumSize: const Size(120, 48),
             ),
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('OK'),
+            child: Text(dialogContext.l10n.okButton),
           ),
         ],
       );
@@ -725,7 +729,7 @@ Future<void> showBikeCannotRentDialog(
               minimumSize: const Size(120, 48),
             ),
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('OK'),
+            child: Text(dialogContext.l10n.okButton),
           ),
         ],
       );
@@ -743,8 +747,9 @@ Future<bool> showLowBatteryWarningDialog(
     barrierDismissible: false,
     builder: (dialogContext) {
       final l10n = dialogContext.l10n;
-      final bikeLabel =
-          bikeCode != null && bikeCode.isNotEmpty ? bikeCode : 'this bike';
+      final bikeLabel = bikeCode != null && bikeCode.isNotEmpty
+          ? bikeCode
+          : l10n.lowBatteryFallbackBike;
       return AlertDialog(
         icon: const Icon(
           Icons.battery_alert_rounded,
@@ -820,6 +825,7 @@ Future<void> _handleCameraTap(
   RentingController controller, {
   Future<void> Function()? onInvalidQr,
 }) async {
+  if (!kDebugMode) return;
   final token = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,

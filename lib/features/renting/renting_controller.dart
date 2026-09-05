@@ -78,9 +78,9 @@ class RentingController extends ChangeNotifier {
       StreamController<void>.broadcast();
   Stream<void> get onRentalTimeout => _timeoutController.stream;
 
-  final StreamController<String> _forceEndController =
-      StreamController<String>.broadcast();
-  Stream<String> get onRentalForceEnded => _forceEndController.stream;
+  final StreamController<String?> _forceEndController =
+      StreamController<String?>.broadcast();
+  Stream<String?> get onRentalForceEnded => _forceEndController.stream;
 
   bool isForceEndDialogShowing = false;
   RealtimeChannel? _realtimeChannel;
@@ -106,7 +106,6 @@ class RentingController extends ChangeNotifier {
   RentalSessionSnapshot? _session;
   RentalSessionSnapshot? _completedSession;
   Timer? _rideTimer;
-  final List<RentalIssueNote> _localIssueNotes = [];
 
   RentalStage stage = RentalStage.scan;
   RideMetrics metrics = const RideMetrics(elapsedSeconds: 0, distanceKm: 0);
@@ -145,8 +144,9 @@ class RentingController extends ChangeNotifier {
 
   int? get rentalId => _session?.rental.id;
 
-  List<RentalIssueNote> get localIssueNotes =>
-      List.unmodifiable(_localIssueNotes);
+  /// Backend bike id of the active/last session, used to prefill the bike
+  /// report form.
+  int? get sessionBikeId => _session?.rental.bikeId;
 
   String? _scannedBikeCode;
   int? _scannedBikeBatteryPercent;
@@ -158,7 +158,10 @@ class RentingController extends ChangeNotifier {
     _hasAcknowledgedLowBatteryWarning = true;
   }
 
-  String get bikeCode => bike?.id ?? _scannedBikeCode ?? demoBikeCode;
+  String get bikeCode =>
+      bike?.id ??
+      _scannedBikeCode ??
+      (kDebugMode ? demoBikeCode : '');
 
   double get unlockFee =>
       _completedSession?.rental.unlockFee ?? _session?.rental.unlockFee ?? 0;
@@ -377,11 +380,12 @@ class RentingController extends ChangeNotifier {
       _clearError();
       await _sweepDeadlines();
       final results = await _loadInitializationData();
+      final riderPosition = await _bestEffortDevicePosition();
       stations = (results[0] as List<StationAvailabilityRecord>)
-          .map(_stationFromDatabase)
+          .map((record) => _stationFromDatabase(record, userPosition: riderPosition))
           .where((s) => !s.isTerminated)
           .toList()
-        ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
+        ..sort(_stationDistanceComparison);
       final active = results[1] as RentalSessionSnapshot?;
       final paymentRecords = results[2] as List<PaymentMethodRecord>;
       if (paymentRecords.isNotEmpty) {
@@ -417,6 +421,43 @@ class RentingController extends ChangeNotifier {
     try {
       await repository.sweepDeadlines();
     } catch (_) {}
+  }
+
+  /// Light station reload: reuses the rider's last known position (when any)
+  /// so the list keeps real distances. Best-effort; errors are swallowed.
+  Future<void> refreshStations() async {
+    try {
+      final records = await repository.listReturnStations();
+      RiderPosition? position;
+      final last = riderLatLng;
+      if (last != null) {
+        position = RiderPosition(latitude: last.latitude, longitude: last.longitude);
+      }
+      stations = records
+          .map((record) => _stationFromDatabase(record, userPosition: position))
+          .where((s) => !s.isTerminated)
+          .toList()
+        ..sort(_stationDistanceComparison);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  int _stationDistanceComparison(ReturnStation a, ReturnStation b) {
+    final ad = a.distanceMeters;
+    final bd = b.distanceMeters;
+    if (ad == null && bd == null) return 0;
+    if (ad == null) return 1;
+    if (bd == null) return -1;
+    return ad.compareTo(bd);
+  }
+
+  /// One-shot best-effort device fix (the source already applies a 5s limit).
+  Future<RiderPosition?> _bestEffortDevicePosition() async {
+    try {
+      return await locationSource.getCurrentPosition();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<List<Object?>> _loadInitializationData() async {
@@ -1002,7 +1043,7 @@ class RentingController extends ChangeNotifier {
       RentalStage.returning => true,
       _ => false,
     };
-    if (!rentalStillActive || !gpsAvailable || isTrackingPaused) return;
+    if (!rentalStillActive || isTrackingPaused) return;
 
     // When real GPS has provided positions, distance is computed directly
     // from physical movement. Fall back to simulation only when GPS is unseeded.
@@ -1039,6 +1080,7 @@ class RentingController extends ChangeNotifier {
             _stopClock();
             _stopRealtimeEvents();
             _resetLocal();
+            _forceEndController.add(null);
           }
         }
       }
@@ -1057,9 +1099,7 @@ class RentingController extends ChangeNotifier {
     _clearError();
     notifyListeners();
     if (notifyVictim) {
-      final message = customMessage ??
-          'Your renting session has been force ended by an admin.';
-      _forceEndController.add(message);
+      _forceEndController.add(customMessage);
     }
   }
 
@@ -1105,14 +1145,6 @@ class RentingController extends ChangeNotifier {
     } else {
       error = RentalError.gpsLost;
     }
-    notifyListeners();
-  }
-
-  void noteRideIssue(RentalIssueType type, String note) {
-    if (!isRideActive) return;
-    _localIssueNotes.add(
-      RentalIssueNote(type: type, note: note.trim(), notedAt: _now()),
-    );
     notifyListeners();
   }
 
@@ -1189,7 +1221,6 @@ class RentingController extends ChangeNotifier {
   /// Resolves a scanned station QR and makes that station authoritative for
   /// the pending return. Arrival still needs a passing GPS check.
   Future<void> selectStationFromQr(String rawInput) async {
-    isBusy = false;
     final station = await resolveStationQr(rawInput);
     if (station == null) {
       error = RentalError.stationQrMismatch;
@@ -1587,26 +1618,17 @@ class RentingController extends ChangeNotifier {
   }
 
   ReturnStation _stationFromDatabase(
-    StationAvailabilityRecord station, [
+    StationAvailabilityRecord station, {
     RiderPosition? userPosition,
-  ]) {
-    final int distanceMeters;
-    if (userPosition != null) {
-      distanceMeters = Geolocator.distanceBetween(
-        userPosition.latitude,
-        userPosition.longitude,
-        station.latitude,
-        station.longitude,
-      ).round();
-    } else {
-      distanceMeters = switch (station.code) {
-        'central' => 120,
-        'riverside' => 260,
-        'market' => 430,
-        'university' => 610,
-        _ => _calculateDistanceMeters(station.latitude, station.longitude),
-      };
-    }
+  }) {
+    final int? distanceMeters = userPosition == null
+        ? null
+        : Geolocator.distanceBetween(
+            userPosition.latitude,
+            userPosition.longitude,
+            station.latitude,
+            station.longitude,
+          ).round();
 
     return ReturnStation(
       backendId: station.id,
@@ -1632,22 +1654,6 @@ class RentingController extends ChangeNotifier {
       if (record != null) return _stationFromDatabase(record);
     } catch (_) {}
     return null;
-  }
-
-  int _calculateDistanceMeters(double lat, double lon) {
-    const refLat = 3.1390;
-    const refLon = 101.6869;
-    const earthRadiusMeters = 6371000.0;
-    final dLat = (lat - refLat) * (math.pi / 180.0);
-    final dLon = (lon - refLon) * (math.pi / 180.0);
-    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(refLat * (math.pi / 180.0)) *
-            math.cos(lat * (math.pi / 180.0)) *
-            math.sin(dLon / 2) *
-            math.sin(dLon / 2);
-    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    final distance = (earthRadiusMeters * c).round();
-    return math.max(50, distance);
   }
 
   ReturnStation? _stationFromSnapshot(StationAvailabilityRecord? station) {
@@ -1863,9 +1869,24 @@ class RentingController extends ChangeNotifier {
         selectedStation!.latitude,
         selectedStation!.longitude,
       ).round();
-      if (stationDistanceMeters! <= 250) {
-        isAtStation = true;
-      }
+      isAtStation = stationDistanceMeters! <= returnGeofenceRadiusMeters;
+    }
+
+    // Keep listed station distances live while the rider moves.
+    if (stations.isNotEmpty) {
+      stations = [
+        for (final listedStation in stations)
+          (listedStation.latitude == 0 && listedStation.longitude == 0)
+              ? listedStation
+              : listedStation.copyWith(
+                  distanceMeters: Geolocator.distanceBetween(
+                    position.latitude,
+                    position.longitude,
+                    listedStation.latitude,
+                    listedStation.longitude,
+                  ).round(),
+                ),
+      ];
     }
 
     notifyListeners();
@@ -1903,10 +1924,12 @@ class RentingController extends ChangeNotifier {
   void _startBikeReadyTimer() {
     _stopBikeReadyTimer();
     final serverExpiresAt = _session?.rental.reservationExpiresAt;
-    _bikeReadyExpiresAt =
-        (serverExpiresAt != null && serverExpiresAt.isAfter(_now()))
-            ? serverExpiresAt
-            : _now().add(bikeReadyTimeout);
+    if (serverExpiresAt != null && !serverExpiresAt.isAfter(_now())) {
+      // Already expired server-side; the next tick fires the timeout.
+      _bikeReadyExpiresAt = serverExpiresAt;
+    } else {
+      _bikeReadyExpiresAt = serverExpiresAt ?? _now().add(bikeReadyTimeout);
+    }
     if (!enableClock) return;
     _bikeReadyTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _tickBikeReady();
@@ -1958,7 +1981,9 @@ class RentingController extends ChangeNotifier {
   }
 
   void handleAppExit() {
-    if (stage == RentalStage.bikeCheck || stage == RentalStage.authorizing) {
+    if (stage == RentalStage.bikeCheck ||
+        stage == RentalStage.authorizing ||
+        stage == RentalStage.unlocking) {
       final id = rentalId;
       _stopBikeReadyTimer();
       _resetLocal();

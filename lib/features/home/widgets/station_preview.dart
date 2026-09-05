@@ -79,7 +79,9 @@ class StationPreview extends StatelessWidget {
                   Divider(height: 1, color: scheme.outline.withValues(alpha: 0.58)),
                 StationRow(
                   name: station.name,
-                  distance: context.l10n.stationDistance(station.distanceMeters),
+                  distance: station.distanceMeters == null
+                      ? ''
+                      : context.l10n.stationDistance(station.distanceMeters!),
                   bikes: context.l10n.bikeCount(station.availableBikes),
                   docks: context.l10n.dockCount(station.availableDocks),
                   availability: availability,

@@ -798,90 +798,6 @@ abstract class AppLocalizations {
   /// **'Report bike issue'**
   String get reportBikeIssue;
 
-  /// No description provided for @reportingBike.
-  ///
-  /// In en, this message translates to:
-  /// **'Reporting an issue for {bikeCode}'**
-  String reportingBike(String bikeCode);
-
-  /// No description provided for @chooseIssueType.
-  ///
-  /// In en, this message translates to:
-  /// **'What is wrong?'**
-  String get chooseIssueType;
-
-  /// No description provided for @chooseIssueTypeError.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose an issue type.'**
-  String get chooseIssueTypeError;
-
-  /// No description provided for @issueBrakes.
-  ///
-  /// In en, this message translates to:
-  /// **'Brakes'**
-  String get issueBrakes;
-
-  /// No description provided for @issueTyres.
-  ///
-  /// In en, this message translates to:
-  /// **'Tyres'**
-  String get issueTyres;
-
-  /// No description provided for @issueLights.
-  ///
-  /// In en, this message translates to:
-  /// **'Lights'**
-  String get issueLights;
-
-  /// No description provided for @issueLock.
-  ///
-  /// In en, this message translates to:
-  /// **'Lock'**
-  String get issueLock;
-
-  /// No description provided for @issueOther.
-  ///
-  /// In en, this message translates to:
-  /// **'Other'**
-  String get issueOther;
-
-  /// No description provided for @issueNoteOptional.
-  ///
-  /// In en, this message translates to:
-  /// **'Note (optional)'**
-  String get issueNoteOptional;
-
-  /// No description provided for @issueNoteHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a short detail that may help.'**
-  String get issueNoteHint;
-
-  /// No description provided for @issueSessionOnly.
-  ///
-  /// In en, this message translates to:
-  /// **'This note stays in the current app session and is not sent to support.'**
-  String get issueSessionOnly;
-
-  /// No description provided for @noteIssue.
-  ///
-  /// In en, this message translates to:
-  /// **'Note issue'**
-  String get noteIssue;
-
-  /// No description provided for @issueNoted.
-  ///
-  /// In en, this message translates to:
-  /// **'Issue noted'**
-  String get issueNoted;
-
-  /// No description provided for @issueNotSent.
-  ///
-  /// In en, this message translates to:
-  /// **'Saved for this app session only. It was not sent to support.'**
-  String get issueNotSent;
-
   /// No description provided for @change.
   ///
   /// In en, this message translates to:
@@ -3053,6 +2969,426 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove Location'**
   String get removeLocation;
+
+  /// No description provided for @okButton.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get okButton;
+
+  /// No description provided for @scanningLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning…'**
+  String get scanningLabel;
+
+  /// No description provided for @flashlightTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Flashlight'**
+  String get flashlightTooltip;
+
+  /// No description provided for @invalidQrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid QR Code'**
+  String get invalidQrTitle;
+
+  /// No description provided for @reservationExpiresIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation expires in {time}'**
+  String reservationExpiresIn(String time);
+
+  /// No description provided for @rentalTimedOutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental Timed Out'**
+  String get rentalTimedOutTitle;
+
+  /// No description provided for @rentalTimedOutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your bike reservation timed out after the {minutes}-minute limit. The bike has been released.'**
+  String rentalTimedOutBody(int minutes);
+
+  /// No description provided for @forceEndedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session Ended by Admin'**
+  String get forceEndedTitle;
+
+  /// No description provided for @rentalEndedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental Ended'**
+  String get rentalEndedTitle;
+
+  /// No description provided for @rentalEndedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your rental session has ended. Start a new ride whenever you\'re ready.'**
+  String get rentalEndedBody;
+
+  /// No description provided for @returnAtStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Return at {station}'**
+  String returnAtStation(String station);
+
+  /// No description provided for @originStation.
+  ///
+  /// In en, this message translates to:
+  /// **'Origin Station'**
+  String get originStation;
+
+  /// No description provided for @tripStartedHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Trip started here'**
+  String get tripStartedHere;
+
+  /// No description provided for @currentLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Location'**
+  String get currentLocation;
+
+  /// No description provided for @yourGpsPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Your GPS position'**
+  String get yourGpsPosition;
+
+  /// No description provided for @stationDetailsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Station details'**
+  String get stationDetailsTooltip;
+
+  /// No description provided for @addPaymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Payment Method'**
+  String get addPaymentMethod;
+
+  /// No description provided for @lowBatteryFallbackBike.
+  ///
+  /// In en, this message translates to:
+  /// **'this bike'**
+  String get lowBatteryFallbackBike;
+
+  /// No description provided for @errorStationFullGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby stations have no free docks right now. Please try again shortly.'**
+  String get errorStationFullGeneral;
+
+  /// No description provided for @termsNoticePrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'By proceeding with the renting process, you are considered to accept and clear the '**
+  String get termsNoticePrefix;
+
+  /// No description provided for @termsNoticeMiddle.
+  ///
+  /// In en, this message translates to:
+  /// **' and '**
+  String get termsNoticeMiddle;
+
+  /// No description provided for @termsNoticeSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **' of the app.'**
+  String get termsNoticeSuffix;
+
+  /// No description provided for @rideHistoryLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride history could not be loaded.'**
+  String get rideHistoryLoadFailed;
+
+  /// No description provided for @noCompletedRides.
+  ///
+  /// In en, this message translates to:
+  /// **'No completed rides yet.'**
+  String get noCompletedRides;
+
+  /// No description provided for @weatherConnectionFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection failed'**
+  String get weatherConnectionFailedTitle;
+
+  /// No description provided for @weatherConnectionFailedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to connect to the weather service. Please check your internet connection and try again.'**
+  String get weatherConnectionFailedBody;
+
+  /// No description provided for @weatherTimeoutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection timed out'**
+  String get weatherTimeoutTitle;
+
+  /// No description provided for @weatherTimeoutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The weather service took too long to respond. Please check your connection and try again.'**
+  String get weatherTimeoutBody;
+
+  /// No description provided for @weatherRateLimitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate limit reached'**
+  String get weatherRateLimitTitle;
+
+  /// No description provided for @weatherRateLimitBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The weather service is temporarily busy. Please wait a moment and try again.'**
+  String get weatherRateLimitBody;
+
+  /// No description provided for @weatherLocationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Location unavailable'**
+  String get weatherLocationTitle;
+
+  /// No description provided for @weatherLocationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Location access is required to show current weather. Please enable GPS and grant permission.'**
+  String get weatherLocationBody;
+
+  /// No description provided for @weatherOutsideMalaysiaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Outside service area'**
+  String get weatherOutsideMalaysiaTitle;
+
+  /// No description provided for @weatherOutsideMalaysiaBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather forecast is only available for locations in Malaysia.'**
+  String get weatherOutsideMalaysiaBody;
+
+  /// No description provided for @weatherServiceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Service unavailable'**
+  String get weatherServiceTitle;
+
+  /// No description provided for @weatherServiceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The weather service is temporarily unavailable. Please try again later.'**
+  String get weatherServiceBody;
+
+  /// No description provided for @weatherNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather unavailable'**
+  String get weatherNotFoundTitle;
+
+  /// No description provided for @weatherNotFoundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No weather forecast found for this location.'**
+  String get weatherNotFoundBody;
+
+  /// No description provided for @weatherGenericTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather unavailable'**
+  String get weatherGenericTitle;
+
+  /// No description provided for @weatherGenericBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load ride conditions right now. Please try again.'**
+  String get weatherGenericBody;
+
+  /// No description provided for @aqiModerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderate'**
+  String get aqiModerate;
+
+  /// No description provided for @aqiUnhealthy.
+  ///
+  /// In en, this message translates to:
+  /// **'Unhealthy'**
+  String get aqiUnhealthy;
+
+  /// No description provided for @aqiVeryUnhealthy.
+  ///
+  /// In en, this message translates to:
+  /// **'Very Unhealthy'**
+  String get aqiVeryUnhealthy;
+
+  /// No description provided for @aqiHazardous.
+  ///
+  /// In en, this message translates to:
+  /// **'Hazardous'**
+  String get aqiHazardous;
+
+  /// No description provided for @rideConditionsRateLimitSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride conditions. Rate limit reached.'**
+  String get rideConditionsRateLimitSemantics;
+
+  /// No description provided for @rideConditionsErrorSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride conditions. {title}: {message}.'**
+  String rideConditionsErrorSemantics(String title, String message);
+
+  /// No description provided for @pmSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'User session expired. Please log in again.'**
+  String get pmSessionExpired;
+
+  /// No description provided for @pmCardInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot delete card: it is currently attached to an active or pending rental.'**
+  String get pmCardInUse;
+
+  /// No description provided for @pmDuplicateCard.
+  ///
+  /// In en, this message translates to:
+  /// **'This card is already registered in your account.'**
+  String get pmDuplicateCard;
+
+  /// No description provided for @pmValidationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Validation error: {detail}'**
+  String pmValidationError(String detail);
+
+  /// No description provided for @pmUnknownError.
+  ///
+  /// In en, this message translates to:
+  /// **'An unexpected error occurred. Please try again.'**
+  String get pmUnknownError;
+
+  /// No description provided for @cvCardNumberRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Card number is required'**
+  String get cvCardNumberRequired;
+
+  /// No description provided for @cvCardDigitsOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter valid card digits'**
+  String get cvCardDigitsOnly;
+
+  /// No description provided for @cvCardBrandUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Only Visa and Mastercard are supported'**
+  String get cvCardBrandUnsupported;
+
+  /// No description provided for @cvCardNumberLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Card number must be 16 digits ({entered}/16)'**
+  String cvCardNumberLength(int entered);
+
+  /// No description provided for @cvCardNumberTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Card number exceeds 16 digits'**
+  String get cvCardNumberTooLong;
+
+  /// No description provided for @cvCardChecksumFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid card number (checksum failed)'**
+  String get cvCardChecksumFailed;
+
+  /// No description provided for @cvExpiryRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiry date is required'**
+  String get cvExpiryRequired;
+
+  /// No description provided for @cvExpiryFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter expiry date as MM/YY'**
+  String get cvExpiryFormat;
+
+  /// No description provided for @cvExpiryInvalidMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid month (must be 01–12)'**
+  String get cvExpiryInvalidMonth;
+
+  /// No description provided for @cvExpiryInvalidYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid expiry year'**
+  String get cvExpiryInvalidYear;
+
+  /// No description provided for @cvCardExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Card has expired'**
+  String get cvCardExpired;
+
+  /// No description provided for @cvExpiryTooFar.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiry year too far in future'**
+  String get cvExpiryTooFar;
+
+  /// No description provided for @cvCvvRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'CVV code is required'**
+  String get cvCvvRequired;
+
+  /// No description provided for @cvCvvLength.
+  ///
+  /// In en, this message translates to:
+  /// **'CVV must be 3 digits'**
+  String get cvCvvLength;
+
+  /// No description provided for @cvNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Cardholder name is required'**
+  String get cvNameRequired;
+
+  /// No description provided for @cvNameTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Name must be at least 2 characters'**
+  String get cvNameTooShort;
+
+  /// No description provided for @cvNameTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Name cannot exceed 50 characters'**
+  String get cvNameTooLong;
+
+  /// No description provided for @cvNameInvalidChars.
+  ///
+  /// In en, this message translates to:
+  /// **'Only letters, spaces, hyphens, and dots allowed'**
+  String get cvNameInvalidChars;
+
+  /// No description provided for @cvNameNeedsTwoParts.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter first and last name'**
+  String get cvNameNeedsTwoParts;
 }
 
 class _AppLocalizationsDelegate

@@ -6,6 +6,7 @@ import 'package:bike_renting_app/bike_station/base_station_map.dart';
 import 'package:bike_renting_app/bike_station/shared_map.dart';
 import 'package:bike_renting_app/bike_station/station_details.dart';
 import 'package:bike_renting_app/bike_station/station_map.dart';
+import 'package:bike_renting_app/constants.dart';
 import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/features/renting/bike_battery_guard.dart';
 import 'package:bike_renting_app/features/renting/renting_controller.dart';
@@ -24,6 +25,7 @@ import 'package:bike_renting_app/features/payment_methods/pages/add_edit_card_pa
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/motion.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
@@ -68,7 +70,7 @@ class _RentingFlowPageState extends State<RentingFlowPage>
   late RentingController _controller;
   bool _lastLockState = false;
   StreamSubscription<void>? _timeoutSubscription;
-  StreamSubscription<String>? _forceEndSubscription;
+  StreamSubscription<String?>? _forceEndSubscription;
   bool _isTimeoutAlertShowing = false;
 
   @override
@@ -131,7 +133,7 @@ class _RentingFlowPageState extends State<RentingFlowPage>
     });
   }
 
-  Future<void> _showForceEndAlert(String message) async {
+  Future<void> _showForceEndAlert(String? message) async {
     if (!mounted || _controller.isForceEndDialogShowing) return;
     _controller.isForceEndDialogShowing = true;
     try {
@@ -147,13 +149,13 @@ class _RentingFlowPageState extends State<RentingFlowPage>
               size: 44,
               color: theme.colorScheme.error,
             ),
-            title: const Text(
-              'Session Ended by Admin',
+            title: Text(
+              dialogContext.l10n.forceEndedTitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             content: Text(
-              message,
+              message ?? dialogContext.l10n.rentalEndedBody,
               textAlign: TextAlign.center,
             ),
             actionsAlignment: MainAxisAlignment.center,
@@ -164,7 +166,7 @@ class _RentingFlowPageState extends State<RentingFlowPage>
                   Navigator.of(dialogContext).pop();
                   widget.onRequestExit?.call();
                 },
-                child: const Text('OK'),
+                child: Text(dialogContext.l10n.okButton),
               ),
             ],
           );
@@ -191,13 +193,15 @@ class _RentingFlowPageState extends State<RentingFlowPage>
               size: 44,
               color: theme.colorScheme.error,
             ),
-            title: const Text(
-              'Rental Timed Out',
+            title: Text(
+              dialogContext.l10n.rentalTimedOutTitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            content: const Text(
-              'Your bike reservation has timed out because the 10-minute limit was reached. The bike has been released.',
+            content: Text(
+              dialogContext.l10n.rentalTimedOutBody(
+                defaultBikeReadyTimeout.inMinutes,
+              ),
               textAlign: TextAlign.center,
             ),
             actionsAlignment: MainAxisAlignment.center,
@@ -205,7 +209,7 @@ class _RentingFlowPageState extends State<RentingFlowPage>
               FilledButton(
                 key: const ValueKey('rent-timeout-modal-ok'),
                 onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('OK'),
+                child: Text(dialogContext.l10n.okButton),
               ),
             ],
           );
@@ -234,7 +238,8 @@ class _RentingFlowPageState extends State<RentingFlowPage>
     _controller.removeListener(_handleControllerChange);
     _controller.pauseTracking();
     if (_controller.stage == RentalStage.bikeCheck ||
-        _controller.stage == RentalStage.authorizing) {
+        _controller.stage == RentalStage.authorizing ||
+        _controller.stage == RentalStage.unlocking) {
       unawaited(_controller.cancelReservation());
     }
     super.dispose();

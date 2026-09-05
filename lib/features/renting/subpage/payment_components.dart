@@ -341,11 +341,15 @@ class _PaymentMethodPickerSheetState extends State<_PaymentMethodPickerSheet> {
     final repo = widget.controller.paymentMethodRepository ??
         AppRepositories.fromSupabase(Supabase.instance.client).paymentMethods;
     final paymentController = PaymentMethodsController(repo);
-    await Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (_) => AddEditCardPage(controller: paymentController),
-      ),
-    );
+    try {
+      await Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (_) => AddEditCardPage(controller: paymentController),
+        ),
+      );
+    } finally {
+      paymentController.dispose();
+    }
     if (!mounted) return;
     await widget.controller.reloadPaymentMethods();
     if (mounted) {
@@ -394,7 +398,7 @@ class _PaymentMethodPickerSheetState extends State<_PaymentMethodPickerSheet> {
               ),
               onPressed: _openAddCard,
               icon: const Icon(Icons.add_card_rounded),
-              label: const Text('Add Payment Method'),
+              label: Text(context.l10n.addPaymentMethod),
             ),
           ],
         ),

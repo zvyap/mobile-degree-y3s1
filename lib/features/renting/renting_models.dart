@@ -12,8 +12,6 @@ enum RentalStage {
 
 enum PaymentStatus { ready, authorized, paid, pending }
 
-enum RentalIssueType { brakes, tyres, lights, lock, other }
-
 enum RentalError {
   authenticationFailed,
   connectionFailed,
@@ -44,18 +42,6 @@ enum RentalError {
   maxExtensionsReached,
 }
 
-class RentalIssueNote {
-  const RentalIssueNote({
-    required this.type,
-    required this.note,
-    required this.notedAt,
-  });
-
-  final RentalIssueType type;
-  final String note;
-  final DateTime notedAt;
-}
-
 class RentalBike {
   const RentalBike({required this.id, required this.batteryPercent});
 
@@ -82,7 +68,7 @@ class ReturnStation {
     required this.backendId,
     required this.id,
     required this.name,
-    required this.distanceMeters,
+    this.distanceMeters,
     required this.availableDocks,
     this.availableBikes = 0,
     this.capacity = 0,
@@ -95,7 +81,7 @@ class ReturnStation {
   final int backendId;
   final String id;
   final String name;
-  final int distanceMeters;
+  final int? distanceMeters;
   final int availableDocks;
   final int availableBikes;
   final int capacity;
@@ -110,6 +96,22 @@ class ReturnStation {
   bool get isNormal => !isUnderMaintenance && !isTerminated;
   bool get canAcceptReturn =>
       !isUnderMaintenance && !isTerminated && availableDocks > 0;
+
+  ReturnStation copyWith({int? distanceMeters}) {
+    return ReturnStation(
+      backendId: backendId,
+      id: id,
+      name: name,
+      distanceMeters: distanceMeters,
+      availableDocks: availableDocks,
+      availableBikes: availableBikes,
+      capacity: capacity,
+      qrToken: qrToken,
+      latitude: latitude,
+      longitude: longitude,
+      status: status,
+    );
+  }
 }
 
 class RentalPaymentMethod {

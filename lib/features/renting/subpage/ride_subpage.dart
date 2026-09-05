@@ -107,11 +107,9 @@ class _RideStage extends StatelessWidget {
                   key: const ValueKey<String>('rent-report-issue-active'),
                   style: _dangerTextButtonStyle(context),
                   onPressed: () {
-                    final bikeCode =
-                        controller.bike?.id ?? controller.bikeCode;
                     Navigator.of(context).pushNamed(
-                      AppPage.bikeReport.routeName,
-                      arguments: bikeCode,
+                      AppPage.reportForm.routeName,
+                      arguments: controller.sessionBikeId,
                     );
                   },
                   icon: const Icon(Icons.report_problem_outlined),
@@ -127,12 +125,16 @@ class _RideStage extends StatelessWidget {
             station: <String, dynamic>{
               'id': controller.startStation!.id,
               'name': _stationName(context.l10n, controller.startStation!),
-              'address': context.l10n.stationDistance(controller.startStation!.distanceMeters),
+              'address': controller.startStation!.distanceMeters == null
+                  ? ''
+                  : context.l10n.stationDistance(
+                      controller.startStation!.distanceMeters!,
+                    ),
               'status': controller.startStation!.status,
             },
             isOrigin: true,
-            defaultTitle: 'Origin Station',
-            defaultSubtitle: 'Trip started here',
+            defaultTitle: context.l10n.originStation,
+            defaultSubtitle: context.l10n.tripStartedHere,
             onEdit: () {},
           ),
           Padding(
@@ -150,7 +152,11 @@ class _RideStage extends StatelessWidget {
               ? <String, dynamic>{
                   'id': nearestStation.id,
                   'name': _stationName(context.l10n, nearestStation),
-                  'address': context.l10n.stationDistance(nearestStation.distanceMeters),
+                  'address': nearestStation.distanceMeters == null
+                      ? ''
+                      : context.l10n.stationDistance(
+                          nearestStation.distanceMeters!,
+                        ),
                   'status': nearestStation.status,
                 }
               : null,
@@ -347,7 +353,11 @@ class _NearbyStationRow extends StatelessWidget {
                     ],
                   ],
                 ),
-                Text(context.l10n.stationDistance(station.distanceMeters)),
+                if (station.distanceMeters != null) ...[
+                  Text(
+                    context.l10n.stationDistance(station.distanceMeters!),
+                  ),
+                ],
               ],
             ),
           ),

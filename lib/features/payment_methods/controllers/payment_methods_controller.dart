@@ -3,6 +3,9 @@ import 'package:bike_renting_app/data/models/database_models.dart';
 import 'package:bike_renting_app/data/repositories/payment_method_repository.dart';
 import 'package:flutter/foundation.dart';
 
+/// Typed error categories surfaced by [PaymentMethodsController].
+enum PaymentMethodErrorType { sessionExpired, cardInUse, duplicate, validation, unknown }
+
 class PaymentMethodsController extends ChangeNotifier {
   PaymentMethodsController(this._repository);
 
@@ -14,22 +17,26 @@ class PaymentMethodsController extends ChangeNotifier {
   bool _isSaving = false;
   bool get isSaving => _isSaving;
 
-  String? _errorMessage;
-  String? get errorMessage => _errorMessage;
+  PaymentMethodErrorType? _errorType;
+  PaymentMethodErrorType? get errorType => _errorType;
+
+  String? _errorDetail;
+  String? get errorDetail => _errorDetail;
 
   List<PaymentMethodRecord> _cards = const [];
   List<PaymentMethodRecord> get cards => _cards;
 
   void clearError() {
-    if (_errorMessage != null) {
-      _errorMessage = null;
+    if (_errorType != null || _errorDetail != null) {
+      _errorType = null;
+      _errorDetail = null;
       notifyListeners();
     }
   }
 
   Future<void> load() async {
     _isLoading = true;
-    _errorMessage = null;
+    _clearErrorFields();
     notifyListeners();
 
     try {
@@ -37,7 +44,7 @@ class PaymentMethodsController extends ChangeNotifier {
       // Filter card provider methods
       _cards = list.where((p) => p.provider == 'card').toList();
     } catch (e) {
-      _errorMessage = _parseError(e);
+      _applyError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -53,7 +60,7 @@ class PaymentMethodsController extends ChangeNotifier {
     bool isDefault = false,
   }) async {
     _isSaving = true;
-    _errorMessage = null;
+    _clearErrorFields();
     notifyListeners();
 
     try {
@@ -68,7 +75,7 @@ class PaymentMethodsController extends ChangeNotifier {
       await load();
       return true;
     } catch (e) {
-      _errorMessage = _parseError(e);
+      _applyError(e);
       notifyListeners();
       return false;
     } finally {
@@ -85,7 +92,7 @@ class PaymentMethodsController extends ChangeNotifier {
     bool? isDefault,
   }) async {
     _isSaving = true;
-    _errorMessage = null;
+    _clearErrorFields();
     notifyListeners();
 
     try {
@@ -99,7 +106,7 @@ class PaymentMethodsController extends ChangeNotifier {
       await load();
       return true;
     } catch (e) {
-      _errorMessage = _parseError(e);
+      _applyError(e);
       notifyListeners();
       return false;
     } finally {
@@ -109,51 +116,57 @@ class PaymentMethodsController extends ChangeNotifier {
   }
 
   Future<bool> setDefault(int id) async {
-    _errorMessage = null;
+    _clearErrorFields();
     try {
       await _repository.setDefault(id);
       await load();
       return true;
     } catch (e) {
-      _errorMessage = _parseError(e);
+      _applyError(e);
       notifyListeners();
       return false;
     }
   }
 
   Future<bool> deleteCard(int id) async {
-    _errorMessage = null;
+    _clearErrorFields();
     try {
       await _repository.deleteCard(id);
       await load();
       return true;
-    } on DatabaseException catch (e) {
-      if (e.code == DatabaseErrorCode.paymentMethodInUse) {
-        _errorMessage =
-            'Cannot delete card: it is currently attached to an active or pending rental.';
-      } else {
-        _errorMessage = _parseError(e);
-      }
-      notifyListeners();
-      return false;
     } catch (e) {
-      _errorMessage = _parseError(e);
+      _applyError(e);
       notifyListeners();
       return false;
     }
   }
 
-  String _parseError(Object error) {
+  void _clearErrorFields() {
+    _errorType = null;
+    _errorDetail = null;
+  }
+
+  void _applyError(Object error) {
     if (error is DatabaseException) {
-      return switch (error.code) {
-        DatabaseErrorCode.notAuthenticated => 'User session expired. Please log in again.',
-        DatabaseErrorCode.paymentMethodInUse =>
-          'Cannot delete card: it is currently attached to an active rental.',
-        DatabaseErrorCode.validation => 'Validation error: ${error.message}',
-        DatabaseErrorCode.conflict => 'This card is already registered in your account.',
-        _ => error.message.isNotEmpty ? error.message : 'An unexpected database error occurred.',
-      };
+      switch (error.code) {
+        case DatabaseErrorCode.notAuthenticated:
+          _errorType = PaymentMethodErrorType.sessionExpired;
+          break;
+        case DatabaseErrorCode.paymentMethodInUse:
+          _errorType = PaymentMethodErrorType.cardInUse;
+          break;
+        case DatabaseErrorCode.conflict:
+          _errorType = PaymentMethodErrorType.duplicate;
+          break;
+        case DatabaseErrorCode.validation:
+          _errorType = PaymentMethodErrorType.validation;
+          _errorDetail = error.message;
+          break;
+        default:
+          _errorType = PaymentMethodErrorType.unknown;
+      }
+    } else {
+      _errorType = PaymentMethodErrorType.unknown;
     }
-    return error.toString();
   }
 }

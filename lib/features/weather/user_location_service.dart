@@ -131,7 +131,8 @@ class UserLocationService {
 
     if (position == null) {
       throw const WeatherApiException(
-        'GPS location unavailable. Please enable GPS and grant permission to get weather.',
+        'Location access is required to show current weather. Please enable GPS and grant permission.',
+        errorType: WeatherErrorType.locationUnavailable,
       );
     }
 
@@ -145,8 +146,9 @@ class UserLocationService {
   Future<UserWeatherLocation> resolveLocation(double lat, double lon) async {
     // Strict Malaysia bounds check: do NOT pretend or fall back if outside Malaysia!
     if (lat < 0.5 || lat > 8.0 || lon < 98.5 || lon > 120.0) {
-      throw WeatherApiException(
-        'GPS location (${lat.toStringAsFixed(2)}, ${lon.toStringAsFixed(2)}) is outside Malaysia. Weather forecast only available in Malaysia.',
+      throw const WeatherApiException(
+        'Weather forecast is only available for locations in Malaysia.',
+        errorType: WeatherErrorType.outsideMalaysia,
       );
     }
 
@@ -187,7 +189,8 @@ class UserLocationService {
             final countryCode = address['country_code']?.toString().toLowerCase();
             if (countryCode != null && countryCode != 'my') {
               throw const WeatherApiException(
-                'Location is outside Malaysia. Weather forecast only available in Malaysia.',
+                'Weather forecast is only available for locations in Malaysia.',
+                errorType: WeatherErrorType.outsideMalaysia,
               );
             }
 
@@ -202,13 +205,21 @@ class UserLocationService {
 
             final candidates = <String>[];
             if (town != null && town.toString().trim().isNotEmpty) {
-              candidates.add(town.toString().trim());
+              final townStr = town.toString().trim();
+              candidates.add(townStr);
+              if (townStr.toLowerCase() == 'george town' ||
+                  townStr.toLowerCase() == 'georgetown') {
+                candidates.add('Pulau Pinang');
+              }
             }
             if (district != null && district.toString().trim().isNotEmpty && district != town) {
               candidates.add(district.toString().trim());
             }
             if (state.isNotEmpty && !candidates.contains(state)) {
               candidates.add(state);
+              if (state.toLowerCase() == 'penang' && !candidates.contains('Pulau Pinang')) {
+                candidates.add('Pulau Pinang');
+              }
             }
 
             final primaryName = candidates.isNotEmpty ? candidates.first : state;
@@ -235,8 +246,9 @@ class UserLocationService {
   /// Finds the closest Malaysian weather forecast station using Haversine formula.
   UserWeatherLocation matchCoordinates(double lat, double lon) {
     if (lat < 0.5 || lat > 8.0 || lon < 98.5 || lon > 120.0) {
-      throw WeatherApiException(
-        'GPS location (${lat.toStringAsFixed(2)}, ${lon.toStringAsFixed(2)}) is outside Malaysia. Weather forecast only available in Malaysia.',
+      throw const WeatherApiException(
+        'Weather forecast is only available for locations in Malaysia.',
+        errorType: WeatherErrorType.outsideMalaysia,
       );
     }
 
@@ -252,17 +264,27 @@ class UserLocationService {
     }
 
     if (closest == null) {
-      throw const WeatherApiException('Unable to determine Malaysian weather station.');
+      throw const WeatherApiException(
+        'Unable to determine Malaysian weather station.',
+        errorType: WeatherErrorType.notFound,
+      );
     }
+
+    final forecastLocName = closest.id == 'St003' ? 'Pulau Pinang' : closest.name;
+    final fallbackList = <String>[
+      if (closest.name != forecastLocName) closest.name,
+      closest.state,
+      if (closest.state.toLowerCase() == 'penang') 'Pulau Pinang',
+    ];
 
     return UserWeatherLocation(
       latitude: lat,
       longitude: lon,
       cityName: closest.name,
       stateName: closest.state,
-      forecastLocationName: closest.name,
+      forecastLocationName: forecastLocName,
       forecastLocationId: closest.id,
-      fallbackCandidates: [closest.state],
+      fallbackCandidates: fallbackList,
     );
   }
 

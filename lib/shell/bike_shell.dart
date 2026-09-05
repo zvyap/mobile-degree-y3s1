@@ -6,6 +6,7 @@ import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/features/user/profile_controller.dart';
 import 'package:bike_renting_app/features/user/user_controller.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:bike_renting_app/navigation/app_navigator.dart';
 import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/navigation/bike_bottom_nav_bar.dart';
@@ -34,7 +35,7 @@ class _BikeShellState extends State<BikeShell> {
   AppPage _currentPage = AppPage.home;
   AppPage _selectedRootPage = AppPage.home;
 
-  StreamSubscription<String>? _forceEndSubscription;
+  StreamSubscription<String?>? _forceEndSubscription;
 
   bool get _isAdmin =>
       _profileController.profile?.role == AppUserRole.admin;
@@ -68,7 +69,7 @@ class _BikeShellState extends State<BikeShell> {
     );
   }
 
-  Future<void> _showGlobalForceEndAlert(String message) async {
+  Future<void> _showGlobalForceEndAlert(String? message) async {
     if (!mounted || _currentPage == AppPage.scan || _rentingController.isForceEndDialogShowing) return;
     _rentingController.isForceEndDialogShowing = true;
     final dialogContext = _navigatorKey.currentContext ?? context;
@@ -85,13 +86,13 @@ class _BikeShellState extends State<BikeShell> {
               size: 44,
               color: theme.colorScheme.error,
             ),
-            title: const Text(
-              'Session Ended by Admin',
+            title: Text(
+              ctx.l10n.forceEndedTitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             content: Text(
-              message,
+              message ?? ctx.l10n.rentalEndedBody,
               textAlign: TextAlign.center,
             ),
             actionsAlignment: MainAxisAlignment.center,
@@ -102,7 +103,7 @@ class _BikeShellState extends State<BikeShell> {
                   Navigator.of(ctx).pop();
                   _selectRootPage(AppPage.home);
                 },
-                child: const Text('OK'),
+                child: Text(ctx.l10n.okButton),
               ),
             ],
           );

@@ -1,6 +1,29 @@
 import 'package:bike_renting_app/features/payment_methods/models/card_brand.dart';
 import 'package:flutter/services.dart';
 
+/// Typed validation outcomes for the card form fields.
+enum CardValidationError {
+  cardNumberRequired,
+  cardDigitsOnly,
+  cardBrandUnsupported,
+  cardNumberLength,
+  cardNumberTooLong,
+  cardChecksumFailed,
+  expiryRequired,
+  expiryFormat,
+  expiryInvalidMonth,
+  expiryInvalidYear,
+  cardExpired,
+  expiryTooFar,
+  cvvRequired,
+  cvvLength,
+  nameRequired,
+  nameTooShort,
+  nameTooLong,
+  nameInvalidChars,
+  nameNeedsTwoParts,
+}
+
 class CardValidator {
   const CardValidator._();
 
@@ -34,46 +57,46 @@ class CardValidator {
     return (sum % 10) == 0;
   }
 
-  /// Full validation for Card Number with inline error message.
-  static String? validateCardNumber(String? value) {
+  /// Full validation for Card Number.
+  static CardValidationError? validateCardNumber(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Card number is required';
+      return CardValidationError.cardNumberRequired;
     }
 
     final digits = cleanDigits(value);
     if (digits.isEmpty) {
-      return 'Enter valid card digits';
+      return CardValidationError.cardDigitsOnly;
     }
 
     final brand = CardBrand.detect(digits);
     if (brand == CardBrand.unknown) {
-      return 'Only Visa and Mastercard are supported';
+      return CardValidationError.cardBrandUnsupported;
     }
 
     if (digits.length < 16) {
-      return 'Card number must be 16 digits (${digits.length}/16)';
+      return CardValidationError.cardNumberLength;
     }
 
     if (digits.length > 16) {
-      return 'Card number exceeds 16 digits';
+      return CardValidationError.cardNumberTooLong;
     }
 
     if (!isValidLuhn(digits)) {
-      return 'Invalid card number (checksum failed)';
+      return CardValidationError.cardChecksumFailed;
     }
 
     return null;
   }
 
-  /// Full validation for Expiry Date (MM/YY) with inline error message.
-  static String? validateExpiry(String? value, [DateTime? currentDate]) {
+  /// Full validation for Expiry Date (MM/YY).
+  static CardValidationError? validateExpiry(String? value, [DateTime? currentDate]) {
     if (value == null || value.trim().isEmpty) {
-      return 'Expiry date is required';
+      return CardValidationError.expiryRequired;
     }
 
     final trimmed = value.trim();
     if (!RegExp(r'^\d{2}/\d{2}$').hasMatch(trimmed)) {
-      return 'Enter expiry date as MM/YY';
+      return CardValidationError.expiryFormat;
     }
 
     final parts = trimmed.split('/');
@@ -81,11 +104,11 @@ class CardValidator {
     final yearPart = int.tryParse(parts[1]);
 
     if (month == null || month < 1 || month > 12) {
-      return 'Invalid month (must be 01–12)';
+      return CardValidationError.expiryInvalidMonth;
     }
 
     if (yearPart == null) {
-      return 'Invalid expiry year';
+      return CardValidationError.expiryInvalidYear;
     }
 
     final fullYear = 2000 + yearPart;
@@ -94,57 +117,95 @@ class CardValidator {
     final currentMonth = now.month;
 
     if (fullYear < currentYear || (fullYear == currentYear && month < currentMonth)) {
-      return 'Card has expired';
+      return CardValidationError.cardExpired;
     }
 
     if (fullYear > currentYear + 20) {
-      return 'Expiry year too far in future';
+      return CardValidationError.expiryTooFar;
     }
 
     return null;
   }
 
-  /// Full validation for CVV / CVC with inline error message.
-  static String? validateCvv(String? value) {
+  /// Full validation for CVV / CVC.
+  static CardValidationError? validateCvv(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'CVV code is required';
+      return CardValidationError.cvvRequired;
     }
 
     final trimmed = value.trim();
     if (!RegExp(r'^\d{3}$').hasMatch(trimmed)) {
-      return 'CVV must be 3 digits';
+      return CardValidationError.cvvLength;
     }
 
     return null;
   }
 
-  /// Full validation for Cardholder Name with inline error message.
+  /// Full validation for Cardholder Name.
   /// Supports Malaysian naming conventions including Indian patronymics (A/L, A/P, S/O, D/O).
-  static String? validateCardholderName(String? value) {
+  static CardValidationError? validateCardholderName(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Cardholder name is required';
+      return CardValidationError.nameRequired;
     }
 
     final trimmed = value.trim();
     if (trimmed.length < 2) {
-      return 'Name must be at least 2 characters';
+      return CardValidationError.nameTooShort;
     }
 
     if (trimmed.length > 50) {
-      return 'Name cannot exceed 50 characters';
+      return CardValidationError.nameTooLong;
     }
 
     if (!RegExp(r"^[a-zA-Z\s\.\'/\-]+$").hasMatch(trimmed) ||
         !RegExp(r'[a-zA-Z]').hasMatch(trimmed)) {
-      return 'Only letters, spaces, hyphens, and dots allowed';
+      return CardValidationError.nameInvalidChars;
     }
 
     if (!trimmed.contains(' ') && !trimmed.contains('/')) {
-      return 'Please enter first and last name';
+      return CardValidationError.nameNeedsTwoParts;
     }
 
     return null;
   }
+}
+
+/// Counts digit characters in [value] before the caret position.
+int _countDigitsBeforeCaret(TextEditingValue value) {
+  var caret = value.text.length;
+  final selection = value.selection;
+  if (selection.isValid &&
+      selection.baseOffset >= 0 &&
+      selection.baseOffset <= value.text.length) {
+    caret = selection.baseOffset;
+  }
+
+  var count = 0;
+  for (var i = 0; i < caret; i++) {
+    final codeUnit = value.text.codeUnitAt(i);
+    if (codeUnit >= 48 && codeUnit <= 57) {
+      count++;
+    }
+  }
+  return count;
+}
+
+/// Returns the offset in [formatted] right after [digitCount] digits
+/// (or the end of the string when there are fewer digits than that).
+int _caretAfterDigits(String formatted, int digitCount) {
+  if (digitCount <= 0) return 0;
+
+  var seen = 0;
+  for (var i = 0; i < formatted.length; i++) {
+    final codeUnit = formatted.codeUnitAt(i);
+    if (codeUnit >= 48 && codeUnit <= 57) {
+      seen++;
+      if (seen == digitCount) {
+        return i + 1;
+      }
+    }
+  }
+  return formatted.length;
 }
 
 class CardNumberInputFormatter extends TextInputFormatter {
@@ -158,6 +219,8 @@ class CardNumberInputFormatter extends TextInputFormatter {
       return oldValue;
     }
 
+    final digitsBeforeCaret = _countDigitsBeforeCaret(newValue);
+
     final buffer = StringBuffer();
     for (int i = 0; i < text.length; i++) {
       if (i > 0 && i % 4 == 0) {
@@ -169,7 +232,9 @@ class CardNumberInputFormatter extends TextInputFormatter {
     final formatted = buffer.toString();
     return TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+      selection: TextSelection.collapsed(
+        offset: _caretAfterDigits(formatted, digitsBeforeCaret),
+      ),
     );
   }
 }
@@ -185,6 +250,8 @@ class CardExpiryInputFormatter extends TextInputFormatter {
       text = text.substring(0, 4);
     }
 
+    final digitsBeforeCaret = _countDigitsBeforeCaret(newValue);
+
     final buffer = StringBuffer();
     for (int i = 0; i < text.length; i++) {
       if (i == 2) {
@@ -196,7 +263,9 @@ class CardExpiryInputFormatter extends TextInputFormatter {
     final formatted = buffer.toString();
     return TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+      selection: TextSelection.collapsed(
+        offset: _caretAfterDigits(formatted, digitsBeforeCaret),
+      ),
     );
   }
 }

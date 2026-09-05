@@ -107,81 +107,6 @@ enum WeatherCondition {
     WeatherCondition.unknown => Icons.wb_cloudy_rounded,
   };
 
-  /// Estimated precipitation probability based on weather severity.
-  int get defaultRainChance => switch (this) {
-    WeatherCondition.noRain => 10,
-    WeatherCondition.haze => 15,
-    WeatherCondition.isolatedRain ||
-    WeatherCondition.coastalRain ||
-    WeatherCondition.inlandRain => 45,
-    WeatherCondition.rain => 65,
-    WeatherCondition.widespreadRain ||
-    WeatherCondition.widespreadInlandRain => 75,
-    WeatherCondition.isolatedThunderstorms ||
-    WeatherCondition.coastalThunderstorms ||
-    WeatherCondition.inlandThunderstorms => 65,
-    WeatherCondition.thunderstorms => 80,
-    WeatherCondition.widespreadThunderstorms => 85,
-    WeatherCondition.heavyThunderstorms => 95,
-    WeatherCondition.unknown => 30,
-  };
-
-  /// Base humidity percentage estimate for this weather condition.
-  int get baseHumidity => switch (this) {
-    WeatherCondition.heavyThunderstorms => 92,
-    WeatherCondition.widespreadThunderstorms ||
-    WeatherCondition.widespreadRain ||
-    WeatherCondition.widespreadInlandRain => 88,
-    WeatherCondition.thunderstorms || WeatherCondition.rain => 84,
-    WeatherCondition.isolatedThunderstorms ||
-    WeatherCondition.isolatedRain ||
-    WeatherCondition.coastalThunderstorms ||
-    WeatherCondition.inlandThunderstorms ||
-    WeatherCondition.coastalRain ||
-    WeatherCondition.inlandRain => 78,
-    WeatherCondition.haze => 58,
-    WeatherCondition.noRain => 68,
-    WeatherCondition.unknown => 72,
-  };
-
-  /// Default Air Quality Index associated with this condition.
-  int get baseAqi => switch (this) {
-    WeatherCondition.haze => 105,
-    WeatherCondition.heavyThunderstorms ||
-    WeatherCondition.widespreadThunderstorms ||
-    WeatherCondition.widespreadRain ||
-    WeatherCondition.widespreadInlandRain ||
-    WeatherCondition.rain => 28,
-    WeatherCondition.thunderstorms ||
-    WeatherCondition.isolatedThunderstorms ||
-    WeatherCondition.coastalThunderstorms ||
-    WeatherCondition.inlandThunderstorms ||
-    WeatherCondition.isolatedRain ||
-    WeatherCondition.coastalRain ||
-    WeatherCondition.inlandRain => 38,
-    WeatherCondition.noRain => 42,
-    WeatherCondition.unknown => 42,
-  };
-
-  /// Estimated wind speed (km/h) for this condition.
-  int get baseWindKmh => switch (this) {
-    WeatherCondition.heavyThunderstorms => 28,
-    WeatherCondition.widespreadThunderstorms => 22,
-    WeatherCondition.thunderstorms ||
-    WeatherCondition.coastalThunderstorms ||
-    WeatherCondition.inlandThunderstorms => 18,
-    WeatherCondition.rain ||
-    WeatherCondition.widespreadRain ||
-    WeatherCondition.widespreadInlandRain => 14,
-    WeatherCondition.isolatedThunderstorms ||
-    WeatherCondition.isolatedRain ||
-    WeatherCondition.coastalRain ||
-    WeatherCondition.inlandRain => 11,
-    WeatherCondition.noRain => 8,
-    WeatherCondition.haze => 5,
-    WeatherCondition.unknown => 9,
-  };
-
   bool get isRaining => switch (this) {
     WeatherCondition.rain ||
     WeatherCondition.isolatedRain ||
@@ -341,65 +266,71 @@ class DailyWeatherForecast {
 }
 
 /// Instantaneous ride conditions snapshot prepared for the dashboard.
+///
+/// Weather conditions and periods come from the api.data.gov.my forecast
+/// (always present). The measured metrics below come from Open-Meteo and are
+/// null when that service is unavailable — the UI hides the affected pieces
+/// instead of showing estimated data.
 class WeatherSnapshot {
   const WeatherSnapshot({
     required this.locationName,
     required this.currentCondition,
-    required this.currentTemperature,
-    required this.feelsLikeTemperature,
     required this.nextHourCondition,
-    required this.nextHourTemperature,
-    required this.nextHourRainChance,
-    required this.humidityPercent,
-    required this.airQualityIndex,
-    required this.airQualityLabel,
-    required this.windSpeedKmh,
-    required this.windDirection,
     required this.updatedAt,
+    this.currentTemperature,
+    this.feelsLikeTemperature,
+    this.nextHourTemperature,
+    this.nextHourRainChance,
+    this.humidityPercent,
+    this.airQualityIndex,
+    this.windSpeedKmh,
+    this.windDirection,
     this.dailyForecasts = const [],
   });
 
   final String locationName;
+
+  /// Forecast condition from api.data.gov.my for the current period.
   final WeatherCondition currentCondition;
-  final int currentTemperature;
-  final int feelsLikeTemperature;
+
+  /// Forecast condition from api.data.gov.my for the upcoming hour/period.
   final WeatherCondition nextHourCondition;
-  final int nextHourTemperature;
-  final int nextHourRainChance;
-  final int humidityPercent;
-  final int airQualityIndex;
-  final String airQualityLabel;
-  final int windSpeedKmh;
-  final String windDirection;
+
+  /// Measured current temperature in °C.
+  final int? currentTemperature;
+
+  /// Measured apparent (feels-like) temperature in °C.
+  final int? feelsLikeTemperature;
+
+  /// Forecast temperature for the hour after now, in °C.
+  final int? nextHourTemperature;
+
+  /// Forecast precipitation probability for the hour after now, in percent.
+  final int? nextHourRainChance;
+
+  /// Measured relative humidity in percent.
+  final int? humidityPercent;
+
+  /// Measured US Air Quality Index.
+  final int? airQualityIndex;
+
+  /// Measured wind speed in km/h.
+  final int? windSpeedKmh;
+
+  /// Compass direction (N/NE/E/SE/S/SW/W/NW) of the measured wind.
+  final String? windDirection;
+
   final DateTime updatedAt;
   final List<DailyWeatherForecast> dailyForecasts;
 
-  String get windFormatted => '$windSpeedKmh km/h $windDirection';
-  String get humidityFormatted => '$humidityPercent%';
-  String get temperatureFormatted => '$currentTemperature°C';
-  String get nextHourTemperatureFormatted => '$nextHourTemperature°C';
-  String get rainChanceFormatted => '$nextHourRainChance%';
-
-  /// Fallback snapshot when offline or awaiting initial load.
-  factory WeatherSnapshot.fallback({
-    String locationName = 'Bukit Mertajam, Penang',
-    DateTime? now,
-  }) {
-    final current = now ?? DateTime.now();
-    return WeatherSnapshot(
-      locationName: locationName,
-      currentCondition: WeatherCondition.isolatedThunderstorms,
-      currentTemperature: 30,
-      feelsLikeTemperature: 34,
-      nextHourCondition: WeatherCondition.thunderstorms,
-      nextHourTemperature: 29,
-      nextHourRainChance: 65,
-      humidityPercent: 78,
-      airQualityIndex: 42,
-      airQualityLabel: 'Good',
-      windSpeedKmh: 9,
-      windDirection: 'SW',
-      updatedAt: current,
-    );
-  }
+  String get windFormatted => windSpeedKmh != null
+      ? '$windSpeedKmh km/h${windDirection == null ? '' : ' $windDirection'}'
+      : '–';
+  String get humidityFormatted => humidityPercent != null ? '$humidityPercent%' : '–';
+  String get temperatureFormatted =>
+      currentTemperature != null ? '$currentTemperature°C' : '–';
+  String get nextHourTemperatureFormatted =>
+      nextHourTemperature != null ? '$nextHourTemperature°C' : '–';
+  String get rainChanceFormatted =>
+      nextHourRainChance != null ? '$nextHourRainChance%' : '–';
 }

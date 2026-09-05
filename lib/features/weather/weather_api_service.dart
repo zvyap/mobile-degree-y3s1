@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:bike_renting_app/features/weather/open_meteo_service.dart';
 import 'package:bike_renting_app/features/weather/user_location_service.dart';
 import 'package:bike_renting_app/features/weather/weather_models.dart';
 
@@ -15,9 +16,21 @@ class _CachedWeather {
   final WeatherSnapshot snapshot;
   final DateTime cachedAt;
 
-  bool isExpired(Duration ttl) {
-    return DateTime.now().difference(cachedAt) > ttl;
+  bool isExpired(Duration ttl, DateTime now) {
+    return now.difference(cachedAt) > ttl;
   }
+}
+
+/// Categorized weather error types for semantic UI representation.
+enum WeatherErrorType {
+  network,
+  timeout,
+  rateLimit,
+  serverError,
+  locationUnavailable,
+  outsideMalaysia,
+  notFound,
+  unknown,
 }
 
 /// Exception thrown when weather forecast retrieval fails.
@@ -26,24 +39,32 @@ class WeatherApiException implements Exception {
     this.message, {
     this.statusCode,
     this.isRateLimit = false,
+    this.errorType = WeatherErrorType.unknown,
+    this.technicalDetails,
   });
 
   final String message;
   final int? statusCode;
   final bool isRateLimit;
+  final WeatherErrorType errorType;
+  final String? technicalDetails;
 
   @override
   String toString() => message;
 }
 
-/// Service that fetches Malaysian weather forecasts from api.data.gov.my,
+/// Service that composes ride conditions from the Malaysian government
+/// weather forecast (api.data.gov.my) plus measured metrics from Open-Meteo,
 /// converts raw responses into typed models, and caches snapshots.
 class WeatherApiService {
   WeatherApiService({
     http.Client? client,
+    OpenMeteoService? openMeteoService,
     this.cacheTtl = const Duration(minutes: 30),
     DateTime Function()? clock,
   })  : _client = client ?? http.Client(),
+        _openMeteo = openMeteoService ??
+            OpenMeteoService(client: client, clock: clock),
         _clock = clock ?? DateTime.now;
 
   static WeatherApiService? _shared;
@@ -54,6 +75,7 @@ class WeatherApiService {
   static const String baseUrl = 'https://api.data.gov.my/weather/forecast/';
 
   final http.Client _client;
+  final OpenMeteoService _openMeteo;
   final Duration cacheTtl;
   final DateTime Function() _clock;
 
@@ -69,10 +91,22 @@ class WeatherApiService {
       response = await _client.get(
         url,
         headers: {'Accept': 'application/json'},
-      );
+      ).timeout(const Duration(seconds: 10));
     } catch (e) {
       debugPrint('Weather API fetch failed: $e');
-      throw WeatherApiException('Network error: $e');
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains('timeoutexception') || errStr.contains('timed out')) {
+        throw WeatherApiException(
+          'Weather service took too long to respond. Please check your connection and try again.',
+          errorType: WeatherErrorType.timeout,
+          technicalDetails: e.toString(),
+        );
+      }
+      throw WeatherApiException(
+        'Unable to connect to weather service. Please check your internet connection and try again.',
+        errorType: WeatherErrorType.network,
+        technicalDetails: e.toString(),
+      );
     }
 
     if (response.statusCode == 200) {
@@ -86,27 +120,43 @@ class WeatherApiService {
         }
       } catch (e) {
         debugPrint('Weather API decode error: $e');
-        throw WeatherApiException('Failed to parse weather data: $e');
+        throw WeatherApiException(
+          'Unable to read weather forecast data. Please try again later.',
+          errorType: WeatherErrorType.unknown,
+          technicalDetails: e.toString(),
+        );
       }
       return const [];
     } else if (response.statusCode == 429) {
       debugPrint('Weather API rate limit (429): ${response.body}');
       throw const WeatherApiException(
-        'Rate limit reached (HTTP 429). Too many requests.',
+        'Too many requests. Please wait a moment before trying again.',
         statusCode: 429,
         isRateLimit: true,
+        errorType: WeatherErrorType.rateLimit,
+      );
+    } else if (response.statusCode >= 500) {
+      debugPrint('Weather API error ${response.statusCode}: ${response.body}');
+      throw WeatherApiException(
+        'Weather service is temporarily unavailable. Please try again later.',
+        statusCode: response.statusCode,
+        errorType: WeatherErrorType.serverError,
       );
     } else {
       debugPrint('Weather API error ${response.statusCode}: ${response.body}');
       throw WeatherApiException(
-        'Weather service error (HTTP ${response.statusCode})',
+        'Weather service unavailable right now. Please try again later.',
         statusCode: response.statusCode,
+        errorType: WeatherErrorType.serverError,
       );
     }
   }
 
   /// Get live ride conditions snapshot for the given user location.
-  /// Uses cached result if within TTL; otherwise queries api.data.gov.my.
+  ///
+  /// The api.data.gov.my forecast always drives the weather conditions and
+  /// periods; Open-Meteo supplies the measured metrics on a best-effort basis.
+  /// Uses cached result if within TTL; otherwise queries both services.
   Future<WeatherSnapshot> getRideConditions(
     UserWeatherLocation location, {
     bool forceRefresh = false,
@@ -116,7 +166,7 @@ class WeatherApiService {
 
     if (!forceRefresh) {
       final cached = _cache[cacheKey];
-      if (cached != null && !cached.isExpired(cacheTtl)) {
+      if (cached != null && !cached.isExpired(cacheTtl, now)) {
         return cached.snapshot;
       }
     }
@@ -139,11 +189,12 @@ class WeatherApiService {
 
     if (forecasts.isEmpty) {
       throw WeatherApiException(
-        'No weather forecast available for ${location.displayName}',
+        'No weather forecast available for ${location.displayName}.',
+        errorType: WeatherErrorType.notFound,
       );
     }
 
-    final snapshot = _buildSnapshotFromForecasts(
+    final snapshot = await _composeSnapshot(
       location,
       forecasts,
       now,
@@ -158,13 +209,16 @@ class WeatherApiService {
     return snapshot;
   }
 
-  /// Synthesize a WeatherSnapshot from the list of daily forecasts.
-  WeatherSnapshot _buildSnapshotFromForecasts(
+  /// Composes a [WeatherSnapshot]: the government forecast drives the current
+  /// and next-hour conditions, while Open-Meteo fills the measured metrics.
+  /// If Open-Meteo fails for any reason the government-only snapshot is
+  /// returned with null metrics so the UI can degrade gracefully.
+  Future<WeatherSnapshot> _composeSnapshot(
     UserWeatherLocation location,
     List<DailyWeatherForecast> forecasts,
     DateTime now, {
     String? displayNameOverride,
-  }) {
+  }) async {
     // Find today's forecast or take the first available
     final todayForecast = forecasts.firstWhere(
       (f) =>
@@ -177,87 +231,31 @@ class WeatherApiService {
     final currentCondition = todayForecast.conditionAt(now);
     final nextHourCondition = todayForecast.nextPeriodConditionAt(now);
 
-    // Compute realistic diurnal temperature based on time of day
-    final currentTemp = _estimateTemperature(
-      minTemp: todayForecast.minTemp,
-      maxTemp: todayForecast.maxTemp,
-      hour: now.hour,
-      minute: now.minute,
-    );
-
-    final humidity = currentCondition.baseHumidity;
-
-    // Approximate heat index / feels-like based on temperature and humidity
-    final feelsLike = _estimateFeelsLike(currentTemp, humidity);
-
-    // Next hour temperature adjustment
-    final nextHourTemp = now.hour >= 14 && now.hour <= 22
-        ? currentTemp - 1
-        : currentTemp + 1;
-
-    final rainChance = nextHourCondition.defaultRainChance;
-    final aqi = currentCondition.baseAqi;
-    final aqiLabel = _aqiToLabel(aqi);
-    final windKmh = currentCondition.baseWindKmh;
-    const windDirection = 'SW';
+    OpenMeteoConditions? metrics;
+    try {
+      metrics = await _openMeteo.fetchConditions(
+        latitude: location.latitude,
+        longitude: location.longitude,
+      );
+    } catch (e) {
+      debugPrint('Open-Meteo metrics unavailable, using gov forecast only: $e');
+    }
 
     return WeatherSnapshot(
       locationName: displayNameOverride ?? location.displayName,
       currentCondition: currentCondition,
-      currentTemperature: currentTemp,
-      feelsLikeTemperature: feelsLike,
       nextHourCondition: nextHourCondition,
-      nextHourTemperature: nextHourTemp,
-      nextHourRainChance: rainChance,
-      humidityPercent: humidity,
-      airQualityIndex: aqi,
-      airQualityLabel: aqiLabel,
-      windSpeedKmh: windKmh,
-      windDirection: windDirection,
+      currentTemperature: metrics?.currentTemperature?.round(),
+      feelsLikeTemperature: metrics?.feelsLikeTemperature?.round(),
+      nextHourTemperature: metrics?.nextHourTemperature?.round(),
+      nextHourRainChance: metrics?.nextHourRainChance,
+      humidityPercent: metrics?.humidityPercent,
+      airQualityIndex: metrics?.airQualityIndex,
+      windSpeedKmh: metrics?.windSpeedKmh?.round(),
+      windDirection: metrics?.windDirection,
       updatedAt: now,
       dailyForecasts: forecasts,
     );
-  }
-
-  /// Calculates diurnal temperature curve peaking around 14:00-15:00.
-  static int _estimateTemperature({
-    required int minTemp,
-    required int maxTemp,
-    required int hour,
-    required int minute,
-  }) {
-    final double time = hour + (minute / 60.0);
-
-    if (time >= 6.0 && time < 14.0) {
-      final factor = (time - 6.0) / 8.0;
-      return (minTemp + (maxTemp - minTemp) * factor).round();
-    } else if (time >= 14.0 && time < 20.0) {
-      final factor = (time - 14.0) / 6.0;
-      return (maxTemp - (maxTemp - minTemp) * 0.6 * factor).round();
-    } else if (time >= 20.0) {
-      final factor = (time - 20.0) / 10.0;
-      final nightStart = minTemp + ((maxTemp - minTemp) * 0.4);
-      return (nightStart - (nightStart - minTemp) * factor).round();
-    } else {
-      // 0:00 to 6:00
-      return minTemp + 1;
-    }
-  }
-
-  /// Simple empirical feels-like calculation for tropical climates.
-  static int _estimateFeelsLike(int temp, int humidity) {
-    if (temp < 25) return temp;
-    final excessHumidity = humidity - 60;
-    if (excessHumidity <= 0) return temp;
-    final boost = (excessHumidity * 0.12).round();
-    return temp + boost;
-  }
-
-  static String _aqiToLabel(int aqi) {
-    if (aqi <= 50) return 'Good';
-    if (aqi <= 100) return 'Moderate';
-    if (aqi <= 200) return 'Unhealthy';
-    return 'Very Unhealthy';
   }
 
   /// Clear in-memory cache.

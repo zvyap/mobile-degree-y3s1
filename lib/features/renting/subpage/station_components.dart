@@ -98,9 +98,11 @@ class _StationTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 3),
-                      Text(
-                        context.l10n.stationDistance(station.distanceMeters),
-                      ),
+                      if (station.distanceMeters != null) ...[
+                        Text(
+                          context.l10n.stationDistance(station.distanceMeters!),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -128,7 +130,7 @@ class _StationTile extends StatelessWidget {
                     size: 20,
                     color: scheme.onSurfaceVariant,
                   ),
-                  tooltip: 'Station details',
+                  tooltip: context.l10n.stationDetailsTooltip,
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -172,7 +174,8 @@ class _ReturnStationMap extends BaseStationMapView {
           trackLiveLocation: true,
           showDirectionIndicator: true,
           selectedStationId: selectedStation?.id,
-          geofenceRadiusMeters: 250,
+          geofenceRadiusMeters: RentingController.returnGeofenceRadiusMeters
+              .toDouble(),
           initialCenter: selectedStation != null
               ? LatLng(selectedStation.latitude, selectedStation.longitude)
               : riderLocation,
@@ -191,7 +194,7 @@ class _ReturnStationMap extends BaseStationMapView {
                         : 'Normal',
                     'available_bikes': s.availableBikes,
                     'capacity': s.capacity,
-                    'distance_meters': s.distanceMeters,
+                    'distance_meters': s.distanceMeters ?? 0,
                   })
               .toList(growable: false),
         );
@@ -213,6 +216,9 @@ class _ReturnStationMapState
   OsrmRouteResult? routeResult;
   bool isCalculating = false;
   bool isRouteTooFar = false;
+  LatLng? _lastRouteOrigin;
+  String? _lastRouteTargetId;
+  bool _routeInFlight = false;
 
   @override
   void initState() {
@@ -251,7 +257,7 @@ class _ReturnStationMapState
                     : 'Normal',
                 'available_bikes': s.availableBikes,
                 'capacity': s.capacity,
-                'distance_meters': s.distanceMeters,
+                'distance_meters': s.distanceMeters ?? 0,
               })
           .toList(growable: false);
       selectedStation = widget.selectedStation != null
@@ -272,11 +278,29 @@ class _ReturnStationMapState
           isRouteTooFar = false;
         });
       }
+      _lastRouteOrigin = null;
+      _lastRouteTargetId = null;
       return;
     }
 
     final LatLng? start = widget.riderLocation ?? userLocation;
     if (start == null) return;
+
+    // Throttle: skip when the target is unchanged and the start barely moved,
+    // so GPS updates do not flood the OSRM route service.
+    final lastOrigin = _lastRouteOrigin;
+    final movedMeters = lastOrigin == null
+        ? double.infinity
+        : Geolocator.distanceBetween(
+            lastOrigin.latitude,
+            lastOrigin.longitude,
+            start.latitude,
+            start.longitude,
+          );
+    if (_routeInFlight ||
+        (_lastRouteTargetId == target.id && movedMeters < 30)) {
+      return;
+    }
 
     if (mounted) {
       setState(() {
@@ -285,43 +309,50 @@ class _ReturnStationMapState
       });
     }
 
-    final end = LatLng(target.latitude, target.longitude);
-    OsrmRouteResult? result = await OsrmService.fetchBikingRoute(start, end);
+    _routeInFlight = true;
+    _lastRouteTargetId = target.id;
+    _lastRouteOrigin = start;
+    try {
+      final end = LatLng(target.latitude, target.longitude);
+      OsrmRouteResult? result = await OsrmService.fetchBikingRoute(start, end);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    // Fallback to direct path calculation if offline or OSRM route is unavailable
-    if (result == null) {
-      final directDist = Geolocator.distanceBetween(
-        start.latitude,
-        start.longitude,
-        end.latitude,
-        end.longitude,
-      );
-      final estSeconds = directDist / 4.16; // ~15 km/h biking estimate
-      result = OsrmRouteResult(
-        polylinePoints: [start, end],
-        distanceMeters: directDist,
-        durationSeconds: estSeconds,
-      );
-    }
+      // Fallback to direct path calculation if offline or OSRM route is unavailable
+      if (result == null) {
+        final directDist = Geolocator.distanceBetween(
+          start.latitude,
+          start.longitude,
+          end.latitude,
+          end.longitude,
+        );
+        final estSeconds = directDist / 4.16; // ~15 km/h biking estimate
+        result = OsrmRouteResult(
+          polylinePoints: [start, end],
+          distanceMeters: directDist,
+          durationSeconds: estSeconds,
+        );
+      }
 
-    bool checkTooFar = false;
-    if (result.distanceKm > 80.0 || result.durationMinutes > (24 * 60)) {
-      checkTooFar = true;
-    }
+      bool checkTooFar = false;
+      if (result.distanceKm > 80.0 || result.durationMinutes > (24 * 60)) {
+        checkTooFar = true;
+      }
 
-    setState(() {
-      routeResult = result;
-      isRouteTooFar = checkTooFar;
-      isCalculating = false;
-    });
+      setState(() {
+        routeResult = result;
+        isRouteTooFar = checkTooFar;
+        isCalculating = false;
+      });
 
-    if (!checkTooFar && result.polylinePoints.isNotEmpty) {
-      _mapTileKey.currentState?.fitBounds(
-        result.polylinePoints,
-        padding: const EdgeInsets.all(28.0),
-      );
+      if (!checkTooFar && result.polylinePoints.isNotEmpty) {
+        _mapTileKey.currentState?.fitBounds(
+          result.polylinePoints,
+          padding: const EdgeInsets.all(28.0),
+        );
+      }
+    } finally {
+      _routeInFlight = false;
     }
   }
 
@@ -332,7 +363,6 @@ class _ReturnStationMapState
         .firstOrNull;
     if (matched != null) {
       widget.onSelectStation(matched);
-      _calculateRoute();
     }
   }
 
@@ -368,7 +398,11 @@ class _ReturnStationMapState
         ? <String, dynamic>{
             'id': widget.selectedStation!.id,
             'name': _stationName(context.l10n, widget.selectedStation!),
-            'address': context.l10n.stationDistance(widget.selectedStation!.distanceMeters),
+            'address': widget.selectedStation!.distanceMeters == null
+                ? ''
+                : context.l10n.stationDistance(
+                    widget.selectedStation!.distanceMeters!,
+                  ),
             'status': widget.selectedStation!.status,
           }
         : null;
@@ -402,8 +436,8 @@ class _ReturnStationMapState
         StationPlaceholderRow(
           station: null,
           isOrigin: true,
-          defaultTitle: 'Current Location',
-          defaultSubtitle: 'Your GPS position',
+          defaultTitle: context.l10n.currentLocation,
+          defaultSubtitle: context.l10n.yourGpsPosition,
           onEdit: recenterToGps,
         ),
         Padding(

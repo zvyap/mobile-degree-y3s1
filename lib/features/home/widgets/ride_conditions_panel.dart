@@ -3,6 +3,7 @@ import 'package:bike_renting_app/features/weather/user_location_service.dart';
 import 'package:bike_renting_app/features/weather/weather_api_service.dart';
 import 'package:bike_renting_app/features/weather/weather_models.dart';
 import 'package:bike_renting_app/l10n/app_formats.dart';
+import 'package:bike_renting_app/l10n/app_localizations.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
@@ -146,6 +147,140 @@ class RideConditionsPanel extends StatefulWidget {
   State<RideConditionsPanel> createState() => RideConditionsPanelState();
 }
 
+/// Structured user-facing error details for the ride conditions panel.
+class WeatherPanelError {
+  const WeatherPanelError({
+    required this.title,
+    required this.message,
+    required this.icon,
+    this.isRateLimit = false,
+  });
+
+  final String title;
+  final String message;
+  final IconData icon;
+  final bool isRateLimit;
+
+  factory WeatherPanelError.from(Object error, AppLocalizations l10n) {
+    if (error is WeatherApiException) {
+      switch (error.errorType) {
+        case WeatherErrorType.network:
+          return WeatherPanelError(
+            title: l10n.weatherConnectionFailedTitle,
+            message: l10n.weatherConnectionFailedBody,
+            icon: Icons.wifi_off_rounded,
+          );
+        case WeatherErrorType.timeout:
+          return WeatherPanelError(
+            title: l10n.weatherTimeoutTitle,
+            message: l10n.weatherTimeoutBody,
+            icon: Icons.timer_outlined,
+          );
+        case WeatherErrorType.rateLimit:
+          return WeatherPanelError(
+            title: l10n.weatherRateLimitTitle,
+            message: l10n.weatherRateLimitBody,
+            icon: Icons.hourglass_top_rounded,
+            isRateLimit: true,
+          );
+        case WeatherErrorType.locationUnavailable:
+          return WeatherPanelError(
+            title: l10n.weatherLocationTitle,
+            message: l10n.weatherLocationBody,
+            icon: Icons.location_off_rounded,
+          );
+        case WeatherErrorType.outsideMalaysia:
+          return WeatherPanelError(
+            title: l10n.weatherOutsideMalaysiaTitle,
+            message: l10n.weatherOutsideMalaysiaBody,
+            icon: Icons.location_off_rounded,
+          );
+        case WeatherErrorType.serverError:
+          return WeatherPanelError(
+            title: l10n.weatherServiceTitle,
+            message: l10n.weatherServiceBody,
+            icon: Icons.cloud_off_rounded,
+          );
+        case WeatherErrorType.notFound:
+          return WeatherPanelError(
+            title: l10n.weatherNotFoundTitle,
+            message: l10n.weatherNotFoundBody,
+            icon: Icons.cloud_off_rounded,
+          );
+        case WeatherErrorType.unknown:
+          break;
+      }
+
+      if (error.isRateLimit || error.statusCode == 429) {
+        return WeatherPanelError(
+          title: l10n.weatherRateLimitTitle,
+          message: l10n.weatherRateLimitBody,
+          icon: Icons.hourglass_top_rounded,
+          isRateLimit: true,
+        );
+      }
+    }
+
+    // Inspect string for raw technical indicators
+    final str = error.toString().toLowerCase();
+    if (str.contains('socketexception') ||
+        str.contains('failed host lookup') ||
+        str.contains('clientexception') ||
+        str.contains('network is unreachable') ||
+        str.contains('connection refused') ||
+        str.contains('no address associated with hostname') ||
+        str.contains('handshakeexception') ||
+        str.contains('network error')) {
+      return WeatherPanelError(
+        title: l10n.weatherConnectionFailedTitle,
+        message: l10n.weatherConnectionFailedBody,
+        icon: Icons.wifi_off_rounded,
+      );
+    }
+
+    if (str.contains('timeoutexception') || str.contains('timed out')) {
+      return WeatherPanelError(
+        title: l10n.weatherTimeoutTitle,
+        message: l10n.weatherTimeoutBody,
+        icon: Icons.timer_outlined,
+      );
+    }
+
+    if (str.contains('429') || str.contains('rate limit')) {
+      return WeatherPanelError(
+        title: l10n.weatherRateLimitTitle,
+        message: l10n.weatherRateLimitBody,
+        icon: Icons.hourglass_top_rounded,
+        isRateLimit: true,
+      );
+    }
+
+    if (str.contains('gps') ||
+        str.contains('permission') ||
+        str.contains('location access')) {
+      return WeatherPanelError(
+        title: l10n.weatherLocationTitle,
+        message: l10n.weatherLocationBody,
+        icon: Icons.location_off_rounded,
+      );
+    }
+
+    if (str.contains('outside malaysia')) {
+      return WeatherPanelError(
+        title: l10n.weatherOutsideMalaysiaTitle,
+        message: l10n.weatherOutsideMalaysiaBody,
+        icon: Icons.location_off_rounded,
+      );
+    }
+
+    return WeatherPanelError(
+      title: l10n.weatherGenericTitle,
+      message: l10n.weatherGenericBody,
+      icon: Icons.cloud_off_rounded,
+    );
+  }
+}
+
 class RideConditionsPanelState extends State<RideConditionsPanel> {
   late final WeatherApiService _weatherService;
   late final UserLocationService _locationService;
@@ -153,8 +288,12 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
 
   WeatherSnapshot? _snapshot;
   bool _isLoading = false;
-  String? _errorMessage;
-  bool _isRateLimit = false;
+  WeatherPanelError? _error;
+
+  @visibleForTesting
+  String? get errorMessage => _error?.message;
+  @visibleForTesting
+  bool get isRateLimit => _error?.isRateLimit ?? false;
 
   /// Trigger a live refresh of weather conditions.
   Future<void> refresh({bool forceRefresh = true}) =>
@@ -193,8 +332,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
     if (!_isLoading) {
       setState(() {
         _isLoading = true;
-        _errorMessage = null;
-        _isRateLimit = false;
+        _error = null;
       });
     }
 
@@ -208,23 +346,15 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
       if (mounted) {
         setState(() {
           _snapshot = snapshot;
-          _errorMessage = null;
-          _isRateLimit = false;
+          _error = null;
         });
       }
     } catch (e) {
       debugPrint('RideConditionsPanel load error: $e');
       if (mounted) {
-        final isRateLimit = (e is WeatherApiException && e.isRateLimit) ||
-            e.toString().toLowerCase().contains('429') ||
-            e.toString().toLowerCase().contains('rate limit');
-        final errorText = e is WeatherApiException
-            ? e.message
-            : e.toString().replaceFirst('Exception: ', '');
         setState(() {
           _snapshot = null;
-          _errorMessage = errorText;
-          _isRateLimit = isRateLimit;
+          _error = WeatherPanelError.from(e, context.l10n);
         });
       }
     } finally {
@@ -243,12 +373,16 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
 
     final snapshot = _snapshot;
     if (snapshot == null) {
-      if (_errorMessage != null && !_isLoading) {
+      if (_error != null && !_isLoading) {
+        final error = _error!;
         return Semantics(
           container: true,
-          label: _isRateLimit
-              ? 'Ride conditions. Rate limit reached.'
-              : 'Ride conditions. Error: $_errorMessage.',
+          label: error.isRateLimit
+              ? context.l10n.rideConditionsRateLimitSemantics
+              : context.l10n.rideConditionsErrorSemantics(
+                  error.title,
+                  error.message,
+                ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -275,24 +409,22 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _isRateLimit ? Icons.hourglass_top_rounded : Icons.cloud_off_rounded,
-                          color: _isRateLimit ? scheme.error : scheme.onSurfaceVariant,
+                          error.icon,
+                          color: error.isRateLimit ? scheme.error : scheme.onSurfaceVariant,
                           size: 32,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _isRateLimit
-                              ? 'Rate limit reached'
-                              : 'Weather unavailable',
+                          error.title,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: _isRateLimit ? scheme.error : scheme.onSurface,
+                            color: error.isRateLimit ? scheme.error : scheme.onSurface,
                           ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _errorMessage!,
+                          error.message,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.75),
                           ),
@@ -303,7 +435,7 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                           key: const ValueKey<String>('weather-retry-button'),
                           onPressed: () => refresh(forceRefresh: true),
                           icon: const Icon(Icons.refresh_rounded, size: 18),
-                          label: const Text('Retry'),
+                          label: Text(context.l10n.retry),
                         ),
                       ],
                     ),
@@ -355,26 +487,81 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
     final location = snapshot.locationName;
     final currentCondition = snapshot.currentCondition.label;
     final currentTemperature = snapshot.temperatureFormatted;
-    final feelsLike = context.l10n.feelsLike('${snapshot.feelsLikeTemperature}°C');
+    final feelsLike = snapshot.feelsLikeTemperature != null
+        ? context.l10n.feelsLike('${snapshot.feelsLikeTemperature}°C')
+        : '–';
     final nextHourCondition = snapshot.nextHourCondition.label;
     final nextHourTemperature = snapshot.nextHourTemperatureFormatted;
-    final nextHourRainChance = context.l10n.rainChance(snapshot.nextHourRainChance);
+    final nextHourRainChance = snapshot.nextHourRainChance != null
+        ? context.l10n.rainChance(snapshot.nextHourRainChance!)
+        : '–';
     final humidity = snapshot.humidityFormatted;
-    final airQualityIndex = '${snapshot.airQualityIndex}';
-    final airQualityLabel = snapshot.airQualityLabel;
+    final airQualityIndex = snapshot.airQualityIndex?.toString() ?? '–';
+    final airQualityLabel = snapshot.airQualityIndex != null
+        ? _aqiLabel(context.l10n, snapshot.airQualityIndex!)
+        : '–';
     final wind = snapshot.windFormatted;
     final updatedAt = snapshot.updatedAt;
     final date = snapshot.updatedAt;
 
-    // Semantic colors
+    // Semantic colors; measured-metric colors only apply when the value exists.
     final conditionColor = palette.getConditionColor(snapshot.currentCondition);
-    final tempColor = palette.getTemperatureColor(snapshot.currentTemperature);
-    final humidityColor = palette.getHumidityColor(snapshot.humidityPercent);
-    final aqiColor = palette.getAqiColor(snapshot.airQualityIndex);
-    final windColor = palette.getWindColor(snapshot.windSpeedKmh);
+    final tempColor = snapshot.currentTemperature != null
+        ? palette.getTemperatureColor(snapshot.currentTemperature!)
+        : scheme.onSurfaceVariant;
+    final humidityColor = snapshot.humidityPercent != null
+        ? palette.getHumidityColor(snapshot.humidityPercent!)
+        : scheme.onSurfaceVariant;
+    final aqiColor = snapshot.airQualityIndex != null
+        ? palette.getAqiColor(snapshot.airQualityIndex!)
+        : scheme.onSurfaceVariant;
+    final windColor = snapshot.windSpeedKmh != null
+        ? palette.getWindColor(snapshot.windSpeedKmh!)
+        : scheme.onSurfaceVariant;
     final nextHourConditionColor = palette.getConditionColor(snapshot.nextHourCondition);
-    final nextHourTempColor = palette.getTemperatureColor(snapshot.nextHourTemperature);
-    final nextHourRainColor = palette.getRainChanceColor(snapshot.nextHourRainChance);
+    final nextHourTempColor = snapshot.nextHourTemperature != null
+        ? palette.getTemperatureColor(snapshot.nextHourTemperature!)
+        : scheme.onSurfaceVariant;
+    final nextHourRainColor = snapshot.nextHourRainChance != null
+        ? palette.getRainChanceColor(snapshot.nextHourRainChance!)
+        : scheme.onSurfaceVariant;
+
+    // Measured metric tiles; hidden entirely when Open-Meteo is unavailable.
+    final metricTiles = <Widget>[
+      if (snapshot.humidityPercent != null)
+        _ConditionMetric(
+          icon: Icons.water_drop_outlined,
+          label: context.l10n.humidity,
+          value: humidity,
+          iconColor: humidityColor,
+          valueColor: humidityColor,
+          backgroundColor: humidityColor.withValues(
+            alpha: isDark ? 0.12 : 0.08,
+          ),
+        ),
+      if (snapshot.airQualityIndex != null)
+        _ConditionMetric(
+          icon: Icons.air_rounded,
+          label: context.l10n.airQuality,
+          value: '$airQualityIndex $airQualityLabel',
+          iconColor: aqiColor,
+          valueColor: aqiColor,
+          backgroundColor: aqiColor.withValues(
+            alpha: isDark ? 0.14 : 0.09,
+          ),
+        ),
+      if (snapshot.windSpeedKmh != null)
+        _ConditionMetric(
+          icon: Icons.waves_rounded,
+          label: context.l10n.wind,
+          value: wind,
+          iconColor: windColor,
+          valueColor: windColor,
+          backgroundColor: windColor.withValues(
+            alpha: isDark ? 0.12 : 0.08,
+          ),
+        ),
+    ];
 
     return Semantics(
       container: true,
@@ -454,73 +641,45 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              feelsLike,
-                              softWrap: true,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: scheme.onSurface.withValues(alpha: isDark ? 0.64 : 0.70),
+                            if (snapshot.feelsLikeTemperature != null) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                feelsLike,
+                                softWrap: true,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: scheme.onSurface.withValues(alpha: isDark ? 0.64 : 0.70),
+                                ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        currentTemperature,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: tempColor,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: _ConditionMetric(
-                            icon: Icons.water_drop_outlined,
-                            label: context.l10n.humidity,
-                            value: humidity,
-                            iconColor: humidityColor,
-                            valueColor: humidityColor,
-                            backgroundColor: humidityColor.withValues(
-                              alpha: isDark ? 0.12 : 0.08,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: _ConditionMetric(
-                            icon: Icons.air_rounded,
-                            label: context.l10n.airQuality,
-                            value: '$airQualityIndex $airQualityLabel',
-                            iconColor: aqiColor,
-                            valueColor: aqiColor,
-                            backgroundColor: aqiColor.withValues(
-                              alpha: isDark ? 0.14 : 0.09,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: _ConditionMetric(
-                            icon: Icons.waves_rounded,
-                            label: context.l10n.wind,
-                            value: wind,
-                            iconColor: windColor,
-                            valueColor: windColor,
-                            backgroundColor: windColor.withValues(
-                              alpha: isDark ? 0.12 : 0.08,
-                            ),
+                      if (snapshot.currentTemperature != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          currentTemperature,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: tempColor,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
+                  if (metricTiles.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var index = 0; index < metricTiles.length; index++) ...[
+                            if (index > 0) const SizedBox(width: 6),
+                            Expanded(child: metricTiles[index]),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -538,52 +697,52 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text.rich(
-                              TextSpan(
-                                text: 'Next hour · ',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurface.withValues(alpha: isDark ? 0.75 : 0.80),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: nextHourCondition,
-                                    style: TextStyle(
-                                      color: nextHourConditionColor,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            Text(
+                              context.l10n.nextHour(nextHourCondition),
                               softWrap: true,
-                            ),
-                            const SizedBox(height: 2),
-                            Text.rich(
-                              TextSpan(
-                                text: nextHourTemperature,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: nextHourTempColor,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: ' · ',
-                                    style: TextStyle(
-                                      color: scheme.onSurface.withValues(alpha: isDark ? 0.50 : 0.58),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: nextHourRainChance,
-                                    style: TextStyle(
-                                      color: nextHourRainColor,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ],
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: nextHourConditionColor,
+                                fontWeight: FontWeight.w800,
                               ),
-                              softWrap: true,
                             ),
+                            if (snapshot.nextHourTemperature != null ||
+                                snapshot.nextHourRainChance != null) ...[
+                              const SizedBox(height: 2),
+                              Text.rich(
+                                TextSpan(
+                                  children: [
+                                    if (snapshot.nextHourTemperature != null)
+                                      TextSpan(
+                                        text: nextHourTemperature,
+                                        style: TextStyle(
+                                          color: nextHourTempColor,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    if (snapshot.nextHourTemperature != null &&
+                                        snapshot.nextHourRainChance != null)
+                                      TextSpan(
+                                        text: ' · ',
+                                        style: TextStyle(
+                                          color: scheme.onSurface.withValues(
+                                            alpha: isDark ? 0.50 : 0.58,
+                                          ),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    if (snapshot.nextHourRainChance != null)
+                                      TextSpan(
+                                        text: nextHourRainChance,
+                                        style: TextStyle(
+                                          color: nextHourRainColor,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                softWrap: true,
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -630,6 +789,15 @@ class RideConditionsPanelState extends State<RideConditionsPanel> {
       ),
     );
   }
+}
+
+/// Maps a measured US AQI value to its localized band label.
+String _aqiLabel(AppLocalizations l10n, int aqi) {
+  if (aqi <= 50) return l10n.good;
+  if (aqi <= 100) return l10n.aqiModerate;
+  if (aqi <= 200) return l10n.aqiUnhealthy;
+  if (aqi <= 300) return l10n.aqiVeryUnhealthy;
+  return l10n.aqiHazardous;
 }
 
 class _ConditionMetric extends StatelessWidget {

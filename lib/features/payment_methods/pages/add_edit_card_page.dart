@@ -49,7 +49,7 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
       _expiryController = TextEditingController(text: exp);
       _cvvController = TextEditingController();
       _isDefault = card.isDefault;
-      _detectedBrand = CardBrand.detect(card.brand.toLowerCase());
+      _detectedBrand = CardBrand.fromName(card.brand);
     } else {
       _cardNumberController = TextEditingController();
       _nameController = TextEditingController();
@@ -85,6 +85,51 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
     setState(() {});
   }
 
+  String? _cardValidationMessage(
+    BuildContext context,
+    String? value,
+    CardValidationError? error,
+  ) {
+    if (error == null) return null;
+    return switch (error) {
+      CardValidationError.cardNumberRequired => context.l10n.cvCardNumberRequired,
+      CardValidationError.cardDigitsOnly => context.l10n.cvCardDigitsOnly,
+      CardValidationError.cardBrandUnsupported => context.l10n.cvCardBrandUnsupported,
+      CardValidationError.cardNumberLength => context.l10n.cvCardNumberLength(
+        CardValidator.cleanDigits(value ?? '').length,
+      ),
+      CardValidationError.cardNumberTooLong => context.l10n.cvCardNumberTooLong,
+      CardValidationError.cardChecksumFailed => context.l10n.cvCardChecksumFailed,
+      CardValidationError.expiryRequired => context.l10n.cvExpiryRequired,
+      CardValidationError.expiryFormat => context.l10n.cvExpiryFormat,
+      CardValidationError.expiryInvalidMonth => context.l10n.cvExpiryInvalidMonth,
+      CardValidationError.expiryInvalidYear => context.l10n.cvExpiryInvalidYear,
+      CardValidationError.cardExpired => context.l10n.cvCardExpired,
+      CardValidationError.expiryTooFar => context.l10n.cvExpiryTooFar,
+      CardValidationError.cvvRequired => context.l10n.cvCvvRequired,
+      CardValidationError.cvvLength => context.l10n.cvCvvLength,
+      CardValidationError.nameRequired => context.l10n.cvNameRequired,
+      CardValidationError.nameTooShort => context.l10n.cvNameTooShort,
+      CardValidationError.nameTooLong => context.l10n.cvNameTooLong,
+      CardValidationError.nameInvalidChars => context.l10n.cvNameInvalidChars,
+      CardValidationError.nameNeedsTwoParts => context.l10n.cvNameNeedsTwoParts,
+    };
+  }
+
+  String _paymentErrorText(
+    BuildContext context,
+    PaymentMethodsController controller,
+  ) {
+    return switch (controller.errorType) {
+      PaymentMethodErrorType.sessionExpired => context.l10n.pmSessionExpired,
+      PaymentMethodErrorType.cardInUse => context.l10n.pmCardInUse,
+      PaymentMethodErrorType.duplicate => context.l10n.pmDuplicateCard,
+      PaymentMethodErrorType.validation =>
+        context.l10n.pmValidationError(controller.errorDetail ?? ''),
+      PaymentMethodErrorType.unknown || null => context.l10n.pmUnknownError,
+    };
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -112,7 +157,9 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
         AppToast.show(context, message: context.l10n.cardUpdatedSuccess);
         Navigator.of(context).pop();
       } else {
-        final error = widget.controller.errorMessage ?? context.l10n.failedToUpdateCard;
+        final error = widget.controller.errorType == null
+            ? context.l10n.failedToUpdateCard
+            : _paymentErrorText(context, widget.controller);
         AppToast.show(context, message: error, variant: AppToastVariant.error);
       }
     } else {
@@ -139,7 +186,9 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
         AppToast.show(context, message: context.l10n.cardAddedSuccess);
         Navigator.of(context).pop();
       } else {
-        final error = widget.controller.errorMessage ?? context.l10n.failedToAddCard;
+        final error = widget.controller.errorType == null
+            ? context.l10n.failedToAddCard
+            : _paymentErrorText(context, widget.controller);
         AppToast.show(context, message: error, variant: AppToastVariant.error);
       }
     }
@@ -206,7 +255,11 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                       ),
                       validator: isEditing
                           ? null
-                          : (v) => CardValidator.validateCardNumber(v),
+                          : (v) => _cardValidationMessage(
+                                context,
+                                v,
+                                CardValidator.validateCardNumber(v),
+                              ),
                     ),
 
                     const SizedBox(height: 18),
@@ -233,7 +286,11 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                         ),
                         errorMaxLines: 2,
                       ),
-                      validator: (v) => CardValidator.validateCardholderName(v),
+                      validator: (v) => _cardValidationMessage(
+                        context,
+                        v,
+                        CardValidator.validateCardholderName(v),
+                      ),
                     ),
 
                     const SizedBox(height: 18),
@@ -271,7 +328,11 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                                   ),
                                   errorMaxLines: 2,
                                 ),
-                                validator: (v) => CardValidator.validateExpiry(v),
+                                validator: (v) => _cardValidationMessage(
+                                  context,
+                                  v,
+                                  CardValidator.validateExpiry(v),
+                                ),
                               ),
                             ],
                           ),
@@ -310,7 +371,11 @@ class _AddEditCardPageState extends State<AddEditCardPage> {
                                     ),
                                     errorMaxLines: 2,
                                   ),
-                                  validator: (v) => CardValidator.validateCvv(v),
+                                  validator: (v) => _cardValidationMessage(
+                                    context,
+                                    v,
+                                    CardValidator.validateCvv(v),
+                                  ),
                                 ),
                               ],
                             ),

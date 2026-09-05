@@ -2,7 +2,7 @@ import 'package:bike_renting_app/features/renting/renting_controller.dart';
 import 'package:bike_renting_app/features/renting/renting_models.dart';
 import 'package:bike_renting_app/l10n/app_formats.dart';
 import 'package:bike_renting_app/l10n/l10n.dart';
-import 'package:bike_renting_app/shared/app_toast.dart';
+import 'package:bike_renting_app/navigation/app_page.dart';
 import 'package:bike_renting_app/shared/ui_components.dart';
 import 'package:flutter/material.dart';
 
@@ -305,10 +305,9 @@ class _ReportIssueButton extends StatelessWidget {
     return OutlinedButton.icon(
       key: const ValueKey<String>('home-report-issue'),
       style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
-      onPressed: () => showRideIssueSheet(
-        context,
-        bikeCode: controller.bikeCode,
-        onSubmit: controller.noteRideIssue,
+      onPressed: () => Navigator.of(context).pushNamed(
+        AppPage.reportForm.routeName,
+        arguments: controller.sessionBikeId,
       ),
       icon: const Icon(Icons.report_problem_outlined),
       label: Text(context.l10n.reportBikeIssue),
@@ -379,7 +378,9 @@ class ActiveReturnStationPreview extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        context.l10n.stationDistance(station.distanceMeters),
+                        station.distanceMeters == null
+                            ? ''
+                            : context.l10n.stationDistance(station.distanceMeters!),
                         style: theme.textTheme.bodySmall,
                       ),
                     ],
@@ -404,193 +405,14 @@ class ActiveReturnStationPreview extends StatelessWidget {
     ReturnStation? nearest;
     for (final station in stations) {
       if (station.availableDocks <= 0) continue;
-      if (nearest == null || station.distanceMeters < nearest.distanceMeters) {
+      final distance = station.distanceMeters;
+      if (nearest == null ||
+          (distance != null &&
+              (nearest.distanceMeters == null ||
+                  distance < nearest.distanceMeters!))) {
         nearest = station;
       }
     }
     return nearest;
   }
-}
-
-Future<void> showRideIssueSheet(
-  BuildContext context, {
-  required String bikeCode,
-  required void Function(RentalIssueType type, String note) onSubmit,
-}) async {
-  final result = await showModalBottomSheet<_RideIssueResult>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    showDragHandle: true,
-    builder: (context) => _RideIssueSheet(bikeCode: bikeCode),
-  );
-
-  if (result != null && context.mounted) {
-    onSubmit(result.type, result.note);
-    AppToast.show(
-      context,
-      title: context.l10n.issueNoted,
-      message: context.l10n.issueNotSent,
-      variant: AppToastVariant.warning,
-    );
-  }
-}
-
-class _RideIssueSheet extends StatefulWidget {
-  const _RideIssueSheet({required this.bikeCode});
-
-  final String bikeCode;
-
-  @override
-  State<_RideIssueSheet> createState() => _RideIssueSheetState();
-}
-
-class _RideIssueSheetState extends State<_RideIssueSheet> {
-  final _noteController = TextEditingController();
-  RentalIssueType? _selectedIssue;
-  bool _showValidation = false;
-
-  @override
-  void dispose() {
-    _noteController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final labels = {
-      RentalIssueType.brakes: context.l10n.issueBrakes,
-      RentalIssueType.tyres: context.l10n.issueTyres,
-      RentalIssueType.lights: context.l10n.issueLights,
-      RentalIssueType.lock: context.l10n.issueLock,
-      RentalIssueType.other: context.l10n.issueOther,
-    };
-
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        18,
-        0,
-        18,
-        18 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Column(
-        key: const ValueKey<String>('ride-issue-sheet'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            context.l10n.reportBikeIssue,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            context.l10n.reportingBike(widget.bikeCode),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.66),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            context.l10n.chooseIssueType,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final entry in labels.entries)
-                ChoiceChip(
-                  key: ValueKey<String>('ride-issue-${entry.key.name}'),
-                  label: Text(entry.value),
-                  selected: _selectedIssue == entry.key,
-                  onSelected: (_) => setState(() {
-                    _selectedIssue = entry.key;
-                    _showValidation = false;
-                  }),
-                ),
-            ],
-          ),
-          if (_showValidation) ...[
-            const SizedBox(height: 8),
-            Text(
-              context.l10n.chooseIssueTypeError,
-              style: theme.textTheme.bodySmall?.copyWith(color: scheme.error),
-            ),
-          ],
-          const SizedBox(height: 14),
-          TextField(
-            key: const ValueKey<String>('ride-issue-note'),
-            controller: _noteController,
-            minLines: 2,
-            maxLines: 4,
-            maxLength: 240,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(
-              labelText: context.l10n.issueNoteOptional,
-              hintText: context.l10n.issueNoteHint,
-              border: const OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: scheme.tertiary.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: 19,
-                  color: scheme.tertiary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    context.l10n.issueSessionOnly,
-                    style: theme.textTheme.bodySmall?.copyWith(height: 1.35),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              key: const ValueKey<String>('ride-issue-submit'),
-              onPressed: _submit,
-              icon: const Icon(Icons.check_rounded),
-              label: Text(context.l10n.noteIssue),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _submit() {
-    if (_selectedIssue == null) {
-      setState(() => _showValidation = true);
-      return;
-    }
-    Navigator.of(
-      context,
-    ).pop(_RideIssueResult(type: _selectedIssue!, note: _noteController.text));
-  }
-}
-
-class _RideIssueResult {
-  const _RideIssueResult({required this.type, required this.note});
-
-  final RentalIssueType type;
-  final String note;
 }
