@@ -55,6 +55,42 @@ class _BikeCheckStage extends StatelessWidget {
                               controller.startStation!.name,
                             ),
                           ),
+                          if (controller.startStation?.isUnderMaintenance == true) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF97316).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: const Color(0xFFF97316),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.build_circle_outlined,
+                                    size: 14,
+                                    color: Color(0xFFF97316),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      context.l10n.stationUnderMaintenance,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        color: const Color(0xFFF97316),
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -105,6 +141,18 @@ class _BikeCheckStage extends StatelessWidget {
               if (controller.error != null) ...[
                 const SizedBox(height: 14),
                 _ErrorPanel(message: _rentalError(context, controller)),
+              ] else if (controller.startStation?.isUnderMaintenance == true ||
+                  controller.startStation?.isTerminated == true) ...[
+                const SizedBox(height: 14),
+                _ErrorPanel(
+                  message: controller.startStation?.isUnderMaintenance == true
+                      ? context.l10n.errorStationMaintenance(
+                          controller.startStation?.name ?? '',
+                        )
+                      : context.l10n.errorStationTerminated(
+                          controller.startStation?.name ?? '',
+                        ),
+                ),
               ],
               const SizedBox(height: 14),
               const _TermsAndPrivacyNotice(),
@@ -115,7 +163,11 @@ class _BikeCheckStage extends StatelessWidget {
                   context.formats.currency(controller.holdAmount),
                 ),
                 icon: Icons.account_balance_wallet_rounded,
-                onPressed: controller.reviewAuthorization,
+                onPressed: (controller.startStation?.isUnderMaintenance == true ||
+                        controller.startStation?.isTerminated == true ||
+                        controller.error != null)
+                    ? null
+                    : controller.reviewAuthorization,
               ),
               const SizedBox(height: 8),
               Center(

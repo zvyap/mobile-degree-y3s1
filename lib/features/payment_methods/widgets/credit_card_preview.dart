@@ -1,4 +1,5 @@
 import 'package:bike_renting_app/features/payment_methods/models/card_brand.dart';
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class CreditCardPreview extends StatelessWidget {
@@ -20,7 +21,7 @@ class CreditCardPreview extends StatelessWidget {
     final theme = Theme.of(context);
     final displayedNumber = _formatDisplayNumber(cardNumber);
     final displayedName = cardholderName.trim().isEmpty
-        ? 'CARDHOLDER NAME'
+        ? context.l10n.cardholderNamePreview
         : cardholderName.trim().toUpperCase();
     final displayedExpiry =
         expiryDate.trim().isEmpty ? 'MM/YY' : expiryDate.trim();
@@ -116,7 +117,7 @@ class CreditCardPreview extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'CARDHOLDER',
+                        context.l10n.cardholderPreview,
                         style: TextStyle(
                           fontSize: 9,
                           letterSpacing: 1.2,
@@ -144,7 +145,7 @@ class CreditCardPreview extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'EXPIRES',
+                      context.l10n.expiresPreview,
                       style: TextStyle(
                         fontSize: 9,
                         letterSpacing: 1.2,

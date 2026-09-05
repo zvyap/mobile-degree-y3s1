@@ -8,6 +8,9 @@ class _StationStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final cannotReturnHere =
+        controller.selectedStation?.isUnderMaintenance == true ||
+            controller.selectedStation?.isTerminated == true;
     return SurfacePanel(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -34,6 +37,8 @@ class _StationStage extends StatelessWidget {
           _ReturnStationMap(
             stations: controller.stations,
             selectedStation: controller.selectedStation,
+            riderLocation: controller.riderLatLng,
+            riderHeading: controller.riderHeading,
             onSelectStation: controller.selectStation,
             isAtStation: controller.isAtStation,
           ),
@@ -42,9 +47,7 @@ class _StationStage extends StatelessWidget {
             _StationTile(
               station: station,
               selected: controller.selectedStation?.id == station.id,
-              onTap: station.availableDocks == 0
-                  ? () => controller.selectStation(station)
-                  : () => controller.selectStation(station),
+              onTap: () => controller.selectStation(station),
             ),
             const SizedBox(height: 8),
           ],
@@ -53,10 +56,22 @@ class _StationStage extends StatelessWidget {
             _ErrorPanel(message: _rentalError(context, controller)),
           ],
           if (controller.selectedStation != null) ...[
+            if (cannotReturnHere) ...[
+              const SizedBox(height: 8),
+              _ErrorPanel(
+                message: controller.selectedStation?.isUnderMaintenance == true
+                    ? context.l10n.stationCannotReturnMaintenance
+                    : context.l10n.errorStationTerminated(
+                        controller.selectedStation!.name,
+                      ),
+              ),
+            ],
             const SizedBox(height: 12),
             OutlinedButton.icon(
               key: const ValueKey('rent-confirm-arrival'),
-              onPressed: controller.isBusy ? null : controller.checkArrival,
+              onPressed: (controller.isBusy || cannotReturnHere)
+                  ? null
+                  : controller.checkArrival,
               icon: controller.isBusy
                   ? const SizedBox.square(
                       dimension: 18,
@@ -101,7 +116,7 @@ class _StationStage extends StatelessWidget {
                   ? context.l10n.continueToDock
                   : 'Return at ${controller.selectedStation!.name}',
               icon: Icons.keyboard_double_arrow_down_rounded,
-              onPressed: controller.isBusy
+              onPressed: (controller.isBusy || cannotReturnHere)
                   ? null
                   : () async {
                       if (!controller.isAtStation) {

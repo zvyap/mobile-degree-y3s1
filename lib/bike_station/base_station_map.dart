@@ -209,6 +209,9 @@ abstract class BaseStationMapViewState<T extends BaseStationMapView> extends Sta
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
+      if (position.heading != 0.0) {
+        userHeading = position.heading;
+      }
       return LatLng(position.latitude, position.longitude);
     } catch (e) {
       debugPrint("Location retrieval error: $e");
@@ -484,6 +487,7 @@ class StationPlaceholderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isMaintenance = station?['status']?.toString().trim().toLowerCase() == 'under maintenance';
 
     final String resolvedTitle = defaultTitle ?? (isOrigin ? "Station A" : "Station B");
     final String resolvedSubtitle = defaultSubtitle ?? (isOrigin ? "Select origin station" : "Select destination station");
@@ -494,12 +498,16 @@ class StationPlaceholderRow extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: colorScheme.onSurface, width: 2),
+            color: isMaintenance ? const Color(0xFFF97316).withValues(alpha: 0.1) : null,
+            border: Border.all(
+              color: isMaintenance ? const Color(0xFFF97316) : colorScheme.onSurface,
+              width: 2,
+            ),
           ),
           child: Icon(
-            Icons.location_on,
+            isMaintenance ? Icons.build_rounded : Icons.location_on,
             size: 20,
-            color: colorScheme.onSurface,
+            color: isMaintenance ? const Color(0xFFF97316) : colorScheme.onSurface,
           ),
         ),
         const SizedBox(width: 12),
@@ -507,15 +515,40 @@ class StationPlaceholderRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                station?['name'] ?? resolvedTitle,
-                style: TextStyle(
-                  color: station != null ? colorScheme.onSurface : colorScheme.onSurface.withValues(alpha: 0.6),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      station?['name'] ?? resolvedTitle,
+                      style: TextStyle(
+                        color: station != null ? colorScheme.onSurface : colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isMaintenance) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF97316).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: const Color(0xFFF97316), width: 1),
+                      ),
+                      child: const Text(
+                        'Under Maintenance',
+                        style: TextStyle(
+                          color: Color(0xFFF97316),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               Text(
                 station?['address'] ?? resolvedSubtitle,

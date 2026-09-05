@@ -28,6 +28,16 @@ String _rentalError(BuildContext context, RentingController controller) {
       l10n.errorBikeMaintenance(controller.bikeCode),
     RentalError.bikeUnavailable =>
       l10n.errorBikeUnavailable(controller.bikeCode),
+    RentalError.stationMaintenance => controller.errorStation != null
+        ? l10n.errorStationMaintenance(
+            _stationName(l10n, controller.errorStation!),
+          )
+        : l10n.errorStationMaintenanceGeneral,
+    RentalError.stationTerminated => controller.errorStation != null
+        ? l10n.errorStationTerminated(
+            _stationName(l10n, controller.errorStation!),
+          )
+        : l10n.errorStationTerminatedGeneral,
     RentalError.holdDeclined => l10n.errorHoldDeclined(
       context.formats.currency(controller.holdAmount),
     ),

@@ -66,8 +66,8 @@ class SettingsPage extends StatelessWidget {
           key: const ValueKey<String>('settings-payment-methods'),
           contentPadding: const EdgeInsets.symmetric(horizontal: 4),
           leading: const Icon(Icons.payment_rounded),
-          title: const Text('Payment Method'),
-          subtitle: const Text('Manage credit/debit cards and PayPal'),
+          title: Text(context.l10n.paymentMethod),
+          subtitle: Text(context.l10n.managePaymentMethodsSubtitle),
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: () {
             Navigator.of(context).push(
@@ -85,26 +85,11 @@ class SettingsPage extends StatelessWidget {
         ),
         const Divider(),
         ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-          leading: const Icon(Icons.location_on_outlined),
-          title: Text(context.l10n.locationAccess),
-          subtitle: Text(context.l10n.locationAccessDescription),
-          trailing: const Icon(Icons.chevron_right_rounded),
-        ),
-        ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-          leading: const Icon(Icons.notifications_outlined),
-          title: Text(context.l10n.rideNotifications),
-          subtitle: Text(context.l10n.rideNotificationsDescription),
-          trailing: const Icon(Icons.chevron_right_rounded),
-        ),
-        const Divider(),
-        ListTile(
           key: const ValueKey<String>('settings-terms-of-service'),
           contentPadding: const EdgeInsets.symmetric(horizontal: 4),
           leading: const Icon(Icons.description_outlined),
-          title: const Text('Terms of Service'),
-          subtitle: const Text('Rental rules, safety policies, and liabilities'),
+          title: Text(context.l10n.termsOfService),
+          subtitle: Text(context.l10n.termsOfServiceSubtitle),
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: () => TermsOfServicePage.open(context),
         ),
@@ -112,8 +97,8 @@ class SettingsPage extends StatelessWidget {
           key: const ValueKey<String>('settings-privacy-policy'),
           contentPadding: const EdgeInsets.symmetric(horizontal: 4),
           leading: const Icon(Icons.privacy_tip_outlined),
-          title: const Text('Privacy Policy'),
-          subtitle: const Text('Data protection, GPS location, and privacy rights'),
+          title: Text(context.l10n.privacyPolicy),
+          subtitle: Text(context.l10n.privacyPolicySubtitle),
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: () => PrivacyPolicyPage.open(context),
         ),
@@ -126,9 +111,9 @@ class SettingsPage extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: () async {await auth.logout();},
             icon: const Icon(Icons.logout_rounded),
-            label: const Text(
-              'Log Out',
-              style: TextStyle(
+            label: Text(
+              context.l10n.logOut,
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
               ),
             ),

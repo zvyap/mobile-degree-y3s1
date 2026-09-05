@@ -1,3 +1,4 @@
+import 'package:bike_renting_app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class PayPalMethodTile extends StatelessWidget {
@@ -36,13 +37,13 @@ class PayPalMethodTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'PayPal Integration',
+                          context.l10n.payPalIntegration,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w900,
                           ),
                         ),
                         Text(
-                          'Always available payment option',
+                          context.l10n.payPalAlwaysAvailable,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
@@ -54,7 +55,7 @@ class PayPalMethodTile extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'PayPal checkout is processed on-demand through a secure in-app webview during bike rental authorization. It does not require storing credit or debit card details, so it cannot be edited or removed.',
+                context.l10n.payPalDescription,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   height: 1.45,
                 ),
@@ -64,7 +65,7 @@ class PayPalMethodTile extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Got it'),
+                  child: Text(context.l10n.gotIt),
                 ),
               ),
             ],
@@ -112,7 +113,7 @@ class PayPalMethodTile extends StatelessWidget {
             runSpacing: 4,
             children: [
               Text(
-                'PayPal',
+                context.l10n.payPal,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -124,7 +125,7 @@ class PayPalMethodTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  'Built-in',
+                  context.l10n.payPalBuiltIn,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: scheme.onTertiaryContainer,
                     fontWeight: FontWeight.w700,
@@ -134,14 +135,14 @@ class PayPalMethodTile extends StatelessWidget {
             ],
           ),
           subtitle: Text(
-            'Webview checkout · Always available',
+            context.l10n.payPalSubtitle,
             style: theme.textTheme.bodySmall?.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.65),
             ),
           ),
           trailing: IconButton(
             icon: const Icon(Icons.info_outline_rounded),
-            tooltip: 'PayPal information',
+            tooltip: context.l10n.payPalInformation,
             onPressed: () => _showPayPalInfo(context),
           ),
           onTap: () => _showPayPalInfo(context),

@@ -134,7 +134,9 @@ class _ScanStageState extends State<ScanStage> with WidgetsBindingObserver {
         if (widget.controller.error == RentalError.invalidQr) {
           _showInvalidQrDialog();
         } else if (widget.controller.error == RentalError.bikeMaintenance ||
-            widget.controller.error == RentalError.bikeUnavailable) {
+            widget.controller.error == RentalError.bikeUnavailable ||
+            widget.controller.error == RentalError.stationMaintenance ||
+            widget.controller.error == RentalError.stationTerminated) {
           _showBikeCannotRentDialog();
         }
       });
@@ -687,7 +689,8 @@ Future<void> showBikeCannotRentDialog(
       final scheme = theme.colorScheme;
       return AlertDialog(
         icon: Icon(
-          controller.error == RentalError.bikeMaintenance
+          controller.error == RentalError.bikeMaintenance ||
+                  controller.error == RentalError.stationMaintenance
               ? Icons.build_circle_outlined
               : Icons.block_rounded,
           size: 36,
@@ -734,7 +737,9 @@ Future<void> _handleCameraTap(
       await showInvalidQrDialog(context, controller: controller);
     }
   } else if (controller.error == RentalError.bikeMaintenance ||
-      controller.error == RentalError.bikeUnavailable) {
+      controller.error == RentalError.bikeUnavailable ||
+      controller.error == RentalError.stationMaintenance ||
+      controller.error == RentalError.stationTerminated) {
     if (context.mounted) {
       await showBikeCannotRentDialog(context, controller: controller);
     }

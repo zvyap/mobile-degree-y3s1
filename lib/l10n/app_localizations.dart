@@ -327,7 +327,7 @@ abstract class AppLocalizations {
   /// No description provided for @paymentMethod.
   ///
   /// In en, this message translates to:
-  /// **'Payment method'**
+  /// **'Payment Method'**
   String get paymentMethod;
 
   /// No description provided for @depositPaymentExplanation.
@@ -1530,6 +1530,42 @@ abstract class AppLocalizations {
   /// **'This rider already has an unfinished rental. Resume or finish it first.'**
   String get errorActiveRentalExists;
 
+  /// No description provided for @errorStationMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Station {station} is currently under maintenance. You cannot rent or return bikes here.'**
+  String errorStationMaintenance(String station);
+
+  /// No description provided for @errorStationTerminated.
+  ///
+  /// In en, this message translates to:
+  /// **'Station {station} has been terminated. You cannot rent or return bikes here.'**
+  String errorStationTerminated(String station);
+
+  /// No description provided for @errorStationMaintenanceGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'This station is currently under maintenance. You cannot rent or return bikes here.'**
+  String get errorStationMaintenanceGeneral;
+
+  /// No description provided for @errorStationTerminatedGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'This station has been terminated. You cannot rent or return bikes here.'**
+  String get errorStationTerminatedGeneral;
+
+  /// No description provided for @stationUnderMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Under Maintenance'**
+  String get stationUnderMaintenance;
+
+  /// No description provided for @stationCannotReturnMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'This station is under maintenance. You cannot return bikes here.'**
+  String get stationCannotReturnMaintenance;
+
   /// No description provided for @errorInvalidRentalTransition.
   ///
   /// In en, this message translates to:
@@ -2231,6 +2267,360 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to add bike: {error}'**
   String failedToAddBike(String error);
+
+  /// No description provided for @managePaymentMethodsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage credit/debit cards and PayPal'**
+  String get managePaymentMethodsSubtitle;
+
+  /// No description provided for @termsOfService.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of Service'**
+  String get termsOfService;
+
+  /// No description provided for @termsOfServiceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rental rules, safety policies, and liabilities'**
+  String get termsOfServiceSubtitle;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get privacyPolicy;
+
+  /// No description provided for @privacyPolicySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Data protection, GPS location, and privacy rights'**
+  String get privacyPolicySubtitle;
+
+  /// No description provided for @logOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Log Out'**
+  String get logOut;
+
+  /// No description provided for @onlineCheckout.
+  ///
+  /// In en, this message translates to:
+  /// **'ONLINE CHECKOUT'**
+  String get onlineCheckout;
+
+  /// No description provided for @savedCards.
+  ///
+  /// In en, this message translates to:
+  /// **'SAVED CARDS'**
+  String get savedCards;
+
+  /// No description provided for @savedCardsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} saved'**
+  String savedCardsCount(int count);
+
+  /// No description provided for @noCardsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'No cards saved yet'**
+  String get noCardsSaved;
+
+  /// No description provided for @noCardsSavedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a Visa or Mastercard for quick, seamless one-tap bike rentals.'**
+  String get noCardsSavedDescription;
+
+  /// No description provided for @addCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Card'**
+  String get addCard;
+
+  /// No description provided for @removeCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Card'**
+  String get removeCard;
+
+  /// No description provided for @removeCardConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to remove your {brand} ending in {lastFour}?'**
+  String removeCardConfirmation(String brand, String lastFour);
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @remove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get remove;
+
+  /// No description provided for @cardRemovedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Card removed successfully'**
+  String get cardRemovedSuccess;
+
+  /// No description provided for @failedToRemoveCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to remove card'**
+  String get failedToRemoveCard;
+
+  /// No description provided for @cardSetAsDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'{brand} set as default payment method'**
+  String cardSetAsDefault(String brand);
+
+  /// No description provided for @failedToUpdateDefaultCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update default card'**
+  String get failedToUpdateDefaultCard;
+
+  /// No description provided for @editCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Card'**
+  String get editCard;
+
+  /// No description provided for @cardUpdatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Card updated successfully'**
+  String get cardUpdatedSuccess;
+
+  /// No description provided for @failedToUpdateCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update card'**
+  String get failedToUpdateCard;
+
+  /// No description provided for @cardAddedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Card added successfully'**
+  String get cardAddedSuccess;
+
+  /// No description provided for @failedToAddCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to add card'**
+  String get failedToAddCard;
+
+  /// No description provided for @cardNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Card Number'**
+  String get cardNumber;
+
+  /// No description provided for @cardNumberHint.
+  ///
+  /// In en, this message translates to:
+  /// **'4xxx xxxx xxxx xxxx'**
+  String get cardNumberHint;
+
+  /// No description provided for @cardholderName.
+  ///
+  /// In en, this message translates to:
+  /// **'Cardholder Name'**
+  String get cardholderName;
+
+  /// No description provided for @cardholderNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. John Doe'**
+  String get cardholderNameHint;
+
+  /// No description provided for @expiryDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiry Date'**
+  String get expiryDate;
+
+  /// No description provided for @expiryDateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'MM/YY'**
+  String get expiryDateHint;
+
+  /// No description provided for @cvvCvc.
+  ///
+  /// In en, this message translates to:
+  /// **'CVV / CVC'**
+  String get cvvCvc;
+
+  /// No description provided for @cvvHint.
+  ///
+  /// In en, this message translates to:
+  /// **'•••'**
+  String get cvvHint;
+
+  /// No description provided for @setAsDefaultPaymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Set as default payment method'**
+  String get setAsDefaultPaymentMethod;
+
+  /// No description provided for @automaticallyUseCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically use this card for bike rentals'**
+  String get automaticallyUseCard;
+
+  /// No description provided for @updateCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Card'**
+  String get updateCard;
+
+  /// No description provided for @cardExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Exp {month}/{year}'**
+  String cardExpiry(String month, String year);
+
+  /// No description provided for @activeCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Card'**
+  String get activeCard;
+
+  /// No description provided for @defaultBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'DEFAULT'**
+  String get defaultBadge;
+
+  /// No description provided for @cardOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Card options'**
+  String get cardOptions;
+
+  /// No description provided for @setAsDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Set as default'**
+  String get setAsDefault;
+
+  /// No description provided for @editCardMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit card'**
+  String get editCardMenu;
+
+  /// No description provided for @removeCardMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove card'**
+  String get removeCardMenu;
+
+  /// No description provided for @payPal.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal'**
+  String get payPal;
+
+  /// No description provided for @payPalBuiltIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in'**
+  String get payPalBuiltIn;
+
+  /// No description provided for @payPalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Webview checkout · Always available'**
+  String get payPalSubtitle;
+
+  /// No description provided for @payPalInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal information'**
+  String get payPalInformation;
+
+  /// No description provided for @payPalIntegration.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal Integration'**
+  String get payPalIntegration;
+
+  /// No description provided for @payPalAlwaysAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Always available payment option'**
+  String get payPalAlwaysAvailable;
+
+  /// No description provided for @payPalDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal checkout is processed on-demand through a secure in-app webview during bike rental authorization. It does not require storing credit or debit card details, so it cannot be edited or removed.'**
+  String get payPalDescription;
+
+  /// No description provided for @gotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get gotIt;
+
+  /// No description provided for @cardholderPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'CARDHOLDER'**
+  String get cardholderPreview;
+
+  /// No description provided for @cardholderNamePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'CARDHOLDER NAME'**
+  String get cardholderNamePreview;
+
+  /// No description provided for @expiresPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'EXPIRES'**
+  String get expiresPreview;
+
+  /// No description provided for @agree.
+  ///
+  /// In en, this message translates to:
+  /// **'Agree'**
+  String get agree;
+
+  /// No description provided for @agreementConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Agreement Confirmation'**
+  String get agreementConfirmation;
+
+  /// No description provided for @agreementNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'By tapping \"{buttonText}\" above or below, you acknowledge that you have reviewed and accept these {title}.'**
+  String agreementNotice(String buttonText, String title);
+
+  /// No description provided for @agreeAndContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'{buttonText} & Continue'**
+  String agreeAndContinue(String buttonText);
+
+  /// No description provided for @contactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Questions? Contact support@bikerent.app'**
+  String get contactSupport;
 }
 
 class _AppLocalizationsDelegate

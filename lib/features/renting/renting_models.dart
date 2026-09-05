@@ -24,6 +24,8 @@ enum RentalError {
   bikeReserved,
   bikeMaintenance,
   bikeUnavailable,
+  stationMaintenance,
+  stationTerminated,
   holdDeclined,
   paymentConfiguration,
   paymentNetwork,
@@ -86,6 +88,7 @@ class ReturnStation {
     this.qrToken = '',
     this.latitude = 0,
     this.longitude = 0,
+    this.status = 'Normal',
   });
 
   final int backendId;
@@ -98,6 +101,14 @@ class ReturnStation {
   final String qrToken;
   final double latitude;
   final double longitude;
+  final String status;
+
+  bool get isUnderMaintenance =>
+      status.trim().toLowerCase() == 'under maintenance';
+  bool get isTerminated => status.trim().toLowerCase() == 'terminated';
+  bool get isNormal => !isUnderMaintenance && !isTerminated;
+  bool get canAcceptReturn =>
+      !isUnderMaintenance && !isTerminated && availableDocks > 0;
 }
 
 class RentalPaymentMethod {
